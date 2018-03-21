@@ -1,0 +1,21 @@
+def hamming(a : string, b : string) : int {
+	length : int;
+	if len(a) > len(b) {
+		length = len(b);
+	} else {
+		length = len(a);
+	}
+
+	distance : int = 0;
+	for i in [0..length] {
+		if a[i] != b[i] {
+			distance += 1;
+		}
+	}
+
+	return distance;
+}
+
+binary : [string] = ["000", "001", "010", "011", "100", "101", "110", "111"];
+cube : <int> = a--b over [0..9] where hamming(binary[a], binary[b]) == 1;
+
