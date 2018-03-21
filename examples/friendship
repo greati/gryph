@@ -1,5 +1,5 @@
 def friendship(a : int, b : int) : bool {
-    if (a == 0 or ceil(a/2) == ceil(b/2)) {
+    if (a != b) and (a == 0 or ceil(a/2) == ceil(b/2)) {
         return true;
 	} else {
         return false;
