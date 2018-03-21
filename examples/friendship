@@ -1,4 +1,4 @@
-def friendship(a : int, b : int) : bool {
+fun friendship(a : int, b : int) : bool {
     if (a != b) and (a == 0 or ceil(a/2) == ceil(b/2)) {
         return true;
 	} else {

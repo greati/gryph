@@ -1,4 +1,4 @@
-def hamming(a : string, b : string) : int {
+fun hamming(a : string, b : string) : int {
 	length : int;
 	if len(a) > len(b) {
 		length = len(b);
