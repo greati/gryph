@@ -1,2 +1,2 @@
 # gryph
-A programming language for easy graph manipulation.
+A programming language for easy graph construction and manipulation.
