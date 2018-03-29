@@ -1,0 +1,2 @@
+vertices : [int] = [0..4];
+tournament <int> = a->b over vertices where a < b;
