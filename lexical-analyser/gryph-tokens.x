@@ -7,10 +7,11 @@
 $digit = 0-9       -- digits
 $alpha = [a-zA-Z]  -- alphabetic characters
 $varname = [$alpha $digit \_]
+@boolvalues = true|false -- boolean values
 @type = int|double|char|string|graph|bool
 @logical_ops = \=\=|and|or|\!\=|xor|not|\>\=|\<\=
 @edges = \-\-|\-\>|\<\-
- 
+
 tokens :-
     $white+                             ;                           
     "#".*                               ;
@@ -20,7 +21,7 @@ tokens :-
     $digit+\.$digit+                    {\p s -> FloatLit p s}
     \.\.                                {\p s -> RangeOp p}
     $digit+                             {\p s -> IntLit p s}
-    true|false                          {\p s -> BoolLit p s}
+    @boolvalues                         {\p s -> BoolLit p s}
     @edges                              {\p s -> EdgeSym p s}
     @type                               {\p s -> Type p s}
     if                                  {\p s -> If p}
