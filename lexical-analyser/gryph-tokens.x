@@ -8,7 +8,7 @@ $digit = 0-9       -- digits
 $alpha = [a-zA-Z]  -- alphabetic characters
 $varname = [$alpha $digit \_]
 @boolvalues = true|false -- boolean values
-@type = int|double|char|string|graph|bool
+@type = int|double|char|string|bool
 @logical_ops = \=\=|and|or|\!\=|xor|not|\>\=|\<\=
 @edges = \-\-|\-\>|\<\-
 
@@ -39,7 +39,23 @@ tokens :-
     $alpha $varname*[\']+[^\']+         {\p s -> Error}           
     $alpha $varname*[\']*               {\p s -> Var p s}
     @logical_ops                        {\p s -> LogicalOps p s}
-    [\%\=\+\-\*\/\(\)\[\]\{\}\:\<\>\,]  {\p s -> Sym p s}
+    \%                                  {\p s -> ModulusOp p}
+    \=                                  {\p s -> AssignmentOp p}
+    \+                                  {\p s -> PlusOp p}
+    \-                                  {\p s -> MinusOp p}
+    \*                                  {\p s -> TimesOp p}
+    \/                                  {\p s -> DivisionOp p}
+    \(                                  {\p s -> OpenParent p}
+    \)                                  {\p s -> CloseParent p}
+    \{                                  {\p s -> OpenCurly p}
+    \}                                  {\p s -> CloseCurly p}
+    \[                                  {\p s -> OpenSquare p}
+    \]                                  {\p s -> CloseSquare p}
+    \:                                  {\p s -> Colon p}
+    \<                                  {\p s -> Less p}
+    \>                                  {\p s -> Greater p}
+    \,                                  {\p s -> Comma p}
+    \?                                  {\p s -> QuestionMark p}
     .                                   {\p s -> Undefined}
 {
 
@@ -68,6 +84,23 @@ data Token =
     LogicalOps AlexPosn String          |
     RangeOp AlexPosn                    |
     Type AlexPosn String                |
+    ModulusOp AlexPosn                  |
+    AssignmentOp AlexPosn               |
+    PlusOp AlexPosn                     |
+    MinusOp AlexPosn                    |
+    TimesOp AlexPosn                    |
+    DivisionOp AlexPosn                 |
+    Comma AlexPosn                      |
+    Colon AlexPosn                      |
+    Less AlexPosn                       |
+    Greater AlexPosn                    |
+    OpenParent AlexPosn                 |
+    CloseParent AlexPosn                |
+    OpenCurly AlexPosn                  |
+    CloseCurly AlexPosn                 |
+    OpenSquare AlexPosn                 |
+    CloseSquare AlexPosn                |
+    QuestionMark AlexPosn               |
     Undefined                           |
     Error 
     deriving (Eq, Show)

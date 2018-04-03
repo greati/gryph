@@ -1,4 +1,5 @@
-1..2
-1.22222..23123.1
+y=x+y;
 
-true false
+fun hello(x:int) {
+    return "hello!";
+}
