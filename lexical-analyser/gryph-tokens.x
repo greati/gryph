@@ -8,7 +8,7 @@ $digit = 0-9       -- digits
 $alpha = [a-zA-Z]  -- alphabetic characters
 $varname = [$alpha $digit \_]
 @boolvalues = true|false -- boolean values
-@type = int|double|char|string|bool
+@type = int|float|char|string|bool
 @logical_ops = \=\=|and|or|\!\=|xor|not|\>\=|\<\=
 @edges = \-\-|\-\>|\<\-
 
