@@ -8,17 +8,18 @@ if exists("b:current_syntax")
 endif
 
 " Keywords
-syn keyword gryphKeywords if else while for over where fun proc return
-syn keyword gryphKeywords int string float char bool
+syn keyword gryphKeywords if else while for over where fun proc return when or and not
+syn keyword gryphTypes int string float char bool
 syn keyword gryphTodo contained TODO FIXME NOTE
 
 " Matches
 
 " Integer with - + or nothing in front
+syn match gryphIdentifier '[a-zA-Z][a-zA-Z0-9\_]*[']*'
 syn match gryphNumber '\d\+'
-syn match gryphNumber '[-+]\d\+'
 syn match gryphBool '\(false\|true\)'
 syn match gryphComment "#.*$" contains=gryphTodo
+syn match gryphError '[a-zA-Z][a-zA-Z0-9\_]*[']\+[^\('| |;\)]\+' " improve regex!
 
 " Floating point number with decimal no E or e
 syn match gryphNumber '[-+]\d\+\.\d*'
@@ -33,18 +34,20 @@ syn match gryphNumber '\d[[:digit:]]*\.\d*[eE][\-+]\=\d\+'
 
 " Regions
 
-syn region gryphDescBlock start="{" end="}" fold transparent contains= gryphKeywords, gryphNumber, gryphBool, gryphString, gryphChar
-syn region gryphString start='"' end='"' contained
-syn region gryphChar start="'" end="'" contained
+syntax region gryphString start=/\v"/ skip=/\v\\./ end=/\v"/
+syntax region gryphChar start=/\v'/ skip=/\v\\./ end=/\v'/
 
 let b:current_syntax = "gph"
-hi def link gryphTodo       Todo
-hi def link gryphComment    Comment
-hi def link gryphKeywords   Statement
-hi def link gryphString     Constant
-hi def link gryphChar       Constant
-hi def link gryphNumber     Constant
-hi def link gryphBool       Constant
+hi def link gryphTodo           Todo
+hi def link gryphComment        Comment
+hi def link gryphKeywords       Statement
+hi def link gryphTypes          Type
+hi def link gryphString         String
+hi def link gryphChar           Character
+hi def link gryphNumber         Constant
+hi def link gryphBool           Constant
+hi def link gryphIdentifier     Identifier
+hi def link gryphError          Error
 
 
 

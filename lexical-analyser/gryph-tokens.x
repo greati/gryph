@@ -56,6 +56,8 @@ tokens :-
     \>                                  {\p s -> Greater p}
     \,                                  {\p s -> Comma p}
     \?                                  {\p s -> QuestionMark p}
+    \|                                  {\p s -> Pipe p}
+    \.                                  {\p s -> Dot p}
     .                                   {\p s -> Undefined}
 {
 
@@ -101,6 +103,8 @@ data Token =
     OpenSquare AlexPosn                 |
     CloseSquare AlexPosn                |
     QuestionMark AlexPosn               |
+    Pipe AlexPosn                       |
+    Dot AlexPosn                        |
     Undefined                           |
     Error 
     deriving (Eq, Show)
