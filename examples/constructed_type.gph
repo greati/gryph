@@ -1,0 +1,8 @@
+|Popo| {
+	lala : [int] = [2, 3];
+	ma : float = 1.2;
+}
+
+a1 : |Popo|;
+a2 : |Popo| = |ma=4.4, lala=[3,4]|;
+a2.lala = [4, 3];
