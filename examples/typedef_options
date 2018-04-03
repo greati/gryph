@@ -1,0 +1,7 @@
+let meingraph be <|Popo|, float>;
+call <|Popo|, float> meingraph;
+name <|Popo|, float> meingraph;
+meingraph as <|Popo|, float>;
+<|Popo|, float> is meingraph;
+I would like to please call the following type meingraph: <|Popo|, float>;
+
