@@ -32,6 +32,10 @@ fun fib (i : int) : int {
 
 #Acess
 
+dict|"b"|;
+l[0];
+z{a};
 g<4--3>;
 g<4>;
 t.4.;
+
