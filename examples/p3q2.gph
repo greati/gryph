@@ -9,8 +9,16 @@ l : [int] = [1,2,3];
 t : (int, float) = (1, 2.0);
 d : {string, int} = {"a" ? 2, "b" ? 3, "c" ? 4};
 g1 : <int> = <[6,6,6], a--b for a,b over [1,2,3],[1,2,3]>;
-g2 : <int, float> = a/2 where a--b+1 for a,b over [0,1],[1,2,3];
-g3 : <int> = a--a for a over [0, 1, 2] when a > c;
+g2 : <int, float> = <a/2 where a--b+1 for a,b over [0,1],[1,2,3]>;
+g3 : <int> = <a--a for a over [0, 1, 2] when a > c>;
+
+T {
+           a : int;
+  }
+
+z : T = {a=1};
+
+
 
 l : [int] = [i+j for i,j over [4,4,4],[3,3,3]];
 l' : [int] = [i+j for i,j over [4,4,4],[3,3,3]];
@@ -22,3 +30,8 @@ fun fib (i : int) : int {
         return fib(i - 1) + fib(i - 2);
 }
 
+#Acess
+
+g<4--3>;
+g<4>;
+t.4.;
