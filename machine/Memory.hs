@@ -1,17 +1,22 @@
 module Memory where
 
-data TypeName   = GInt | GFloat | GChar | GString | GBool | GList deriving (Show)
-data Value      = Integer Integer | Float Double | Char Char | String String | Bool Bool | List [Value] deriving (Show)
-type Cell       = (String, String, Value)
+import Data.Map (Map)
 
-type MemoryState = [Cell]
+{- Language values -}
+data Primitive          = Integer Integer | Float Double | Char Char | String String | Bool Bool deriving (Show)
+type List a             = [a]               
+type Pair a b           = (a, b)
+type Triple a b c       = (a, b, c)
+type Quadruple a b c d  = (a, b, c, d)
+type Dictionary a b     = Map a b
 
-getType :: Value -> TypeName
-getType x = case x of
-                Integer _ -> GInt
+{- Language memory implementation -}
+type Name   = String
+type Scope  = String
 
-insert :: Cell -> MemoryState -> MemoryState
-insert k' [] = [k']
-insert k'@(k,_,v) (x'@(x,y,z):xs)
-    | k == x   = (k,y,v):xs
-    | otherwise = x' : insert k' xs 
+type Identifier     = (Name, Scope)
+
+type PrimitiveCell  = ([Primitive])
+
+type Memory         = Map Identifier Cell
+
