@@ -36,9 +36,10 @@ tokens :-
     dfs                                 {\p s -> DFS p}
     bfs                                 {\p s -> BFS p}
     return                              {\p s -> Return p}
-    $alpha $varname*[\']+[^\']+         {\p s -> Error}           
+    $alpha $varname*[\']+[^\'$white]+         {\p s -> Error p}           
     $alpha $varname*[\']*               {\p s -> Var p s}
     @logical_ops                        {\p s -> LogicalOps p s}
+    \@                                  {\p s -> AtOp p}
     \%                                  {\p s -> ModulusOp p}
     \=                                  {\p s -> AssignmentOp p}
     \+                                  {\p s -> PlusOp p}
@@ -86,6 +87,7 @@ data Token =
     LogicalOps AlexPosn String          |
     RangeOp AlexPosn                    |
     Type AlexPosn String                |
+    AtOp AlexPosn                       |
     ModulusOp AlexPosn                  |
     AssignmentOp AlexPosn               |
     PlusOp AlexPosn                     |
@@ -106,7 +108,7 @@ data Token =
     Pipe AlexPosn                       |
     Dot AlexPosn                        |
     Undefined                           |
-    Error 
+    Error AlexPosn
     deriving (Eq, Show)
 
 main = do
