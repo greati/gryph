@@ -1,5 +1,5 @@
-y=x+y;
+a : string;
 
-fun hello(x:int) {
-    return "hello!";
-}
+read a;
+
+print a;
