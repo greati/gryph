@@ -1,5 +1,7 @@
 {
-  module Lexer (main, Token(..), AlexPosn(..), alexScanTokens) where
+module Lexer (main, GphTokenPos(..), AlexPosn(..), alexScanTokens) where
+
+import GphTokens
 }
 
 %wrapper "posn"
@@ -15,105 +17,56 @@ $varname = [$alpha $digit \_]
 tokens :-
     $white+                             ;                           
     "#".*                               ;
-    ";"                                 {\p s -> SemiColon p s}
-    \'.\'                               {\p s -> CharLit p s}
-    \" [^\"]* \"                        {\p s -> StringLit p s}
-    $digit+\.$digit+                    {\p s -> FloatLit p s}
-    \.\.                                {\p s -> RangeOp p s}
-    $digit+                             {\p s -> IntLit p s}
-    @boolvalues                         {\p s -> BoolLit p s}
-    @edges                              {\p s -> EdgeSym p s}
-    @type                               {\p s -> Type p s}
-    if                                  {\p s -> If p s}
-    else                                {\p s -> Else p s}
-    for                                 {\p s -> For p s}
-    while                               {\p s -> While p s}
-    where                               {\p s -> Where p s}
-    when                                {\p s -> When p s}
-    over                                {\p s -> Over p s}
-    fun                                 {\p s -> Function p s}
-    proc                                {\p s -> Procedure p s}
-    dfs                                 {\p s -> DFS p s}
-    bfs                                 {\p s -> BFS p s}
-    return                              {\p s -> Return p s}
-    print                               {\p s -> Print p s}
-    read                                {\p s -> Read p s}
-    $alpha $varname*[\']+[^\'$white]+   {\p s -> Error p s}           
-    $alpha $varname*[\']*               {\p s -> Var p s }
-    @logical_ops                        {\p s -> LogicalOps p s}
-    \@                                  {\p s -> AtOp p s}
-    \%                                  {\p s -> ModulusOp p s}
-    \=                                  {\p s -> AssignmentOp p s}
-    \+                                  {\p s -> PlusOp p s}
-    \-                                  {\p s -> MinusOp p s}
-    \*                                  {\p s -> TimesOp p s}
-    \/                                  {\p s -> DivisionOp p s}
-    \(                                  {\p s -> OpenParent p s}
-    \)                                  {\p s -> CloseParent p s}
-    \{                                  {\p s -> OpenCurly p s}
-    \}                                  {\p s -> CloseCurly p s}
-    \[                                  {\p s -> OpenSquare p s}
-    \]                                  {\p s -> CloseSquare p s}
-    \:                                  {\p s -> Colon p s}
-    \<                                  {\p s -> Less p s}
-    \>                                  {\p s -> Greater p s}
-    \,                                  {\p s -> Comma p s}
-    \?                                  {\p s -> QuestionMark p s}
-    \|                                  {\p s -> Pipe p s}
-    \.                                  {\p s -> Dot p s}
-    .                                   {\p s -> Undefined p s}
+    ";"                                 {\p s -> (GTokSemicolon, p)}
+    \'.\'                               {\p s -> (GTokCharLit s, p)}
+    \" [^\"]* \"                        {\p s -> (GTokStringLit s, p)}
+    $digit+\.$digit+                    {\p s -> (GTokFloatLit s, p)}
+    \.\.                                {\p s -> (GTokRangeOp, p)}
+    $digit+                             {\p s -> (GTokIntLit s, p)}
+    @boolvalues                         {\p s -> (GTokBoolLit s, p)}
+    @edges                              {\p s -> (GTokEdgeSym s, p)}
+    @type                               {\p s -> (GTokType s, p)}
+    if                                  {\p s -> (GTokIf, p)}
+    else                                {\p s -> (GTokElse, p)}
+    for                                 {\p s -> (GTokFor, p)}
+    while                               {\p s -> (GTokWhile, p)}
+    where                               {\p s -> (GTokWhere, p)}
+    when                                {\p s -> (GTokWhen, p)}
+    over                                {\p s -> (GTokOver, p)}
+    fun                                 {\p s -> (GTokFunction, p)}
+    proc                                {\p s -> (GTokProc, p)}
+    dfs                                 {\p s -> (GTokDFS, p)}
+    bfs                                 {\p s -> (GTokBFS, p)}
+    return                              {\p s -> (GTokReturn, p)}
+    print                               {\p s -> (GTokPrint, p)}
+    read                                {\p s -> (GTokRead, p)}
+    $alpha $varname*[\']+[^\'$white]+   {\p s -> (GTokError s, p)}           
+    $alpha $varname*[\']*               {\p s -> (GTokIdentifier s, p)}
+    @logical_ops                        {\p s -> (GTokLogicalOp s, p)}
+    \@                                  {\p s -> (GTokAt, p)}
+    \%                                  {\p s -> (GTokModulus, p)}
+    \=                                  {\p s -> (GTokAssignment, p)}
+    \+                                  {\p s -> (GTokPlus, p)}
+    \-                                  {\p s -> (GTokMinus, p)}
+    \*                                  {\p s -> (GTokTimes, p)}
+    \/                                  {\p s -> (GTokDivision, p)}
+    \(                                  {\p s -> (GTokLParen, p)}
+    \)                                  {\p s -> (GTokRParen, p)}
+    \{                                  {\p s -> (GTokLCurly, p)}
+    \}                                  {\p s -> (GTokRCurly, p)}
+    \[                                  {\p s -> (GTokLSquare, p)}
+    \]                                  {\p s -> (GTokRSquare, p)}
+    \:                                  {\p s -> (GTokColon, p)}
+    \<                                  {\p s -> (GTokLess, p)}
+    \>                                  {\p s -> (GTokGreater, p)}
+    \,                                  {\p s -> (GTokComma, p)}
+    \?                                  {\p s -> (GTokQuestion, p)}
+    \|                                  {\p s -> (GTokPipe, p)}
+    \.                                  {\p s -> (GTokDot, p)}
+    .                                   {\p s -> (GTokUndefined s, p)}
 {
 
-data Token = 
-    SemiColon AlexPosn String                 |
-    Var AlexPosn String                 |
-    Function AlexPosn String                  |
-    Procedure AlexPosn String                                   |
-    If AlexPosn  String                                         |
-    Else AlexPosn  String                                       |
-    For AlexPosn  String                                        |
-    While AlexPosn  String                                      |
-    Return AlexPosn  String                                     |
-    Read AlexPosn   String                                      |
-    Print AlexPosn  String                                      |
-    Where AlexPosn  String                                      |
-    When AlexPosn String                                        |
-    Over AlexPosn String                                        |
-    DFS AlexPosn String                                         |
-    BFS AlexPosn  String                                        |
-    Sym AlexPosn String                 |
-    IntLit AlexPosn String              |
-    FloatLit AlexPosn String            |
-    CharLit AlexPosn String             |
-    StringLit AlexPosn String           |
-    BoolLit AlexPosn String             |
-    EdgeSym AlexPosn String             |
-    LogicalOps AlexPosn String          |
-    RangeOp AlexPosn  String                                    |
-    Type AlexPosn String                |
-    AtOp AlexPosn  String                                       |
-    ModulusOp AlexPosn  String                                  |
-    AssignmentOp AlexPosn  String                               |
-    PlusOp AlexPosn  String                                     |
-    MinusOp AlexPosn  String                                    |
-    TimesOp AlexPosn  String                                    |
-    DivisionOp AlexPosn  String                                 |
-    Comma AlexPosn  String                                      |
-    Colon AlexPosn  String                                      |
-    Less AlexPosn  String                                       |
-    Greater AlexPosn  String                                    |
-    OpenParent AlexPosn  String                                 |
-    CloseParent AlexPosn  String                                |
-    OpenCurly AlexPosn  String                                  |
-    CloseCurly AlexPosn  String                                 |
-    OpenSquare AlexPosn  String                                 |
-    CloseSquare AlexPosn  String                                |
-    QuestionMark AlexPosn  String                               |
-    Pipe AlexPosn  String                                       |
-    Dot AlexPosn  String                                        |
-    Undefined  AlexPosn String                                          |
-    Error AlexPosn String                  
-    deriving (Eq, Show)
+type GphTokenPos = (GphToken, AlexPosn)
 
 main = do
     s <- getContents
