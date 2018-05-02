@@ -43,3 +43,12 @@ anyType = satisfy' p <?> "type"
         p (t,_) = case t of 
                     GTokType i -> Just i
                     _ -> Nothing    
+
+numberLit :: Monad m => ParsecT [GphTokenPos] u m String
+numberLit = satisfy' p <?> "number"
+    where 
+        p (t,_) = case t of
+                    GTokIntLit i -> Just i
+                    GTokFloatLit i -> Just i
+                    _ -> Nothing
+

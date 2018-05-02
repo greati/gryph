@@ -1,5 +1,7 @@
 a : string;
 
-read a;
+#read a;
 
-print a;
+#print a;
+
+a = 2;

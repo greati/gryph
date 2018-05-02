@@ -31,6 +31,7 @@ data GphToken =
     GTokModulus                     |
     GTokAssignment                  |
     GTokPlus                        |
+    GTokHat                         |
     GTokMinus                       |
     GTokTimes                       |  
     GTokDivision                    |

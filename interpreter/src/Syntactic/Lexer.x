@@ -44,6 +44,7 @@ tokens :-
     $alpha $varname*[\']*               {\p s -> (GTokIdentifier s, p)}
     @logical_ops                        {\p s -> (GTokLogicalOp s, p)}
     \@                                  {\p s -> (GTokAt, p)}
+    \^                                  {\p s -> (GTokHat, p)}
     \%                                  {\p s -> (GTokModulus, p)}
     \=                                  {\p s -> (GTokAssignment, p)}
     \+                                  {\p s -> (GTokPlus, p)}
