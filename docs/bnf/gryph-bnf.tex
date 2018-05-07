@@ -1,0 +1,29 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{backnaur}
+
+\title{BNF for the Gryph Programming Language}
+\author{Vitor Greati \and Artur Curinga \and Carlos Vieira \and Vinícius Campos}
+
+\begin{document}
+
+\maketitle
+
+\section{General structure}
+
+\section{Expressions}
+
+\begin{bnf*}
+    \bnfprod{expr}{\bnfpn{term} \bnfor \bnfpn{term}\bnfpn{expr-aux}}\\
+    \bnfprod{expr-aux}{\bnfpn{bin-op-p0}\bnfpn{term} \bnfor \bnfpn{bin-op-p0}\bnfpn{term}\bnfpn{expr-aux}}\\
+    \bnfprod{term}{\bnfpn{un-op} \bnfpn{term} \bnfor \bnfpn{un-op} \bnfpn{term} \bnfpn{term-aux} \bnfor \bnfpn{factor} \bnfor \bnfpn{factor} \bnfpn{term-aux}}\\
+    \bnfprod{term-aux}{\bnfpn{bin-op-p1}\bnfpn{factor} \bnfor \bnfpn{bin-op-p1}\bnfpn{factor}\bnfpn{term-aux}}\\
+    \bnfprod{un-op}{\bnfts{+} \bnfor \bnfts{-}}\\
+    \bnfprod{bin-op-p0}{\bnfts{+} \bnfor \bnfts{-}}\\
+    \bnfprod{bin-op-p1}{\bnfts{*} \bnfor \bnfts{/} \bnfor \bnfts{\%} \bnfor \bnfts{\^}}\\
+    \bnfprod{factor}{\bnfts{(} \bnfsp \bnfpn{expr} \bnfsp \bnfts{)} \bnfor \bnfpn{ident} \bnfor \bnfpn{int-lit} \bnfor \bnfpn{float-lit} }
+\end{bnf*}
+
+
+\end{document}

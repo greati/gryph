@@ -1,7 +1,2 @@
-a : string;
-
-read a;
-
-print a;
-
-a = (1 + 2);
+a:string;
+a = 1+1;
