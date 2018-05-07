@@ -19,11 +19,11 @@ gryphParser =
 stmt :: GenParser GphTokenPos st Stmt
 stmt = readStmt
     <|> printStmt
-    <|> try(attrStmt)
-    <|> try(declStmt)
+    <|> attrStmt
+    <|> declStmt
 
 attrStmt :: GenParser GphTokenPos st Stmt
-attrStmt = do
+attrStmt = try $ do
                 i <- anyIdent
                 (tok GTokAssignment)
                 v <- arithExpr
@@ -45,7 +45,7 @@ printStmt = do
                 return (PrintStmt i) 
 
 declStmt :: GenParser GphTokenPos st Stmt
-declStmt = do
+declStmt = try $ do
                 i <- anyIdent
                 (tok GTokColon)
                 t <- anyType
@@ -59,23 +59,25 @@ data ArithExpr = ArithUnExpr ArithUnOp ArithExpr | ArithBinExpr ArithBinOp Arith
 
 
 arithExpr :: GenParser GphTokenPos st ArithExpr
-arithExpr = do 
-                try(termArithExpr)
+arithExpr = do
+                try $ do
+                    t <- termArithExpr
+                    arithExprAux t
             <|>
-            do
-                t <- termArithExpr
-                (arithExprAux t)
+            do 
+                termArithExpr
+
 
 arithExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
 arithExprAux t = do
                     (tok GTokPlus)
                     f <- termArithExpr
-                    arithExprAux (ArithBinExpr PlusBinOp t f)
+                    return (ArithBinExpr PlusBinOp t f)
                 <|>
                 do
                     (tok GTokPlus)
                     f <- termArithExpr
-                    return (ArithBinExpr PlusBinOp t f)
+                    arithExprAux (ArithBinExpr PlusBinOp t f)
                 <|>
                 do
                     (tok GTokMinus)
@@ -87,26 +89,12 @@ arithExprAux t = do
                     f <- termArithExpr
                     return (ArithBinExpr MinusBinOp t f)
                     
-{-
-arithExpr :: GenParser GphTokenPos st ArithExpr
-arithExpr = do 
-                e <- arithExpr
-                (tok GTokPlus)
-                t <- termArithExpr
-                return (ArithBinExpr PlusBinOp e t)
-            <|>
-            do
-                e <- arithExpr
-                (tok GTokMinus)
-                t <- termArithExpr
-                return (ArithBinExpr MinusBinOp e t)
-            <|>
-            do
-                termArithExpr
--}                
 
 termArithExpr :: GenParser GphTokenPos st ArithExpr
-termArithExpr = do
+termArithExpr = do  
+                    factorArithExpr
+                <|>
+                do
                     (tok GTokMinus)
                     t <- termArithExpr
                     return (ArithUnExpr MinusUnOp t)
@@ -115,9 +103,6 @@ termArithExpr = do
                     (tok GTokMinus)
                     t <- termArithExpr
                     termArithExprAux t
-                <|>
-                do  
-                    factorArithExpr
                 <|>
                 do
                     f <- factorArithExpr
@@ -164,56 +149,20 @@ termArithExprAux t = do
                         f <- factorArithExpr
                         termArithExprAux (ArithBinExpr ExpBinOp t f)
                         
-{-
-termArithExpr :: GenParser GphTokenPos st ArithExpr
-termArithExpr = do
-                    (tok GTokMinus)
-                    t <- termArithExpr
-                    return (ArithUnExpr MinusUnOp t)
-                <|>
-                do
-                    t <- termArithExpr
-                    (tok GTokModulus)
-                    f <- factorArithExpr
-                    return (ArithBinExpr PlusBinOp t f)
-                <|>
-                do
-                    t <- termArithExpr
-                    (tok GTokTimes)
-                    f <- factorArithExpr
-                    return (ArithBinExpr TimesBinOp t f)
-                <|>
-                do
-                    t <- termArithExpr
-                    (tok GTokDivision)
-                    f <- factorArithExpr
-                    return (ArithBinExpr DivBinOp t f)
-                <|>
-                do
-                    t <- termArithExpr
-                    (tok GTokHat)
-                    f <- factorArithExpr
-                    return (ArithBinExpr ExpBinOp t f)
-                <|>
-                do
-                    factorArithExpr
-  -}                  
-
 factorArithExpr :: GenParser GphTokenPos st ArithExpr
-factorArithExpr = do
-                    (tok GTokLParen)
-                    e <- arithExpr
-                    (tok GTokRParen)
-                    return e 
-                  <|> 
-                  do 
+factorArithExpr = do 
                     n <- (numberLit)
                     return (ArithTerm n)
                   <|>
                   do 
                     i <- anyIdent
                     return (ArithTerm i)
-
+                  <|>
+                  do
+                    (tok GTokLParen)
+                    e <- arithExpr
+                    (tok GTokRParen)
+                    return e 
 
 parseFile :: String -> IO [Stmt]
 parseFile file = 
