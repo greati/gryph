@@ -1,0 +1,113 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{backnaur}
+\usepackage[margin=2cm]{geometry}
+
+\title{BNF for the Gryph Programming Language}
+\author{Vitor Greati \and Artur Curinga \and Carlos Vieira \and Vinícius Campos}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{General structure}
+
+
+    \subsection{Program}
+    \begin{bnf*}
+        \bnfprod{program}{\bnfpn{program-unit} \bnfor \bnfpn{program-unit}\bnfpn{program}}\\
+        \bnfprod{program-unit}{\bnfpn{stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{subprog-decl}}
+    \end{bnf*}
+
+    \subsection{Statements}
+    \begin{bnf*}
+        \bnfprod{stmt-list}{\bnfpn{stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{stmt}\bnfsp\bnfts{;}\bnfsp\bnfpn{stmt-list}}\\
+        \bnfprod{stmt}{\bnfpn{read-stmt} \bnfor \bnfpn{print-stmt} \bnfor \bnfpn{var-decl-stmt} }
+    \end{bnf*}
+
+        \subsubsection{IO}
+        \begin{bnf*}
+            \bnfprod{read-stmt}{\bnfts{read} \bnfsp \bnfpn{ident}}\\
+            \bnfprod{write-stmt}{\bnfts{print} \bnfsp \bnfpn{ident} \bnfor \bnfts{print} \bnfsp \bnfpn{string-lit}}\\
+        \end{bnf*}
+
+        \subsubsection{Variables}
+        \begin{bnf*}
+            \bnfprod{ident-begin-stmt}{\bnfpn{ident-list}\bnfpn{ident-list-post}}\\
+            \bnfprod{ident-list-post}{ \bnfts{:} \bnfpn{type} \bnfpn{var-decl-stmt} \bnfor \bnfpn{var-attr-stmt}}\\
+            \bnfprod{var-decl-stmt}{\bnfes \bnfor \bnfpn{var-attr-stmt}}\\
+            \bnfprod{var-attr-stmt}{\bnfts{=} \bnfpn{expr-list}}\\
+        \end{bnf*}
+
+    \subsection{Subprograms}
+        \subsubsection{Declaration}
+        \subsubsection{Call}
+            \begin{bnf*}
+                \bnfprod{subprog-call}{\bnfpn{ident}\bnfts{(}\bnfpn{expr-list}\bnfts{)}}
+            \end{bnf*}
+
+
+\section{Types}
+    \begin{bnf*}
+        \bnfprod{type-list}{\bnfpn{type}\bnfts{,}\bnfpn{type-list} \bnfor \bnfpn{type}}\\
+        \bnfprod{type}{\bnfpn{native-type} \bnfor \bnfpn{user-type}}\\
+        \bnfprod{native-type}{\bnfpn{primitive-type} \bnfor \bnfpn{composite-type}}\\
+        \bnfprod{primitive-type}{\bnfts{int} \bnfor \bnfts{float} \bnfor \bnfts{char} \bnfor \bnfts{string}}\\
+        \bnfprod{composite-type}{\bnfts{[} \bnfpn{type} \bnfts{]} \bnfor \bnfts{$\mid$} \bnfpn{type} \bnfts{$\mid$} 
+        \bnfor \bnfts{(} \bnfpn{type} \bnfts{,} \bnfpn{type-list} \bnfts{)} \bnfor \bnfpn{graph-type}}\\
+        \bnfprod{graph-type}{\bnfts{$<$} \bnfpn{type} \bnfts{$>$} \bnfor \bnfts{$<$} \bnfpn{type} \bnfts{,} \bnfpn{type} \bnfts{$>$}}\\
+        \bnfprod{user-type}{\bnfpn{upper-letter}\bnfpn{alpha-num-list}}\\
+    \end{bnf*}
+
+    \paragraph{Observations}
+    \begin{itemize}
+        \item The maximum size of tuples depends on the language implementation, though, in the BNF description
+            above, it may assume any value.
+    \end{itemize}
+
+\section{Expressions}
+
+    \subsection{Any expression}
+        \begin{bnf*}
+            \bnfprod{any-expr}{\bnfpn{rel-expr} \bnfor \bnfpn{bool-expr} \bnfor \bnfpn{expr}}
+        \end{bnf*}
+
+    \subsection{Relational expressions}
+        \begin{bnf*}
+            \bnfprod{rel-expr}{\bnfpn{rel-term} \bnfor \bnfpn{rel-term}\bnfpn{rel-expr-aux}}\\
+            \bnfprod{rel-expr-aux}{ \bnfpn{rel-op}\bnfpn{rel-term} \bnfor \bnfpn{rel-op}\bnfpn{rel-term}\bnfpn{rel-expr-aux}}\\
+            \bnfprod{rel-op}{\bnfts{$>$} \bnfor \bnfts{$<$} \bnfor \bnfts{$<=$} \bnfor \bnfts{$>=$} \bnfor \bnfts{$==$} \bnfor \bnfts{$!=$}}\\
+            \bnfprod{rel-term}{\bnfpn{any-expr}}\\
+        \end{bnf*}
+
+    \subsection{Boolean expressions}
+        \begin{bnf*}
+            \bnfprod{b-expr}{\bnfpn{b-term} \bnfor \bnfpn{b-term}\bnfpn{b-expr-aux}}\\
+            \bnfprod{b-expr-aux}{\bnfpn{b-bin-op-p0}\bnfpn{b-term} \bnfor \bnfpn{b-bin-op-p0}\bnfpn{b-term}\bnfpn{b-expr-aux}}\\
+            \bnfprod{b-term}{\bnfpn{b-un-op} \bnfpn{b-term} \bnfor \bnfpn{b-un-op} \bnfpn{b-term} \bnfpn{b-term-aux} \bnfor \bnfpn{b-factor} \bnfor \bnfpn{b-factor} \bnfpn{b-term-aux}}\\
+            \bnfprod{b-term-aux}{\bnfpn{b-bin-op-p1}\bnfpn{b-factor} \bnfor \bnfpn{b-bin-op-p1}\bnfpn{b-factor}\bnfpn{b-term-aux}}\\
+            \bnfprod{b-un-op}{\bnfts{not}}\\
+            \bnfprod{b-bin-op-p0}{\bnfts{or} \bnfor \bnfts{xor}}\\
+            \bnfprod{b-bin-op-p1}{\bnfts{and}}\\
+            \bnfprod{b-factor}{\bnfts{(} \bnfsp \bnfpn{b-expr} \bnfsp \bnfts{)} \bnfor \bnfts{true} \bnfor \bnfts{false} \bnfor \bnfpn{rel-expr}}
+        \end{bnf*}
+
+    \subsection{Expressions with numbers, lists and strings}
+
+    \begin{bnf*}
+        \bnfprod{expr}{\bnfpn{term} \bnfor \bnfpn{term}\bnfpn{expr-aux}}\\
+        \bnfprod{expr-aux}{\bnfpn{bin-op-p0}\bnfpn{term} \bnfor \bnfpn{bin-op-p0}\bnfpn{term}\bnfpn{expr-aux}}\\
+        \bnfprod{term}{\bnfpn{un-op} \bnfpn{term} \bnfor \bnfpn{un-op} \bnfpn{term} \bnfpn{term-aux} \bnfor \bnfpn{factor} \bnfor \bnfpn{factor} \bnfpn{term-aux}}\\
+        \bnfprod{term-aux}{\bnfpn{bin-op-p1}\bnfpn{factor} \bnfor \bnfpn{bin-op-p1}\bnfpn{factor}\bnfpn{term-aux}}\\
+        \bnfprod{un-op}{\bnfts{+} \bnfor \bnfts{-}}\\
+        \bnfprod{bin-op-p0}{\bnfts{+} \bnfor \bnfts{-}}\\
+        \bnfprod{bin-op-p1}{\bnfts{*} \bnfor \bnfts{/} \bnfor \bnfts{\%} \bnfor \bnfts{\^} \bnfor \bnfts{++} \bnfor \bnfts{**}}\\
+        \bnfprod{factor}{\bnfts{(} \bnfsp \bnfpn{expr} \bnfsp \bnfts{)} \bnfor \bnfpn{ident} \bnfor \bnfpn{int-lit} \bnfor \bnfpn{float-lit}
+        \bnfor \bnfpn{list-lit} \bnfor \bnfpn{subprog-call} \bnfor \bnfpn{string-lit} }
+    \end{bnf*}
+
+
+\end{document}

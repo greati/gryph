@@ -1,5 +1,21 @@
-y=x+y;
+a : string;
 
-fun hello(x:int) {
-    return "hello!";
-}
+read a;
+
+print a;
+print "oaisoias";
+
+a, b : int = 1/2, 3;
+a, b : int;
+b, k, f : float = 1, 2, 3;
+c = 2-2-2-2-2+2-2;
+a = -1;
+b = -(2*2 / 2 + 2 - 1);
+a = 2+2-1;
+c=2;
+a = 2++2;
+a = "oi"++2;
+d = +2;
+a = b+c+soma(j,c);
+
+

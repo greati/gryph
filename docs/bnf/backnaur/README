@@ -1,0 +1,29 @@
+The backnaur package typesets Backus-Naur Form (BNF) 
+definitions. It prints formatted lists of productions, 
+with numbers if required. It can also print in line BNF 
+expressions using math mode.
+
+To install the package, run LaTeX on the installation script
+backnaur.ins and follow the instructions provided by the script
+itself.
+
+Run LaTeX on backnaur.dtx to get the package's documentation. 
+Comment out this files 'OnlyDescription' line to include the
+implementation documentation.
+
+Copyright (C) 2012 by Adrian P Robson
+    adrian.robson@nepsweb.co.uk
+
+This work may be distributed and/or modified under the
+conditions of the LaTeX Project Public License, either 
+version 1.3c of this license or (at your option) any later
+version. The latest version of this license is in
+   http://www.latex-project.org/lppl.txt
+
+This work has the LPPL maintenance status `maintained'.
+The Current Maintainer of this work is Adrian Robson.
+
+This work consists of the files backnaur.dtx and 
+                                backnaur.ins
+and the derived files           backnaur.sty and 
+                                backnaur.pdf
