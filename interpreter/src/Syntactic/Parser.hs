@@ -7,7 +7,7 @@ import GphTokens
 
 type Identifier = String
 type Type = String
-data Stmt = ReadStmt Identifier | PrintStmt Identifier | DeclStmt Identifier Type | AttrStmt Identifier Value deriving (Show, Eq)
+data Stmt = ReadStmt Identifier | PrintStmt Identifier | DeclStmt [Identifier] Type [Value] | AttrStmt [Identifier] [Value] deriving (Show, Eq)
 data Value = AritValue ArithExpr deriving (Show, Eq)
 
 gryphParser :: GenParser GphTokenPos st [Stmt]
@@ -22,23 +22,31 @@ stmt = readStmt
 
 startIdentStmt :: GenParser GphTokenPos st Stmt
 startIdentStmt = do
-                    i <- anyIdent
+                    i <- identList
                     do
                         attrStmt i <|> declStmt i
 
-attrStmt :: Identifier -> GenParser GphTokenPos st Stmt
-attrStmt i = do 
+attrStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
+attrStmt is = do 
                 (tok GTokAssignment)
-                v <- arithExpr
+                vs <- arithExprList
                 (tok GTokSemicolon)
-                return (AttrStmt i (AritValue v))
+                return (AttrStmt is (map AritValue vs))
 
-declStmt :: Identifier -> GenParser GphTokenPos st Stmt
-declStmt i = do
+declStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
+declStmt is = do
                 (tok GTokColon)
                 t <- anyType
-                (tok GTokSemicolon)
-                return (DeclStmt i t)
+                do
+                    (tok GTokSemicolon)
+                    return (DeclStmt is t [])
+                    <|>
+                    do
+                        (tok GTokAssignment)
+                        es <- arithExprList
+                        (tok GTokSemicolon)
+                        return (DeclStmt is t (map AritValue es))
+                    
 
 readStmt :: GenParser GphTokenPos st Stmt
 readStmt = do 
@@ -50,7 +58,8 @@ readStmt = do
 printStmt :: GenParser GphTokenPos st Stmt
 printStmt = do
                 (tok GTokPrint) 
-                i <- anyIdent
+                i <- do
+                        anyIdent <|> stringLit
                 (tok GTokSemicolon)
                 return (PrintStmt i) 
 
@@ -58,7 +67,32 @@ printStmt = do
 data ArithUnOp = MinusUnOp | PlusUnOp deriving (Show, Eq)
 data ArithBinOp = MinusBinOp | PlusBinOp | TimesBinOp | DivBinOp | ModBinOp | ExpBinOp deriving (Show, Eq)
 data ArithExpr = ArithUnExpr ArithUnOp ArithExpr | ArithBinExpr ArithBinOp ArithExpr ArithExpr | ArithTerm String deriving (Show, Eq)
+data IdentList = IdentList [Identifier]
 
+{- Identifier lists.
+ -
+ -}
+identList :: GenParser GphTokenPos st [Identifier]
+identList = do
+                i <- anyIdent
+                do
+                    (tok GTokComma)
+                    next <- identList
+                    return (i : next)
+                    <|> return [i]
+
+arithExprList :: GenParser GphTokenPos st [ArithExpr]
+arithExprList = do
+                    e <- arithExpr
+                    do
+                        (tok GTokComma)
+                        next <- arithExprList
+                        return (e:next)
+                        <|> return [e]
+
+{- Arithmetic expressions parser.
+ - 
+ - -}
 
 arithExpr :: GenParser GphTokenPos st ArithExpr
 arithExpr = do

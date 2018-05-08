@@ -51,4 +51,10 @@ numberLit = satisfy' p <?> "number"
                     GTokIntLit i -> Just i
                     GTokFloatLit i -> Just i
                     _ -> Nothing
+stringLit :: Monad m => ParsecT [GphTokenPos] u m String
+stringLit = satisfy' p <?> "string"
+    where 
+        p (t,_) = case t of
+                    GTokStringLit i -> Just i
+                    _ -> Nothing
 
