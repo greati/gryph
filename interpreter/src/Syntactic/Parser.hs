@@ -55,7 +55,7 @@ printStmt = do
                 return (PrintStmt i) 
 
 
-data ArithUnOp = MinusUnOp deriving (Show, Eq)
+data ArithUnOp = MinusUnOp | PlusUnOp deriving (Show, Eq)
 data ArithBinOp = MinusBinOp | PlusBinOp | TimesBinOp | DivBinOp | ModBinOp | ExpBinOp deriving (Show, Eq)
 data ArithExpr = ArithUnExpr ArithUnOp ArithExpr | ArithBinExpr ArithBinOp ArithExpr ArithExpr | ArithTerm String deriving (Show, Eq)
 
@@ -65,6 +65,11 @@ arithExpr = do
                 t <- termArithExpr
                 do
                     arithExprAux t <|> return t
+
+opUnary :: GenParser GphTokenPos st ArithUnOp
+opUnary = do (tok GTokPlus) >> return PlusUnOp
+        <|>
+        do (tok GTokMinus) >> return MinusUnOp
 
 opZero :: GenParser GphTokenPos st ArithBinOp
 opZero = do (tok GTokPlus) >> return PlusBinOp 
@@ -81,11 +86,11 @@ arithExprAux t = do
 
 termArithExpr :: GenParser GphTokenPos st ArithExpr
 termArithExpr = do 
-                    (tok GTokMinus)
+                    op <- opUnary
                     t <- termArithExpr
                     do
                         termArithExprAux t
-                        <|> return (ArithUnExpr MinusUnOp t)
+                        <|> return (ArithUnExpr op t)
                 <|>
                 do
                     f <- factorArithExpr
