@@ -1,14 +1,12 @@
-module Parsing.Parser where
+module Syntactic.Parser where
 
-import Lexer
+import Syntactic.Lexer
 import Text.ParserCombinators.Parsec
-import GTok
-import GphTokens
-
-type Identifier = String
-type Type = String
-data Stmt = ReadStmt Identifier | PrintStmt Identifier | DeclStmt [Identifier] Type [Value] | AttrStmt [Identifier] [Value] deriving (Show, Eq)
-data Value = AritValue ArithExpr deriving (Show, Eq)
+import Syntactic.GTok
+import Syntactic.GphTokens
+import Execution.Memory
+import Syntactic.Values
+import Syntactic.Syntax
 
 gryphParser :: GenParser GphTokenPos st [Stmt]
 gryphParser = 
@@ -18,10 +16,10 @@ gryphParser =
 stmt :: GenParser GphTokenPos st Stmt
 stmt = readStmt
     <|> printStmt
-    <|> startIdentStmt
+    <|> startIdentListStmt
 
-startIdentStmt :: GenParser GphTokenPos st Stmt
-startIdentStmt = do
+startIdentListStmt :: GenParser GphTokenPos st Stmt
+startIdentListStmt = do
                     i <- identList
                     do
                         attrStmt i <|> declStmt i
@@ -31,7 +29,7 @@ attrStmt is = do
                 (tok GTokAssignment)
                 vs <- arithExprList
                 (tok GTokSemicolon)
-                return (AttrStmt is (map AritValue vs))
+                return (AttrStmt is vs)
 
 declStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
 declStmt is = do
@@ -45,7 +43,7 @@ declStmt is = do
                         (tok GTokAssignment)
                         es <- arithExprList
                         (tok GTokSemicolon)
-                        return (DeclStmt is t (map AritValue es))
+                        return (DeclStmt is t es)
                     
 
 readStmt :: GenParser GphTokenPos st Stmt
@@ -58,18 +56,39 @@ readStmt = do
 printStmt :: GenParser GphTokenPos st Stmt
 printStmt = do
                 (tok GTokPrint) 
-                i <- do
-                        anyIdent <|> stringLit
-                (tok GTokSemicolon)
-                return (PrintStmt i) 
+                do
+                    do
+                        i <- anyIdent 
+                        (tok GTokSemicolon)
+                        return (PrintStmt (IdTerm i)) 
+                    <|>
+                    do
+                        i <- stringLit
+                        (tok GTokSemicolon)
+                        return (PrintStmt (LitTerm i)) 
 
+startIdent :: GenParser GphTokenPos st ArithExpr 
+startIdent = do
+                i <- anyIdent
+                do
+                    do
+                        s <- subprogCall i
+                        return (ArithTerm (SubcallTerm s))
+                    <|> 
+                    return (ArithTerm (IdTerm i))
 
-data ArithUnOp = MinusUnOp | PlusUnOp deriving (Show, Eq)
-data ArithBinOp = MinusBinOp | PlusBinOp | TimesBinOp | DivBinOp | ModBinOp | ExpBinOp deriving (Show, Eq)
-data ArithExpr = ArithUnExpr ArithUnOp ArithExpr | ArithBinExpr ArithBinOp ArithExpr ArithExpr | ArithTerm String deriving (Show, Eq)
-data IdentList = IdentList [Identifier]
+{- Subprogram calls.
+ -
+ - -}
+subprogCall :: Identifier -> GenParser GphTokenPos st SubprogCall
+subprogCall i = do
+                (tok GTokLParen)
+                es <- arithExprList -- change to anyExprList
+                (tok GTokRParen)
+                return (SubprogCall i es)
+                
 
-{- Identifier lists.
+{- Stmt lists.
  -
  -}
 identList :: GenParser GphTokenPos st [Identifier]
@@ -140,6 +159,10 @@ opOne = do (tok GTokModulus) >> return ModBinOp
         do (tok GTokTimes) >> return TimesBinOp
         <|>
         do (tok GTokHat) >> return ExpBinOp
+        <|>
+        do (tok GTokPlusPlus) >> return PlusPlusBinOp
+        <|>
+        do (tok GTokTimesTimes) >> return TimesTimesBinOp
             
 
 termArithExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
@@ -153,11 +176,14 @@ termArithExprAux t = do
 factorArithExpr :: GenParser GphTokenPos st ArithExpr
 factorArithExpr = do 
                     n <- (numberLit)
-                    return (ArithTerm n)
+                    return (ArithTerm (LitTerm n))
+                  <|>
+                  do
+                    startIdent
                   <|>
                   do 
-                    i <- anyIdent
-                    return (ArithTerm i)
+                    i <- (stringLit)
+                    return (ArithTerm (LitTerm i))
                   <|>
                   do
                     (tok GTokLParen)

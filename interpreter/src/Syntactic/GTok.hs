@@ -1,10 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module GTok where
+module Syntactic.GTok where
 
 
-import Lexer
-import GphTokens
+import Syntactic.Lexer
+import Syntactic.GphTokens
+import Data.Char (isUpper)
+import Syntactic.Values
+import Syntactic.Syntax
 
 import Text.Parsec hiding (satisfy, string)
 
@@ -30,11 +33,11 @@ tok t = satisfy (\(t', _) -> t' == t) <?> show t
 tok' :: (Stream [GphTokenPos] m GphTokenPos) => GphToken -> ParsecT [GphTokenPos] u m ()
 tok' p = tok p >> return ()
 
-anyIdent :: Monad m => ParsecT [GphTokenPos] u m String
+anyIdent :: Monad m => ParsecT [GphTokenPos] u m Identifier
 anyIdent = satisfy' p <?> "ident"
     where 
         p (t,_) = case t of 
-                    GTokIdentifier i -> Just i
+                    GTokIdentifier i -> Just (Ident i)
                     _ -> Nothing    
 
 anyType :: Monad m => ParsecT [GphTokenPos] u m String
@@ -42,19 +45,23 @@ anyType = satisfy' p <?> "type"
     where 
         p (t,_) = case t of 
                     GTokType i -> Just i
+                    GTokIdentifier is'@(i:is) -> 
+                        if isUpper i then Just is'
+                        else Nothing
                     _ -> Nothing    
 
-numberLit :: Monad m => ParsecT [GphTokenPos] u m String
+numberLit :: Monad m => ParsecT [GphTokenPos] u m Literal
 numberLit = satisfy' p <?> "number"
     where 
         p (t,_) = case t of
-                    GTokIntLit i -> Just i
-                    GTokFloatLit i -> Just i
+                    GTokIntLit i -> Just (Lit (Integer (read i)))
+                    GTokFloatLit i -> Just (Lit (Float (read i)))
                     _ -> Nothing
-stringLit :: Monad m => ParsecT [GphTokenPos] u m String
+
+stringLit :: Monad m => ParsecT [GphTokenPos] u m Literal
 stringLit = satisfy' p <?> "string"
     where 
         p (t,_) = case t of
-                    GTokStringLit i -> Just i
+                    GTokStringLit i -> Just (Lit (String i))
                     _ -> Nothing
 

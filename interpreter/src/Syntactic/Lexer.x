@@ -1,7 +1,7 @@
 {
-module Lexer (main, GphTokenPos(..), AlexPosn(..), alexScanTokens) where
+module Syntactic.Lexer (main, GphTokenPos(..), AlexPosn(..), alexScanTokens) where
 
-import GphTokens
+import Syntactic.GphTokens
 }
 
 %wrapper "posn"
@@ -46,6 +46,8 @@ tokens :-
     \@                                  {\p s -> (GTokAt, p)}
     \^                                  {\p s -> (GTokHat, p)}
     \%                                  {\p s -> (GTokModulus, p)}
+    \+\+                                {\p s -> (GTokPlusPlus, p)}
+    \*\*                                {\p s -> (GTokTimesTimes, p)}
     \=                                  {\p s -> (GTokAssignment, p)}
     \+                                  {\p s -> (GTokPlus, p)}
     \-                                  {\p s -> (GTokMinus, p)}

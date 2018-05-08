@@ -1,4 +1,4 @@
-module GphTokens where
+module Syntactic.GphTokens where
 
 {-| Tokens of the Gryph language -}
 data GphToken =
@@ -31,9 +31,11 @@ data GphToken =
     GTokModulus                     |
     GTokAssignment                  |
     GTokPlus                        |
+    GTokPlusPlus                    |
     GTokHat                         |
     GTokMinus                       |
     GTokTimes                       |  
+    GTokTimesTimes                  |  
     GTokDivision                    |
     GTokComma                       |
     GTokColon                       |

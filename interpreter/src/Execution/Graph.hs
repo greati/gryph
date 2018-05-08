@@ -1,4 +1,4 @@
-module Graph where
+module Execution.Graph where
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -26,7 +26,7 @@ instance (Show b, Show a) => Show (Edge a b) where
     show (Edge v1 v2 p) = show v1 ++ " -> " ++ show v2 ++ " [" ++ show p ++ "]"
 
 -- |Graph with vertices indexed by integers holding data of type a, and edges holding data of type b
-data Graph a b = Graph (S.Set (Vertex a)) (M.Map Int [Edge a b])
+data Graph a b = Graph (S.Set (Vertex a)) (M.Map Int [Edge a b]) deriving Eq
 
 instance (Show a, Show b) => Show (Graph a b) where
     show (Graph vs es) = show vs ++ "\n\n" ++ show es 
