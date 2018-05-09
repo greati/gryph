@@ -49,6 +49,12 @@
                 \bnfprod{subprog-call}{\bnfpn{ident}\bnfts{(}\bnfpn{expr-list}\bnfts{)}}
             \end{bnf*}
 
+\section{Control Structures}
+    \subsection{If\-else statements}
+        \begin{bnf*}
+        \bnfprod{if-stmt}{\bnfts{(}\bnfpn{b-expr}\bnfts{)}\bnfpn{block-or-stmt}}
+        %\bnfprod{if-else-stmt}{\bnfpn{}}
+        \end{bnf*}
 
 \section{Types}
     \begin{bnf*}
@@ -77,7 +83,7 @@
 
     \subsection{Relational expressions}
         \begin{bnf*}
-            \bnfprod{rel-expr}{\bnfpn{rel-term} \bnfor \bnfpn{rel-term}\bnfpn{rel-expr-aux}}\\
+            \bnfprod{rel-expr}{\bnfpn{rel-term}\bnfpn{rel-expr-aux}}\\
             \bnfprod{rel-expr-aux}{ \bnfpn{rel-op}\bnfpn{rel-term} \bnfor \bnfpn{rel-op}\bnfpn{rel-term}\bnfpn{rel-expr-aux}}\\
             \bnfprod{rel-op}{\bnfts{$>$} \bnfor \bnfts{$<$} \bnfor \bnfts{$<=$} \bnfor \bnfts{$>=$} \bnfor \bnfts{$==$} \bnfor \bnfts{$!=$}}\\
             \bnfprod{rel-term}{\bnfpn{any-expr}}\\
