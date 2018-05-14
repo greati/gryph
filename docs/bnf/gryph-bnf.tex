@@ -108,11 +108,13 @@
         \bnfprod{expr-aux}{\bnfpn{bin-op-p0}\bnfpn{term} \bnfor \bnfpn{bin-op-p0}\bnfpn{term}\bnfpn{expr-aux}}\\
         \bnfprod{term}{\bnfpn{un-op} \bnfpn{term} \bnfor \bnfpn{un-op} \bnfpn{term} \bnfpn{term-aux} \bnfor \bnfpn{factor} \bnfor \bnfpn{factor} \bnfpn{term-aux}}\\
         \bnfprod{term-aux}{\bnfpn{bin-op-p1}\bnfpn{factor} \bnfor \bnfpn{bin-op-p1}\bnfpn{factor}\bnfpn{term-aux}}\\
+        \bnfprod{factor}{\bnfpn{literal} \bnfts{\^} \bnfpn{factor} \bnfor \bnfpn{literal}}\\
+        \bnfprod{literal}{\bnfpn{basis} \bnfor \bnfts{+}\bnfpn{basis} \bnfor \bnfts{-}\bnfpn{basis}}\\
+        \bnfprod{basis}{\bnfts{(} \bnfsp \bnfpn{expr} \bnfsp \bnfts{)} \bnfor \bnfpn{ident} \bnfor \bnfpn{int-lit} \bnfor \bnfpn{float-lit}
+                \bnfor \bnfpn{list-lit} \bnfor \bnfpn{subprog-call} \bnfor \bnfpn{string-lit}}\\
         \bnfprod{un-op}{\bnfts{+} \bnfor \bnfts{-}}\\
         \bnfprod{bin-op-p0}{\bnfts{+} \bnfor \bnfts{-}}\\
-        \bnfprod{bin-op-p1}{\bnfts{*} \bnfor \bnfts{/} \bnfor \bnfts{\%} \bnfor \bnfts{\^} \bnfor \bnfts{++} \bnfor \bnfts{**}}\\
-        \bnfprod{factor}{\bnfts{(} \bnfsp \bnfpn{expr} \bnfsp \bnfts{)} \bnfor \bnfpn{ident} \bnfor \bnfpn{int-lit} \bnfor \bnfpn{float-lit}
-        \bnfor \bnfpn{list-lit} \bnfor \bnfpn{subprog-call} \bnfor \bnfpn{string-lit} }
+        \bnfprod{bin-op-p1}{\bnfts{*} \bnfor \bnfts{/} \bnfor \bnfts{\%} \bnfor \bnfts{++} \bnfor \bnfts{**}}\\
     \end{bnf*}
 
 
