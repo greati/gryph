@@ -93,10 +93,11 @@
         \begin{bnf*}
             \bnfprod{b-expr}{\bnfpn{b-term} \bnfor \bnfpn{b-term}\bnfpn{b-expr-aux}}\\
             \bnfprod{b-expr-aux}{\bnfpn{b-bin-op-p0}\bnfpn{b-term} \bnfor \bnfpn{b-bin-op-p0}\bnfpn{b-term}\bnfpn{b-expr-aux}}\\
-            \bnfprod{b-term}{\bnfpn{b-un-op} \bnfpn{b-term} \bnfor \bnfpn{b-un-op} \bnfpn{b-term} \bnfpn{b-term-aux} \bnfor \bnfpn{b-factor} \bnfor \bnfpn{b-factor} \bnfpn{b-term-aux}}\\
+            \bnfprod{b-term}{\bnfpn{b-literal} \bnfor \bnfpn{b-literal} \bnfpn{b-term-aux}}\\
             \bnfprod{b-term-aux}{\bnfpn{b-bin-op-p1}\bnfpn{b-literal} \bnfor \bnfpn{b-bin-op-p1}\bnfpn{b-literal}\bnfpn{b-term-aux}}\\
             \bnfprod{b-literal}{\bnfpn{b-base} \bnfor \bnfpn{b-un-op}\bnfpn{b-base}}\\
-            \bnfprod{b-base}{\bnfts{(} \bnfsp \bnfpn{b-expr} \bnfsp \bnfts{)} \bnfor \bnfts{true} \bnfor \bnfts{false} \bnfor \bnfpn{rel-expr}}\\
+            \bnfprod{b-base}{\bnfts{(} \bnfsp \bnfpn{b-expr} \bnfsp \bnfts{)} \bnfor \bnfts{true} \bnfor \bnfts{false} \bnfor \bnfpn{rel-expr}
+                        \bnfor \bnfpn{ident} \bnfor \bnfpn{subprog-call}}\\
             \bnfprod{b-un-op}{\bnfts{not}}\\
             \bnfprod{b-bin-op-p0}{\bnfts{or} \bnfor \bnfts{xor}}\\
             \bnfprod{b-bin-op-p1}{\bnfts{and}}\\

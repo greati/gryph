@@ -14,7 +14,7 @@ data Stmt = ReadStmt Identifier |
             PrintStmt Term | 
             DeclStmt [Identifier] Type [ArithExpr] | 
             AttrStmt [Identifier] [ArithExpr] |
-            IfStmt RelExpr
+            IfStmt BoolExpr
             deriving (Show, Eq)
     
 
@@ -42,6 +42,7 @@ data RelOp =
             deriving (Show, Eq)
 
 data BoolUnOp = Not deriving (Show, Eq)
+
 data BoolBinOp = 
             And |
             Or |
@@ -49,7 +50,12 @@ data BoolBinOp =
             deriving (Show, Eq)
 
 data BoolExpr = BoolBinExpr BoolBinOp BoolExpr BoolExpr |
-                BoolUnExpr BoolUnOp BoolExpr 
+                BoolUnExpr BoolUnOp BoolExpr |
+                LitTrue |
+                LitFalse |
+                BoolRelExpr RelExpr |
+                BoolIdTerm Identifier |
+                BoolSubcallTerm SubprogCall
                 deriving (Show, Eq)
 
 data AnyExpr = RelExpr RelExpr | ArithExpr ArithExpr deriving (Show, Eq)

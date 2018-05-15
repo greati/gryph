@@ -85,7 +85,7 @@ ifStmt :: GenParser GphTokenPos st Stmt
 ifStmt = do
             (tok GTokIf)
             (tok GTokLParen)
-            e <- relExpr
+            e <- boolExpr
             (tok GTokRParen)
             return (IfStmt e)
 
@@ -140,10 +140,9 @@ relOp = do (tok GTokGreater) >> return Greater
         do (tok GTokNeq) >> return NotEquals
         
 
-relExpr :: GenParser GphTokenPos st RelExpr
-relExpr = do 
-                t <- relTerm
-                relExprAux t
+relExpr :: AnyExpr -> GenParser GphTokenPos st RelExpr
+relExpr e = do 
+                relExprAux e
 
 relExprAux :: AnyExpr -> GenParser GphTokenPos st RelExpr
 relExprAux r = do
@@ -164,14 +163,107 @@ relTerm = do
 {- Boolean expression parser.
  -
  --}
-boolUnOp :: GenParser GphTokenPos st BoolOp
-boolUnOp = undefined
+boolUnOp :: GenParser GphTokenPos st BoolUnOp
+boolUnOp = do (tok GTokNot) >> return (Not)
 
-boolOp0 :: GenParser GphTokenPos st BoolOp
-boolOp0 = undefined
+boolOp0 :: GenParser GphTokenPos st BoolBinOp
+boolOp0 = do (tok GTokOr) >> return (Or)
+          <|>
+          do (tok GTokXor) >> return (Xor)
 
-boolOp1 :: GenParser GphTokenPos st BoolOp
-boolOp1 = undefined
+boolOp1 :: GenParser GphTokenPos st BoolBinOp
+boolOp1 = do (tok GTokAnd) >> return (And)
+
+boolExpr :: GenParser GphTokenPos st BoolExpr
+boolExpr = do
+                t <- boolTerm
+                do
+                    do  
+                        boolExprAux t
+                    <|>
+                    do
+                        return t
+
+boolExprAux :: BoolExpr -> GenParser GphTokenPos st BoolExpr
+boolExprAux e = do
+                    op <- boolOp0
+                    t <- boolTerm
+                    do
+                        do
+                            boolExprAux (BoolBinExpr op e t)
+                        <|>
+                        do
+                            return (BoolBinExpr op e t)
+                        
+boolTerm :: GenParser GphTokenPos st BoolExpr
+boolTerm = do
+                l <- boolLiteral 
+                do
+                    do
+                        boolTermAux l
+                    <|>
+                    do
+                        return l
+
+boolTermAux :: BoolExpr -> GenParser GphTokenPos st BoolExpr
+boolTermAux e = do
+                    op <- boolOp1
+                    l <- boolLiteral
+                    do
+                        do
+                            boolTermAux (BoolBinExpr op e l)
+                        <|>
+                        do
+                            return (BoolBinExpr op e l)
+
+boolLiteral :: GenParser GphTokenPos st BoolExpr
+boolLiteral = do
+                    do
+                        op <- boolUnOp
+                        b <- boolBase
+                        return (BoolUnExpr op b)
+                    <|>
+                    do
+                        boolBase
+
+boolBase :: GenParser GphTokenPos st BoolExpr
+boolBase = do
+                do
+                    (tok GTokLParen)
+                    e <- boolExpr
+                    (tok GTokRParen)
+                    return e
+                <|>
+                do
+                    (tok GTokTrue)
+                    return LitTrue
+                <|>
+                do
+                    (tok GTokFalse)
+                    return LitFalse
+                <|> 
+                do
+                    e <- startIdent 
+                    do
+                        do 
+                            a <- arithExprAux e
+                            r <- relExpr (ArithExpr a)
+                            return (BoolRelExpr r)
+                        <|>
+                        do
+                            r <- relExpr (ArithExpr e)
+                            return (BoolRelExpr r)
+                        <|>
+                        do
+                            case e of
+                                ArithTerm (SubcallTerm s) -> return (BoolSubcallTerm s)
+                                ArithTerm (IdTerm i) -> return (BoolIdTerm i)
+                <|>
+                do
+                    e <- arithExpr
+                    r <- relExpr (ArithExpr e)
+                    return (BoolRelExpr r)
+
 
 {- Arithmetic expressions parser.
  - 
@@ -277,5 +369,6 @@ parseFile file =
        case parse gryphParser "" (alexScanTokens program) of
             Left e  -> print e >> fail "parse error"
             Right r -> return r
+
 
 
