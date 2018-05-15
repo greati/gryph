@@ -138,6 +138,14 @@ arithExprAux t = do
                         <|> return (ArithBinExpr op t f)
 
 termArithExpr :: GenParser GphTokenPos st ArithExpr
+termArithExpr = do
+                    f <- factorArithExpr
+                    do
+                        termArithExprAux f
+                        <|> return f
+
+{--
+termArithExpr :: GenParser GphTokenPos st ArithExpr
 termArithExpr = do 
                     op <- opUnary
                     t <- termArithExpr
@@ -150,7 +158,8 @@ termArithExpr = do
                     do
                         termArithExprAux f
                         <|> return f
- 
+--}
+--
 opOne :: GenParser GphTokenPos st ArithBinOp
 opOne = do (tok GTokModulus) >> return ModBinOp 
         <|> 
@@ -174,7 +183,30 @@ termArithExprAux t = do
                             <|> return (ArithBinExpr op t f)
  
 factorArithExpr :: GenParser GphTokenPos st ArithExpr
-factorArithExpr = do 
+factorArithExpr =   do
+                        l <- literalArithExpr
+                        do
+                            do
+                                (tok GTokHat)
+                                f <- factorArithExpr
+                                return (ArithBinExpr ExpBinOp l f)
+                            <|>
+                            do
+                                return l
+                        
+
+literalArithExpr :: GenParser GphTokenPos st ArithExpr
+literalArithExpr =  do
+                        basisArithExpr
+                    <|>
+                    do
+                        op <- opUnary
+                        b <- basisArithExpr
+                        return (ArithUnExpr op b)
+                        
+
+basisArithExpr :: GenParser GphTokenPos st ArithExpr
+basisArithExpr = do 
                     n <- (numberLit)
                     return (ArithTerm (LitTerm n))
                   <|>
