@@ -24,7 +24,12 @@ data GphToken =
     GTokStringLit String            |
     GTokBoolLit String              |
     GTokEdgeSym String              |
-    GTokLogicalOp String            |
+    GTokAnd                         |
+    GTokOr                          |
+    GTokXor                         |
+    GTokNot                         |
+    GTokTrue                        |
+    GTokFalse                       |
     GTokRangeOp                     |
     GTokType String                 |
     GTokAt                          |

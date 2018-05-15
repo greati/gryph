@@ -9,9 +9,7 @@ import Syntactic.GphTokens
 $digit = 0-9       -- digits
 $alpha = [a-zA-Z]  -- alphabetic characters
 $varname = [$alpha $digit \_]
-@boolvalues = true|false -- boolean values
 @type = int|float|char|string|bool
-@logical_ops = and|or|xor|not
 @edges = \-\-|\-\>|\<\-
 
 tokens :-
@@ -23,9 +21,14 @@ tokens :-
     $digit+\.$digit+                    {\p s -> (GTokFloatLit s, p)}
     \.\.                                {\p s -> (GTokRangeOp, p)}
     $digit+                             {\p s -> (GTokIntLit s, p)}
-    @boolvalues                         {\p s -> (GTokBoolLit s, p)}
     @edges                              {\p s -> (GTokEdgeSym s, p)}
     @type                               {\p s -> (GTokType s, p)}
+    true                                {\p s -> (GTokTrue, p)}
+    false                               {\p s -> (GTokFalse, p)}
+    and                                 {\p s -> (GTokAnd, p)}
+    or                                  {\p s -> (GTokOr, p)}
+    not                                 {\p s -> (GTokNot, p)}
+    xor                                 {\p s -> (GTokXor, p)}
     if                                  {\p s -> (GTokIf, p)}
     else                                {\p s -> (GTokElse, p)}
     for                                 {\p s -> (GTokFor, p)}
@@ -42,7 +45,6 @@ tokens :-
     read                                {\p s -> (GTokRead, p)}
     $alpha $varname*[\']+[^\'$white]+   {\p s -> (GTokError s, p)}           
     $alpha $varname*[\']*               {\p s -> (GTokIdentifier s, p)}
-    @logical_ops                        {\p s -> (GTokLogicalOp s, p)}
     \@                                  {\p s -> (GTokAt, p)}
     \^                                  {\p s -> (GTokHat, p)}
     \%                                  {\p s -> (GTokModulus, p)}
