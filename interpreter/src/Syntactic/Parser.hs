@@ -161,6 +161,18 @@ relTerm = do
             e <- arithExpr 
             return (ArithExpr e)
 
+{- Boolean expression parser.
+ -
+ --}
+boolUnOp :: GenParser GphTokenPos st BoolOp
+boolUnOp = undefined
+
+boolOp0 :: GenParser GphTokenPos st BoolOp
+boolOp0 = undefined
+
+boolOp1 :: GenParser GphTokenPos st BoolOp
+boolOp1 = undefined
+
 {- Arithmetic expressions parser.
  - 
  - -}

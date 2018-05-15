@@ -41,6 +41,17 @@ data RelOp =
             NotEquals 
             deriving (Show, Eq)
 
+data BoolUnOp = Not deriving (Show, Eq)
+data BoolBinOp = 
+            And |
+            Or |
+            Xor 
+            deriving (Show, Eq)
+
+data BoolExpr = BoolBinExpr BoolBinOp BoolExpr BoolExpr |
+                BoolUnExpr BoolUnOp BoolExpr 
+                deriving (Show, Eq)
+
 data AnyExpr = RelExpr RelExpr | ArithExpr ArithExpr deriving (Show, Eq)
 
 data RelExpr = BinRelExpr RelOp AnyExpr AnyExpr deriving (Show, Eq)
