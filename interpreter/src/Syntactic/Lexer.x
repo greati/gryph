@@ -11,7 +11,7 @@ $alpha = [a-zA-Z]  -- alphabetic characters
 $varname = [$alpha $digit \_]
 @boolvalues = true|false -- boolean values
 @type = int|float|char|string|bool
-@logical_ops = \=\=|and|or|\!\=|xor|not|\>\=|\<\=
+@logical_ops = and|or|xor|not
 @edges = \-\-|\-\>|\<\-
 
 tokens :-
@@ -48,6 +48,8 @@ tokens :-
     \%                                  {\p s -> (GTokModulus, p)}
     \+\+                                {\p s -> (GTokPlusPlus, p)}
     \*\*                                {\p s -> (GTokTimesTimes, p)}
+    \!\=                                {\p s -> (GTokNeq, p)}
+    \=\=                                {\p s -> (GTokEq, p)}
     \=                                  {\p s -> (GTokAssignment, p)}
     \+                                  {\p s -> (GTokPlus, p)}
     \-                                  {\p s -> (GTokMinus, p)}
@@ -60,7 +62,9 @@ tokens :-
     \[                                  {\p s -> (GTokLSquare, p)}
     \]                                  {\p s -> (GTokRSquare, p)}
     \:                                  {\p s -> (GTokColon, p)}
+    \<\=                                {\p s -> (GTokLessEq, p)}
     \<                                  {\p s -> (GTokLess, p)}
+    \>\=                                {\p s -> (GTokGreaterEq, p)}
     \>                                  {\p s -> (GTokGreater, p)}
     \,                                  {\p s -> (GTokComma, p)}
     \?                                  {\p s -> (GTokQuestion, p)}

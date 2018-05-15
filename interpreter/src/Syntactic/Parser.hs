@@ -17,6 +17,7 @@ stmt :: GenParser GphTokenPos st Stmt
 stmt = readStmt
     <|> printStmt
     <|> startIdentListStmt
+    <|> ifStmt
 
 startIdentListStmt :: GenParser GphTokenPos st Stmt
 startIdentListStmt = do
@@ -77,6 +78,18 @@ startIdent = do
                     <|> 
                     return (ArithTerm (IdTerm i))
 
+{- If stmt.
+ -
+ -}
+ifStmt :: GenParser GphTokenPos st Stmt
+ifStmt = do
+            (tok GTokIf)
+            (tok GTokLParen)
+            e <- relExpr
+            (tok GTokRParen)
+            return (IfStmt e)
+
+
 {- Subprogram calls.
  -
  - -}
@@ -108,6 +121,45 @@ arithExprList = do
                         next <- arithExprList
                         return (e:next)
                         <|> return [e]
+
+{--
+ - Relational expressions parser.
+ -
+ -}
+relOp :: GenParser GphTokenPos st RelOp
+relOp = do (tok GTokGreater) >> return Greater
+        <|>
+        do (tok GTokLess) >> return Less
+        <|>
+        do (tok GTokLessEq) >> return LessEq
+        <|> 
+        do (tok GTokGreaterEq) >> return GreaterEq
+        <|>
+        do (tok GTokEq) >> return Equals
+        <|>
+        do (tok GTokNeq) >> return NotEquals
+        
+
+relExpr :: GenParser GphTokenPos st RelExpr
+relExpr = do 
+                t <- relTerm
+                relExprAux t
+
+relExprAux :: AnyExpr -> GenParser GphTokenPos st RelExpr
+relExprAux r = do
+                op <- relOp
+                t <- relTerm
+                do
+                    do
+                        relExprAux (RelExpr (BinRelExpr op r t))
+                    <|>
+                    do
+                        return (BinRelExpr op r t)
+
+relTerm :: GenParser GphTokenPos st AnyExpr
+relTerm = do
+            e <- arithExpr 
+            return (ArithExpr e)
 
 {- Arithmetic expressions parser.
  - 
@@ -144,22 +196,6 @@ termArithExpr = do
                         termArithExprAux f
                         <|> return f
 
-{--
-termArithExpr :: GenParser GphTokenPos st ArithExpr
-termArithExpr = do 
-                    op <- opUnary
-                    t <- termArithExpr
-                    do
-                        termArithExprAux t
-                        <|> return (ArithUnExpr op t)
-                <|>
-                do
-                    f <- factorArithExpr
-                    do
-                        termArithExprAux f
-                        <|> return f
---}
---
 opOne :: GenParser GphTokenPos st ArithBinOp
 opOne = do (tok GTokModulus) >> return ModBinOp 
         <|> 

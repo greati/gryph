@@ -13,7 +13,10 @@ data SubprogCall = SubprogCall Identifier [ArithExpr] deriving(Show, Eq) -- chan
 data Stmt = ReadStmt Identifier | 
             PrintStmt Term | 
             DeclStmt [Identifier] Type [ArithExpr] | 
-            AttrStmt [Identifier] [ArithExpr] deriving (Show, Eq)
+            AttrStmt [Identifier] [ArithExpr] |
+            IfStmt RelExpr
+            deriving (Show, Eq)
+    
 
 data ArithUnOp =    MinusUnOp | 
                     PlusUnOp 
@@ -29,6 +32,18 @@ data ArithBinOp =   MinusBinOp |
                     TimesTimesBinOp 
                     deriving (Show, Eq)
 
+data RelOp = 
+            Greater |
+            Less |
+            GreaterEq|    
+            LessEq |
+            Equals |
+            NotEquals 
+            deriving (Show, Eq)
+
+data AnyExpr = RelExpr RelExpr | ArithExpr ArithExpr deriving (Show, Eq)
+
+data RelExpr = BinRelExpr RelOp AnyExpr AnyExpr deriving (Show, Eq)
 
 data Term = LitTerm Literal | 
             IdTerm Identifier |

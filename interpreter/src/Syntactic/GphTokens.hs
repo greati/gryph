@@ -39,8 +39,12 @@ data GphToken =
     GTokDivision                    |
     GTokComma                       |
     GTokColon                       |
+    GTokEq                          |
+    GTokNeq                         |
     GTokLess                        |
+    GTokLessEq                      |
     GTokGreater                     |
+    GTokGreaterEq                   |
     GTokLParen                      |
     GTokRParen                      |
     GTokLCurly                      |

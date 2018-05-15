@@ -106,7 +106,7 @@
     \begin{bnf*}
         \bnfprod{expr}{\bnfpn{term} \bnfor \bnfpn{term}\bnfpn{expr-aux}}\\
         \bnfprod{expr-aux}{\bnfpn{bin-op-p0}\bnfpn{term} \bnfor \bnfpn{bin-op-p0}\bnfpn{term}\bnfpn{expr-aux}}\\
-        \bnfprod{term}{\bnfpn{un-op} \bnfpn{term} \bnfor \bnfpn{un-op} \bnfpn{term} \bnfpn{term-aux} \bnfor \bnfpn{factor} \bnfor \bnfpn{factor} \bnfpn{term-aux}}\\
+        \bnfprod{term}{\bnfpn{factor} \bnfor \bnfpn{factor} \bnfpn{term-aux}}\\
         \bnfprod{term-aux}{\bnfpn{bin-op-p1}\bnfpn{factor} \bnfor \bnfpn{bin-op-p1}\bnfpn{factor}\bnfpn{term-aux}}\\
         \bnfprod{factor}{\bnfpn{literal} \bnfts{\^} \bnfpn{factor} \bnfor \bnfpn{literal}}\\
         \bnfprod{literal}{\bnfpn{basis} \bnfor \bnfts{+}\bnfpn{basis} \bnfor \bnfts{-}\bnfpn{basis}}\\
