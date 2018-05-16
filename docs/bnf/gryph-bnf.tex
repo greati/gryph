@@ -25,11 +25,8 @@
     \subsection{Statements}
     \begin{bnf*}
         \bnfprod{stmt-list}{\bnfpn{stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{stmt}\bnfsp\bnfts{;}\bnfsp\bnfpn{stmt-list}}\\
-        \bnfprod{matched-list}{\bnfpn{matched-stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{matched-stmt}\bnfsp\bnfts{;}\bnfsp\bnfpn{matched-list}}\\
-        \bnfprod{unmatched-list}{\bnfpn{unmatched-stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{unmatched-stmt}\bnfsp\bnfts{;}\bnfsp\bnfpn{unmatched-list}}\\
-        \bnfprod{stmt-block}{\bnfts{\{} \bnfsp \bnfpn{stmt-list} \bnfsp \bnfts{\}} \bnfor \bnfpn{stmt} \bnfsp \bnfts{;}}\\
-        \bnfprod{matched-block}{\bnfts{\{} \bnfsp \bnfpn{matched-list} \bnfsp \bnfts{\}} \bnfor \bnfpn{matched-stmt} \bnfsp \bnfts{;}}\\        
-        \bnfprod{unmatched-block}{\bnfts{\{} \bnfsp \bnfpn{unmatched-list} \bnfsp \bnfts{\}} \bnfor \bnfpn{unmatched-stmt} \bnfsp \bnfts{;}}\\
+        \bnfprod{stmt-block}{\bnfts{\{} \bnfsp \bnfpn{stmt-list} \bnfsp \bnfts{\}}}\\
+        \bnfprod{block-or-matched}{\bnfpn{stmt-block} \bnfor \bnfpn{matched-stmt}\bnfts{;}}\\
         \bnfprod{com-stmt}{\bnfpn{read-stmt} \bnfor \bnfpn{print-stmt} \bnfor \bnfpn{var-decl-stmt}}\\
         \bnfprod{stmt}{\bnfpn{matched-stmt} \bnfor \bnfpn{unmatched-stmt}}\\
         \bnfprod{matched-stmt}{\bnfpn{matched-if-else} \bnfor \bnfpn{com-stmt}}\\
@@ -60,10 +57,10 @@
 \section{Control Structures}
     \subsection{If-else statements}
         \begin{bnf*}
-        \bnfprod    {matched-if}{\bnfts{if} \bnfsp \bnfts{(}\bnfpn{b-exp}\bnfts{)} \bnfsp \bnfpn{matched-block}}\\
-        \bnfprod{matched-if-else}{\bnfpn{matched-if} \bnfsp \bnfts{else} \bnfsp \bnfpn{matched-block}}\\
-        \bnfprod{unmatched-if-else}{\bnfpn{matched-if} \bnfsp \bnfts{else} \bnfsp \bnfpn{unmatched-block}}\\
-        \bnfprod{if-stmt}{\bnfts{if} \bnfsp \bnfts{(}\bnfpn{b-exp}\bnfts{)} \bnfsp \bnfpn{stmt-block}}\\
+        \bnfprod{if-expr}{\bnfts{if} \bnfsp \bnfts{(}\bnfpn{b-exp}\bnfts{)}}\\
+        \bnfprod{if-stmt}{\bnfpn{if-expr} \bnfsp \bnfpn{stmt}\bnfts{;}}\\
+        \bnfprod{unmatched-if-else}{\bnfpn{if-expr} \bnfsp \bnfpn{matched-stmt}\bnfts{;} \bnfsp \bnfts{else} \bnfsp \bnfpn{unmatched-stmt}\bnfts{;}}\\
+        \bnfprod{matched-if-else}{\bnfpn{if-expr} \bnfsp \bnfpn{block-or-matched} \bnfsp \bnfts{else} \bnfsp \bnfpn{block-or-matched} \bnfor \bnfpn{if-expr} \bnfsp \bnfpn{stmt-block}}\\
         \end{bnf*}
 
 \section{Types}
