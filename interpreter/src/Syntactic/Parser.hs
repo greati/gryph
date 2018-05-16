@@ -140,9 +140,10 @@ relOp = do (tok GTokGreater) >> return Greater
         do (tok GTokNeq) >> return NotEquals
         
 
-relExpr :: AnyExpr -> GenParser GphTokenPos st RelExpr
-relExpr e = do 
-                relExprAux e
+relExpr :: GenParser GphTokenPos st RelExpr
+relExpr = do 
+                t <- relTerm
+                relExprAux t
 
 relExprAux :: AnyExpr -> GenParser GphTokenPos st RelExpr
 relExprAux r = do
@@ -157,8 +158,23 @@ relExprAux r = do
 
 relTerm :: GenParser GphTokenPos st AnyExpr
 relTerm = do
-            e <- arithExpr 
-            return (ArithExpr e)
+            do
+                (try $ do 
+                    e <- arithExpr 
+                    return (ArithExpr e))
+            <|>
+            do
+                (try $ do 
+                    e <- boolExpr
+                    return (BoolExpr e))
+            <|>
+            do
+                (tok GTokLParen)
+                r <- relExpr
+                (tok GTokRParen)
+                return (RelExpr r)
+                
+            
 
 {- Boolean expression parser.
  -
@@ -229,12 +245,6 @@ boolLiteral = do
 boolBase :: GenParser GphTokenPos st BoolExpr
 boolBase = do
                 do
-                    (tok GTokLParen)
-                    e <- boolExpr
-                    (tok GTokRParen)
-                    return e
-                <|>
-                do
                     (tok GTokTrue)
                     return LitTrue
                 <|>
@@ -247,11 +257,11 @@ boolBase = do
                     do
                         do 
                             a <- arithExprAux e
-                            r <- relExpr (ArithExpr a)
+                            r <- relExprAux (ArithExpr a)
                             return (BoolRelExpr r)
                         <|>
                         do
-                            r <- relExpr (ArithExpr e)
+                            r <- relExprAux (ArithExpr e)
                             return (BoolRelExpr r)
                         <|>
                         do
@@ -260,10 +270,25 @@ boolBase = do
                                 ArithTerm (IdTerm i) -> return (BoolIdTerm i)
                 <|>
                 do
-                    e <- arithExpr
-                    r <- relExpr (ArithExpr e)
-                    return (BoolRelExpr r)
+                    try $ do
+                        e <- arithExpr
+                        r <- relExprAux (ArithExpr e)
+                        return (BoolRelExpr r)
+                <|>
+{--
+                do
+                    try $ do
+                        e <- boolExpr
+                        r <- relExprAux (BoolExpr e)
+                        return (BoolRelExpr r)
 
+                <|>
+--}
+                do
+                    (tok GTokLParen)
+                    e <- boolExpr
+                    (tok GTokRParen)
+                    return e
 
 {- Arithmetic expressions parser.
  - 

@@ -1,4 +1,4 @@
-if (not (m + 2 == 2 and 2 < 2))
+if ((2<2)==true)
 
 #if (not 2==2 and b==2)
 

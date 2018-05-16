@@ -58,7 +58,7 @@ data BoolExpr = BoolBinExpr BoolBinOp BoolExpr BoolExpr |
                 BoolSubcallTerm SubprogCall
                 deriving (Show, Eq)
 
-data AnyExpr = RelExpr RelExpr | ArithExpr ArithExpr deriving (Show, Eq)
+data AnyExpr = RelExpr RelExpr | ArithExpr ArithExpr | BoolExpr BoolExpr deriving (Show, Eq)
 
 data RelExpr = BinRelExpr RelOp AnyExpr AnyExpr deriving (Show, Eq)
 
