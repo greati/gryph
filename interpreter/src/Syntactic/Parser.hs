@@ -164,10 +164,18 @@ relTerm = do
                     return (ArithExpr e))
             <|>
             do
+                (tok GTokTrue)
+                return (BoolExpr LitTrue)
+            <|>
+            do
+                (tok GTokFalse)
+                return (BoolExpr LitFalse)
+            <|>           
+{--            do
                 (try $ do 
                     e <- boolExpr
                     return (BoolExpr e))
-            <|>
+--}
             do
                 (tok GTokLParen)
                 r <- relExpr
@@ -252,13 +260,15 @@ boolBase = do
                     (tok GTokFalse)
                     return LitFalse
                 <|> 
+{--
                 do
                     e <- startIdent 
                     do
                         do 
-                            a <- arithExprAux e
-                            r <- relExprAux (ArithExpr a)
-                            return (BoolRelExpr r)
+                            try $ 
+                                a <- arithExprAux e
+                                r <- relExprAux (ArithExpr a)
+                                return (BoolRelExpr r)
                         <|>
                         do
                             r <- relExprAux (ArithExpr e)
@@ -269,21 +279,27 @@ boolBase = do
                                 ArithTerm (SubcallTerm s) -> return (BoolSubcallTerm s)
                                 ArithTerm (IdTerm i) -> return (BoolIdTerm i)
                 <|>
+--}
+                do
+                    try $
+                        do
+                            r <- relExpr
+                            return (BoolRelExpr r)
+{--
                 do
                     try $ do
                         e <- arithExpr
                         r <- relExprAux (ArithExpr e)
                         return (BoolRelExpr r)
                 <|>
-{--
                 do
                     try $ do
                         e <- boolExpr
                         r <- relExprAux (BoolExpr e)
                         return (BoolRelExpr r)
 
-                <|>
 --}
+                <|>
                 do
                     (tok GTokLParen)
                     e <- boolExpr

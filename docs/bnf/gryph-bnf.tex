@@ -86,7 +86,7 @@
             \bnfprod{rel-expr}{\bnfpn{rel-term}\bnfpn{rel-expr-aux}}\\
             \bnfprod{rel-expr-aux}{ \bnfpn{rel-op}\bnfpn{rel-term} \bnfor \bnfpn{rel-op}\bnfpn{rel-term}\bnfpn{rel-expr-aux}}\\
             \bnfprod{rel-op}{\bnfts{$>$} \bnfor \bnfts{$<$} \bnfor \bnfts{$<=$} \bnfor \bnfts{$>=$} \bnfor \bnfts{$==$} \bnfor \bnfts{$!=$}}\\
-            \bnfprod{rel-term}{\bnfpn{any-expr}}\\
+            \bnfprod{rel-term}{\bnfts{(}\bnfpn{rel-expr}\bnfts{)} \bnfor \bnfpn{bool-expr} \bnfor \bnfpn{expr}}\\
         \end{bnf*}
 
     \subsection{Boolean expressions}

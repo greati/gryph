@@ -1,4 +1,2 @@
-if ((2<2)==true)
-
-#if (not 2==2 and b==2)
-
+#a=k*2+1;
+if ((2>3 and 2<4) == true)
