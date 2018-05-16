@@ -25,7 +25,15 @@
     \subsection{Statements}
     \begin{bnf*}
         \bnfprod{stmt-list}{\bnfpn{stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{stmt}\bnfsp\bnfts{;}\bnfsp\bnfpn{stmt-list}}\\
-        \bnfprod{stmt}{\bnfpn{read-stmt} \bnfor \bnfpn{print-stmt} \bnfor \bnfpn{var-decl-stmt} }
+        \bnfprod{matched-list}{\bnfpn{matched-stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{matched-stmt}\bnfsp\bnfts{;}\bnfsp\bnfpn{matched-list}}\\
+        \bnfprod{unmatched-list}{\bnfpn{unmatched-stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{unmatched-stmt}\bnfsp\bnfts{;}\bnfsp\bnfpn{unmatched-list}}\\
+        \bnfprod{stmt-block}{\bnfts{\{} \bnfsp \bnfpn{stmt-list} \bnfsp \bnfts{\}} \bnfor \bnfpn{stmt} \bnfsp \bnfts{;}}\\
+        \bnfprod{matched-block}{\bnfts{\{} \bnfsp \bnfpn{matched-list} \bnfsp \bnfts{\}} \bnfor \bnfpn{matched-stmt} \bnfsp \bnfts{;}}\\        
+        \bnfprod{unmatched-block}{\bnfts{\{} \bnfsp \bnfpn{unmatched-list} \bnfsp \bnfts{\}} \bnfor \bnfpn{unmatched-stmt} \bnfsp \bnfts{;}}\\
+        \bnfprod{com-stmt}{\bnfpn{read-stmt} \bnfor \bnfpn{print-stmt} \bnfor \bnfpn{var-decl-stmt}}\\
+        \bnfprod{stmt}{\bnfpn{matched-stmt} \bnfor \bnfpn{unmatched-stmt}}\\
+        \bnfprod{matched-stmt}{\bnfpn{matched-if-else} \bnfor \bnfpn{com-stmt}}\\
+        \bnfprod{unmatched-stmt}{\bnfpn{if-stmt} \bnfor \bnfpn{unmatched-if-else}}\\
     \end{bnf*}
 
         \subsubsection{IO}
@@ -50,10 +58,12 @@
             \end{bnf*}
 
 \section{Control Structures}
-    \subsection{If\-else statements}
+    \subsection{If-else statements}
         \begin{bnf*}
-        \bnfprod{if-stmt}{\bnfts{(}\bnfpn{b-expr}\bnfts{)}\bnfpn{block-or-stmt}}
-        %\bnfprod{if-else-stmt}{\bnfpn{}}
+        \bnfprod    {matched-if}{\bnfts{if} \bnfsp \bnfts{(}\bnfpn{b-exp}\bnfts{)} \bnfsp \bnfpn{matched-block}}\\
+        \bnfprod{matched-if-else}{\bnfpn{matched-if} \bnfsp \bnfts{else} \bnfsp \bnfpn{matched-block}}\\
+        \bnfprod{unmatched-if-else}{\bnfpn{matched-if} \bnfsp \bnfts{else} \bnfsp \bnfpn{unmatched-block}}\\
+        \bnfprod{if-stmt}{\bnfts{if} \bnfsp \bnfts{(}\bnfpn{b-exp}\bnfts{)} \bnfsp \bnfpn{stmt-block}}\\
         \end{bnf*}
 
 \section{Types}
