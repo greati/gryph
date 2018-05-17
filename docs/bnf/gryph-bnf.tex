@@ -77,9 +77,43 @@
 \section{Expressions}
 
     \subsection{Any expression}
+        {\scriptsize
         \begin{bnf*}
-            \bnfprod{any-expr}{\bnfpn{rel-expr} \bnfor \bnfpn{bool-expr} \bnfor \bnfpn{expr}}
-        \end{bnf*}
+            \bnfprod{expression}{\bnfpn{logical-xor-expr}}\\
+            \bnfprod{logical-xor-expr}{\bnfpn{logical-or-expr} \bnfor \bnfpn{logical-or-expr}\bnfpn{logical-xor-expr-aux}}\\
+            \bnfprod{logical-xor-expr-aux}{\bnfts{xor}\bnfsp\bnfpn{logical-or-expr}\bnfor \bnfts{xor}\bnfsp\bnfpn{logical-or-expr}\bnfpn{logical-xor-expr-aux}}\\
+            \bnfprod{logical-or-expr}{\bnfpn{logical-and-expr} \bnfor \bnfpn{logical-and-expr}\bnfpn{logical-or-expr-aux}}\\
+            \bnfprod{logical-or-expr-aux}{\bnfts{or}\bnfsp\bnfpn{logical-and-expr}\bnfor \bnfts{or}\bnfsp\bnfpn{logical-and-expr}\bnfpn{logical-or-expr-aux}}\\
+            \bnfprod{logical-and-expr}{\bnfpn{equality-expr} \bnfor \bnfpn{equality-expr}\bnfpn{logical-and-expr-aux}}\\
+            \bnfprod{logical-and-expr-aux}{\bnfts{and}\bnfsp\bnfpn{equality-expr}\bnfor \bnfts{and}\bnfsp\bnfpn{equality-expr}\bnfpn{logical-and-expr-aux}}\\
+            \bnfprod{equality-expr}{\bnfpn{rel-expr} \bnfor \bnfpn{rel-expr}\bnfpn{rel-expr-aux}}\\
+            \bnfprod{equality-expr-aux}{\bnfpn{equality-op}\bnfsp\bnfpn{rel-expr}\bnfor \bnfpn{equality-op}\bnfsp\bnfpn{rel-expr}\bnfpn{equality-expr-aux}}\\
+            \bnfprod{rel-expr}{\bnfpn{add-expr}\bnfpn{rel-expr-aux}}\\
+            \bnfprod{rel-expr-aux}{ \bnfpn{rel-op}\bnfpn{add-expr} \bnfor \bnfpn{rel-op}\bnfpn{add-expr}\bnfpn{rel-expr-aux}}\\
+            \bnfprod{add-expr}{\bnfpn{mult-expr} \bnfor \bnfpn{mult-expr}\bnfpn{add-expr-aux}}\\
+            \bnfprod{add-expr-aux}{\bnfpn{add-op}\bnfpn{mult-expr} \bnfor \bnfpn{add-op}\bnfpn{mult-expr}\bnfpn{add-expr-aux}}\\
+            \bnfprod{mult-expr}{\bnfpn{exp-expr} \bnfor \bnfpn{exp-expr}\bnfpn{mult-expr-aux}}\\
+            \bnfprod{mult-expr-aux}{\bnfpn{mult-op}\bnfpn{mult-expr-aux} \bnfor \bnfpn{mult-op}\bnfpn{exp-expr}\bnfpn{mult-expr-aux}}\\
+            \bnfprod{exp-expr}{\bnfpn{cast-expr} \bnfor \bnfpn{cast-expr}\bnfpn{exp-expr-aux}}\\
+            \bnfprod{exp-expr-aux}{\bnfpn{exp-op}\bnfpn{exp-expr-aux} \bnfor \bnfpn{exp-op}\bnfpn{cast-expr}\bnfpn{exp-expr-aux}}\\
+            \bnfprod{cast-expr}{\bnfpn{unary-expr} \bnfor \bnfpn{unary-expr}\bnfpn{cast-expr-aux}}\\
+            \bnfprod{cast-expr-aux}{\bnfts{@}\bnfpn{type} \bnfor \bnfts{@}\bnfpn{type}\bnfpn{cast-expr-aux}}\\
+            \bnfprod{unary-expr}{\bnfpn{unary-op}\bnfpn{cast-expr} \bnfor \bnfpn{postfix-expr}}\\
+            \bnfprod{postfix-expr}{\bnfpn{primary-expr} \bnfor \bnfpn{ident}\bnfts{$|$}\bnfts{expression}\bnfts{$|$} \bnfor 
+            \bnfpn{ident}\bnfts{$<$}\bnfts{expression}\bnfts{$>$} \bnfor
+            \bnfpn{ident}\bnfts{$[$}\bnfts{expression}\bnfts{$]$} \bnfor
+            \bnfpn{ident}\bnfts{$\{$}\bnfpn{ident}\bnfts{$\}$} \bnfor
+            \bnfpn{ident}\bnfts{.}\bnfpn{expression}
+            }\\
+            \bnfprod{primary-expr}{\bnfts{(}\bnfpn{expression}\bnfts{)} \bnfor \bnfpn{ident} \bnfor \bnfpn{subprogcall} \bnfor \bnfpn{constant} }\\
+            \bnfprod{constant}{\bnfpn{int-lit} \bnfor \bnfpn{float-lit} \bnfor \bnfpn{string-lit} \bnfor \bnfpn{bool-lit}} \bnfor \bnfpn{list-lit} \bnfor \bnfpn{graph-lit}\\
+            \bnfprod{rel-op}{\bnfts{$>$} \bnfor \bnfts{$<$} \bnfor \bnfts{$<=$} \bnfor \bnfts{$>=$}}\\
+            \bnfprod{equality-op}{\bnfts{==} \bnfor \bnfts{!=}}\\
+            \bnfprod{unary-op}{\bnfts{+} \bnfor \bnfts{-}}\\
+            \bnfprod{add-op}{\bnfts{+} \bnfor \bnfts{-}}\\
+            \bnfprod{mult-op}{\bnfts{*} \bnfor \bnfts{/} \bnfor \bnfts{\%} \bnfor \bnfts{++} \bnfor \bnfts{**}}\\
+            \bnfprod{exp-op}{\bnfts{\^}}\\
+        \end{bnf*}}
 
     \subsection{Relational expressions}
         \begin{bnf*}
