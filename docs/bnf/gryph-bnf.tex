@@ -93,9 +93,10 @@
             \bnfprod{add-expr}{\bnfpn{mult-expr} \bnfor \bnfpn{mult-expr}\bnfpn{add-expr-aux}}\\
             \bnfprod{add-expr-aux}{\bnfpn{add-op}\bnfpn{mult-expr} \bnfor \bnfpn{add-op}\bnfpn{mult-expr}\bnfpn{add-expr-aux}}\\
             \bnfprod{mult-expr}{\bnfpn{exp-expr} \bnfor \bnfpn{exp-expr}\bnfpn{mult-expr-aux}}\\
-            \bnfprod{mult-expr-aux}{\bnfpn{mult-op}\bnfpn{mult-expr-aux} \bnfor \bnfpn{mult-op}\bnfpn{exp-expr}\bnfpn{mult-expr-aux}}\\
-            \bnfprod{exp-expr}{\bnfpn{cast-expr} \bnfor \bnfpn{cast-expr}\bnfpn{exp-expr-aux}}\\
-            \bnfprod{exp-expr-aux}{\bnfpn{exp-op}\bnfpn{exp-expr-aux} \bnfor \bnfpn{exp-op}\bnfpn{cast-expr}\bnfpn{exp-expr-aux}}\\
+            \bnfprod{mult-expr-aux}{\bnfpn{mult-op}\bnfpn{exp-expr} \bnfor \bnfpn{mult-op}\bnfpn{exp-expr}\bnfpn{mult-expr-aux}}\\
+            \bnfprod{exp-expr}{\bnfpn{cast-expr} \bnfor \bnfpn{cast-expr}\bnfpn{exp-op}\bnfpn{exp-expr}}\\
+            %\bnfprod{exp-expr}{\bnfpn{cast-expr} \bnfor \bnfpn{cast-expr}\bnfpn{exp-expr-aux}}\\
+            %\bnfprod{exp-expr-aux}{\bnfpn{exp-op}\bnfpn{cast-expr} \bnfor \bnfpn{exp-op}\bnfpn{cast-expr}\bnfpn{exp-expr-aux}}\\
             \bnfprod{cast-expr}{\bnfpn{unary-expr} \bnfor \bnfpn{unary-expr}\bnfpn{cast-expr-aux}}\\
             \bnfprod{cast-expr-aux}{\bnfts{@}\bnfpn{type} \bnfor \bnfts{@}\bnfpn{type}\bnfpn{cast-expr-aux}}\\
             \bnfprod{unary-expr}{\bnfpn{unary-op}\bnfpn{cast-expr} \bnfor \bnfpn{postfix-expr}}\\

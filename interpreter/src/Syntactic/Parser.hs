@@ -28,7 +28,7 @@ startIdentListStmt = do
 attrStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
 attrStmt is = do 
                 (tok GTokAssignment)
-                vs <- arithExprList
+                vs <- expressionList
                 (tok GTokSemicolon)
                 return (AttrStmt is vs)
 
@@ -42,7 +42,7 @@ declStmt is = do
                     <|>
                     do
                         (tok GTokAssignment)
-                        es <- arithExprList
+                        es <- expressionList
                         (tok GTokSemicolon)
                         return (DeclStmt is t es)
                     
@@ -85,7 +85,7 @@ ifStmt :: GenParser GphTokenPos st Stmt
 ifStmt = do
             (tok GTokIf)
             (tok GTokLParen)
-            e <- boolExpr
+            e <- expression
             (tok GTokRParen)
             return (IfStmt e)
 
@@ -96,7 +96,7 @@ ifStmt = do
 subprogCall :: Identifier -> GenParser GphTokenPos st SubprogCall
 subprogCall i = do
                 (tok GTokLParen)
-                es <- arithExprList -- change to anyExprList
+                es <- expressionList -- change to anyExprList
                 (tok GTokRParen)
                 return (SubprogCall i es)
                 
@@ -113,19 +113,280 @@ identList = do
                     return (i : next)
                     <|> return [i]
 
-arithExprList :: GenParser GphTokenPos st [ArithExpr]
-arithExprList = do
-                    e <- arithExpr
-                    do
-                        (tok GTokComma)
-                        next <- arithExprList
-                        return (e:next)
-                        <|> return [e]
 
-{--
- - Relational expressions parser.
+{- New expression parser.
+ -
  -
  -}
+
+
+expression :: GenParser GphTokenPos st ArithExpr
+expression = logicalXorExpr
+
+logicalXorExpr :: GenParser GphTokenPos st ArithExpr
+logicalXorExpr = do 
+                     e <- logicalOrExpr
+                     do
+                         logicalXorExprAux e
+                         <|> return e
+
+logicalXorExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+logicalXorExprAux e = do
+                        op <- boolXorOp
+                        r <- logicalOrExpr
+                        do
+                            do
+                                logicalXorExprAux (LogicalBinExpr op e r)
+                                <|> return (LogicalBinExpr op e r) 
+
+logicalOrExpr :: GenParser GphTokenPos st ArithExpr
+logicalOrExpr = do 
+                     e <- logicalAndExpr
+                     do
+                         logicalOrExprAux e
+                         <|> return e
+
+logicalOrExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+logicalOrExprAux e = do
+                        op <- boolOrOp
+                        r <- logicalAndExpr
+                        do
+                            do
+                                logicalOrExprAux (LogicalBinExpr op e r)
+                                <|> return (LogicalBinExpr op e r) 
+
+logicalAndExpr :: GenParser GphTokenPos st ArithExpr
+logicalAndExpr = do 
+                     e <- eqExpr
+                     do
+                         logicalAndExprAux e
+                         <|> return e
+
+logicalAndExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+logicalAndExprAux e = do
+                        op <- boolAndOp
+                        r <- eqExpr
+                        do
+                            do
+                                logicalAndExprAux (LogicalBinExpr op e r)
+                                <|> return (LogicalBinExpr op e r) 
+ 
+
+eqExpr :: GenParser GphTokenPos st ArithExpr
+eqExpr = do 
+             e <- relExpr
+             do
+                 eqExprAux e
+                 <|> return e
+
+eqExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+eqExprAux e = do
+                    op <- eqOp
+                    r <- relExpr
+                    do
+                        do
+                            eqExprAux (ArithEqExpr op e r)
+                            <|> return (ArithEqExpr op e r) 
+ 
+
+relExpr :: GenParser GphTokenPos st ArithExpr
+relExpr = do 
+                e <- addExpr
+                do
+                    relExprAux e
+                    <|> return e
+
+relExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+relExprAux e = do
+                    op <- relOp
+                    a <- addExpr
+                    do
+                        do
+                            relExprAux (ArithRelExpr op e a)
+                            <|> return (ArithRelExpr op e a) 
+                        
+
+addExpr :: GenParser GphTokenPos st ArithExpr
+addExpr = do
+                e <- multExpr
+                do
+                    addExprAux e
+                    <|> return e
+
+addExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+addExprAux e = do
+                    op <- opAdd
+                    r <- multExpr
+                    do
+                        do
+                            addExprAux (ArithBinExpr op e r)
+                            <|> return (ArithBinExpr op e r) 
+                            
+multExpr :: GenParser GphTokenPos st ArithExpr
+multExpr = do
+                e <- expExpr
+                do
+                    multExprAux e
+                    <|> return e
+
+multExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+multExprAux e = do
+                    op <- opMult
+                    r <- expExpr
+                    do
+                        do
+                            multExprAux (ArithBinExpr op e r)
+                            <|> return (ArithBinExpr op e r) 
+                            
+
+expExpr :: GenParser GphTokenPos st ArithExpr
+expExpr = do
+                c <- castExpr
+                do
+                    do
+                        op <- opExp
+                        e <- expExpr
+                        return (ArithBinExpr op c e)
+                    <|> 
+                    do
+                        return c
+                    
+
+castExpr :: GenParser GphTokenPos st ArithExpr
+castExpr = 
+            do
+                e <- unaryExpr
+                do
+                    castExprAux e
+                    <|> return e
+
+castExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+castExprAux e = do
+                    do
+                        (tok GTokAt)
+                        t <- anyType
+                        do
+                            do
+                                castExprAux (CastExpr e t)
+                            <|>
+                            do
+                                return (CastExpr e t)
+                        
+
+unaryExpr :: GenParser GphTokenPos st ArithExpr
+unaryExpr = do
+                do
+                    op <- opUnary
+                    e <- castExpr
+                    return (ArithUnExpr op e)
+                <|>
+                do
+                    postfixExpr
+
+postfixExpr :: GenParser GphTokenPos st ArithExpr
+postfixExpr = do
+                    try $ do
+                        i <- anyIdent
+                        do
+                            do
+                                (tok GTokLess) 
+                                e <- expression
+                                (tok GTokGreater)
+                                return (GraphAccess i e)
+                            <|>
+                            do
+                                (tok GTokPipe) 
+                                e <- expression
+                                (tok GTokPipe)
+                                return (DictAccess i e)
+                            <|>
+                            do
+                                (tok GTokLSquare) 
+                                e <- expression
+                                (tok GTokRSquare)
+                                return (ListAccess i e)
+                            <|>
+                            do
+                                (tok GTokLCurly) 
+                                e <- expression
+                                (tok GTokRCurly)
+                                return (StructAccess i e)
+                            <|>
+                            do
+                                (tok GTokDot) 
+                                e <- expression
+                                return (TupleAccess i e)
+                    <|>
+                    do
+                        primaryExpr
+
+primaryExpr :: GenParser GphTokenPos st ArithExpr
+primaryExpr = do
+                    do
+                        (tok GTokLParen)
+                        e <- expression
+                        (tok GTokRParen)
+                        return e
+                    <|>
+                    do
+                        startIdent -- ident or subprogcall
+                    <|>
+                    do
+                        constant
+                    
+
+constant :: GenParser GphTokenPos st ArithExpr
+constant = do
+                do
+                    n <- (numberLit)
+                    return (ArithTerm (LitTerm n))
+                <|>
+                do 
+                    i <- (stringLit)
+                    return (ArithTerm (LitTerm i))
+                <|>
+                do
+                    b <- boolLit
+                    return (ArithTerm (LitTerm b))
+
+
+boolLit :: GenParser GphTokenPos st Literal
+boolLit = do
+                do
+                    (tok GTokTrue)
+                    return (Lit (Bool True))
+                <|>
+                do
+                    (tok GTokFalse)
+                    return (Lit (Bool False))
+
+opUnary :: GenParser GphTokenPos st ArithUnOp
+opUnary = do (tok GTokPlus) >> return PlusUnOp
+        <|>
+        do (tok GTokMinus) >> return MinusUnOp
+        <|>
+        do (tok GTokNot) >> return NotUnOp
+
+opAdd :: GenParser GphTokenPos st ArithBinOp
+opAdd = do (tok GTokPlus) >> return PlusBinOp 
+        <|>
+        do (tok GTokMinus) >> return MinusBinOp
+
+opMult :: GenParser GphTokenPos st ArithBinOp
+opMult = do (tok GTokModulus) >> return ModBinOp 
+        <|> 
+        do (tok GTokDivision) >> return DivBinOp 
+        <|> 
+        do (tok GTokTimes) >> return TimesBinOp
+        <|>
+        do (tok GTokPlusPlus) >> return PlusPlusBinOp
+        <|>
+        do (tok GTokTimesTimes) >> return TimesTimesBinOp
+            
+
+opExp :: GenParser GphTokenPos st ArithBinOp
+opExp = do (tok GTokHat) >> return ExpBinOp
+
 relOp :: GenParser GphTokenPos st RelOp
 relOp = do (tok GTokGreater) >> return Greater
         <|>
@@ -134,275 +395,33 @@ relOp = do (tok GTokGreater) >> return Greater
         do (tok GTokLessEq) >> return LessEq
         <|> 
         do (tok GTokGreaterEq) >> return GreaterEq
-        <|>
-        do (tok GTokEq) >> return Equals
+
+eqOp :: GenParser GphTokenPos st EqOp
+eqOp =  do (tok GTokEq) >> return Equals
         <|>
         do (tok GTokNeq) >> return NotEquals
-        
-
-relExpr :: GenParser GphTokenPos st RelExpr
-relExpr = do 
-                t <- relTerm
-                relExprAux t
-
-relExprAux :: AnyExpr -> GenParser GphTokenPos st RelExpr
-relExprAux r = do
-                op <- relOp
-                t <- relTerm
-                do
-                    do
-                        relExprAux (RelExpr (BinRelExpr op r t))
-                    <|>
-                    do
-                        return (BinRelExpr op r t)
-
-relTerm :: GenParser GphTokenPos st AnyExpr
-relTerm = do
-            do
-                (try $ do 
-                    e <- arithExpr 
-                    return (ArithExpr e))
-            <|>
-            do
-                (tok GTokTrue)
-                return (BoolExpr LitTrue)
-            <|>
-            do
-                (tok GTokFalse)
-                return (BoolExpr LitFalse)
-            <|>           
-{--            do
-                (try $ do 
-                    e <- boolExpr
-                    return (BoolExpr e))
---}
-            do
-                (tok GTokLParen)
-                r <- relExpr
-                (tok GTokRParen)
-                return (RelExpr r)
-                
-            
-
-{- Boolean expression parser.
- -
- --}
+ 
 boolUnOp :: GenParser GphTokenPos st BoolUnOp
 boolUnOp = do (tok GTokNot) >> return (Not)
 
-boolOp0 :: GenParser GphTokenPos st BoolBinOp
-boolOp0 = do (tok GTokOr) >> return (Or)
-          <|>
-          do (tok GTokXor) >> return (Xor)
+boolOrOp :: GenParser GphTokenPos st BoolBinOp
+boolOrOp = do (tok GTokOr) >> return (Or)
 
-boolOp1 :: GenParser GphTokenPos st BoolBinOp
-boolOp1 = do (tok GTokAnd) >> return (And)
+boolAndOp :: GenParser GphTokenPos st BoolBinOp
+boolAndOp = do (tok GTokAnd) >> return (And)
 
-boolExpr :: GenParser GphTokenPos st BoolExpr
-boolExpr = do
-                t <- boolTerm
-                do
-                    do  
-                        boolExprAux t
-                    <|>
+boolXorOp :: GenParser GphTokenPos st BoolBinOp
+boolXorOp = do (tok GTokXor) >> return (Xor)
+
+
+expressionList :: GenParser GphTokenPos st [ArithExpr]
+expressionList = do
+                    e <- expression
                     do
-                        return t
-
-boolExprAux :: BoolExpr -> GenParser GphTokenPos st BoolExpr
-boolExprAux e = do
-                    op <- boolOp0
-                    t <- boolTerm
-                    do
-                        do
-                            boolExprAux (BoolBinExpr op e t)
-                        <|>
-                        do
-                            return (BoolBinExpr op e t)
-                        
-boolTerm :: GenParser GphTokenPos st BoolExpr
-boolTerm = do
-                l <- boolLiteral 
-                do
-                    do
-                        boolTermAux l
-                    <|>
-                    do
-                        return l
-
-boolTermAux :: BoolExpr -> GenParser GphTokenPos st BoolExpr
-boolTermAux e = do
-                    op <- boolOp1
-                    l <- boolLiteral
-                    do
-                        do
-                            boolTermAux (BoolBinExpr op e l)
-                        <|>
-                        do
-                            return (BoolBinExpr op e l)
-
-boolLiteral :: GenParser GphTokenPos st BoolExpr
-boolLiteral = do
-                    do
-                        op <- boolUnOp
-                        b <- boolBase
-                        return (BoolUnExpr op b)
-                    <|>
-                    do
-                        boolBase
-
-boolBase :: GenParser GphTokenPos st BoolExpr
-boolBase = do
-                do
-                    (tok GTokTrue)
-                    return LitTrue
-                <|>
-                do
-                    (tok GTokFalse)
-                    return LitFalse
-                <|> 
-{--
-                do
-                    e <- startIdent 
-                    do
-                        do 
-                            try $ 
-                                a <- arithExprAux e
-                                r <- relExprAux (ArithExpr a)
-                                return (BoolRelExpr r)
-                        <|>
-                        do
-                            r <- relExprAux (ArithExpr e)
-                            return (BoolRelExpr r)
-                        <|>
-                        do
-                            case e of
-                                ArithTerm (SubcallTerm s) -> return (BoolSubcallTerm s)
-                                ArithTerm (IdTerm i) -> return (BoolIdTerm i)
-                <|>
---}
-                do
-                    try $
-                        do
-                            r <- relExpr
-                            return (BoolRelExpr r)
-{--
-                do
-                    try $ do
-                        e <- arithExpr
-                        r <- relExprAux (ArithExpr e)
-                        return (BoolRelExpr r)
-                <|>
-                do
-                    try $ do
-                        e <- boolExpr
-                        r <- relExprAux (BoolExpr e)
-                        return (BoolRelExpr r)
-
---}
-                <|>
-                do
-                    (tok GTokLParen)
-                    e <- boolExpr
-                    (tok GTokRParen)
-                    return e
-
-{- Arithmetic expressions parser.
- - 
- - -}
-
-arithExpr :: GenParser GphTokenPos st ArithExpr
-arithExpr = do
-                t <- termArithExpr
-                do
-                    arithExprAux t <|> return t
-
-opUnary :: GenParser GphTokenPos st ArithUnOp
-opUnary = do (tok GTokPlus) >> return PlusUnOp
-        <|>
-        do (tok GTokMinus) >> return MinusUnOp
-
-opZero :: GenParser GphTokenPos st ArithBinOp
-opZero = do (tok GTokPlus) >> return PlusBinOp 
-        <|>
-        do (tok GTokMinus) >> return MinusBinOp
-
-arithExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
-arithExprAux t = do 
-                    op <- opZero
-                    f <- termArithExpr
-                    do 
-                        arithExprAux (ArithBinExpr op t f)
-                        <|> return (ArithBinExpr op t f)
-
-termArithExpr :: GenParser GphTokenPos st ArithExpr
-termArithExpr = do
-                    f <- factorArithExpr
-                    do
-                        termArithExprAux f
-                        <|> return f
-
-opOne :: GenParser GphTokenPos st ArithBinOp
-opOne = do (tok GTokModulus) >> return ModBinOp 
-        <|> 
-        do (tok GTokDivision) >> return DivBinOp 
-        <|> 
-        do (tok GTokTimes) >> return TimesBinOp
-        <|>
-        do (tok GTokHat) >> return ExpBinOp
-        <|>
-        do (tok GTokPlusPlus) >> return PlusPlusBinOp
-        <|>
-        do (tok GTokTimesTimes) >> return TimesTimesBinOp
-            
-
-termArithExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
-termArithExprAux t = do 
-                        op <- opOne
-                        f <- factorArithExpr
-                        do
-                            termArithExprAux (ArithBinExpr op t f)
-                            <|> return (ArithBinExpr op t f)
- 
-factorArithExpr :: GenParser GphTokenPos st ArithExpr
-factorArithExpr =   do
-                        l <- literalArithExpr
-                        do
-                            do
-                                (tok GTokHat)
-                                f <- factorArithExpr
-                                return (ArithBinExpr ExpBinOp l f)
-                            <|>
-                            do
-                                return l
-                        
-
-literalArithExpr :: GenParser GphTokenPos st ArithExpr
-literalArithExpr =  do
-                        basisArithExpr
-                    <|>
-                    do
-                        op <- opUnary
-                        b <- basisArithExpr
-                        return (ArithUnExpr op b)
-                        
-
-basisArithExpr :: GenParser GphTokenPos st ArithExpr
-basisArithExpr = do 
-                    n <- (numberLit)
-                    return (ArithTerm (LitTerm n))
-                  <|>
-                  do
-                    startIdent
-                  <|>
-                  do 
-                    i <- (stringLit)
-                    return (ArithTerm (LitTerm i))
-                  <|>
-                  do
-                    (tok GTokLParen)
-                    e <- arithExpr
-                    (tok GTokRParen)
-                    return e 
+                        (tok GTokComma)
+                        next <- expressionList
+                        return (e:next)
+                        <|> return [e]
 
 parseFile :: String -> IO [Stmt]
 parseFile file = 

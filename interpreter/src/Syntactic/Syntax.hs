@@ -14,12 +14,13 @@ data Stmt = ReadStmt Identifier |
             PrintStmt Term | 
             DeclStmt [Identifier] Type [ArithExpr] | 
             AttrStmt [Identifier] [ArithExpr] |
-            IfStmt BoolExpr
+            IfStmt ArithExpr
             deriving (Show, Eq)
     
 
 data ArithUnOp =    MinusUnOp | 
-                    PlusUnOp 
+                    PlusUnOp |
+                    NotUnOp
                     deriving (Show, Eq)
 
 data ArithBinOp =   MinusBinOp | 
@@ -36,10 +37,14 @@ data RelOp =
             Greater |
             Less |
             GreaterEq|    
-            LessEq |
+            LessEq 
+            deriving (Show, Eq)
+
+data EqOp =
             Equals |
             NotEquals 
             deriving (Show, Eq)
+            
 
 data BoolUnOp = Not deriving (Show, Eq)
 
@@ -69,7 +74,16 @@ data Term = LitTerm Literal |
 
 data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr | 
                     ArithBinExpr ArithBinOp ArithExpr ArithExpr | 
-                    ArithTerm Term
+                    ArithTerm Term |
+                    GraphAccess Identifier ArithExpr |
+                    DictAccess Identifier ArithExpr |
+                    ListAccess Identifier ArithExpr |
+                    StructAccess Identifier ArithExpr |
+                    TupleAccess Identifier ArithExpr |
+                    CastExpr ArithExpr Type |
+                    ArithRelExpr RelOp ArithExpr ArithExpr |
+                    ArithEqExpr EqOp ArithExpr ArithExpr |
+                    LogicalBinExpr BoolBinOp ArithExpr ArithExpr
                     deriving (Show, Eq)
 
 data IdentList = IdentList [Identifier] deriving (Show, Eq)
