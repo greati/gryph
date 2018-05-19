@@ -122,6 +122,14 @@
         \bnfprod{exp-op}{\bnfts{\^}}\\
     \end{bnf*}}
 
+    \subsection{Literals}
+        \begin{bnf*}
+            \bnfprod{list-lit}{\bnfts{[}\bnfpn{expression-list}\bnfts{]}}\\
+            \bnfprod{tuple-lit}{\bnfts{(}\bnfpn{expression-list}\bnfts{)}}\\
+            \bnfprod{dict-entry}{\bnfpn{expression} \bnfts{?} \bnfpn{expression}}\\
+            \bnfprod{dict-entry-list}{\bnfpn{dict-entry} \bnfor \bnfpn{dict-entry},\bnfpn{dict-entry-list}}\\
+            \bnfprod{dict-lit}{\bnfts{$|$} \bnfpn{dict-entry-list} \bnfts{$|$}}\\
+        \end{bnf*}
 
 
 \end{document}
