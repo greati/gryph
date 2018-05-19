@@ -48,6 +48,8 @@ type GTypeList = [GType]
 data Identifier = Ident String deriving(Show, Eq)
 
 data Literal = Lit Value deriving(Show, Eq)
+type DictEntry = (ArithExpr, ArithExpr)
+data ExprLiteral = ListLit [ArithExpr] | TupleLit [ArithExpr] | DictLit [DictEntry] deriving (Show, Eq)
 
 data SubprogCall = SubprogCall Identifier [ArithExpr] deriving(Show, Eq) -- change to anyExpr
 
@@ -116,6 +118,7 @@ data Term = LitTerm Literal |
 data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr | 
                     ArithBinExpr ArithBinOp ArithExpr ArithExpr | 
                     ArithTerm Term |
+                    ExprLiteral ExprLiteral |
                     GraphAccess Identifier ArithExpr |
                     DictAccess Identifier ArithExpr |
                     ListAccess Identifier ArithExpr |

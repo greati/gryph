@@ -5,6 +5,4 @@
 
 #a : <[int]> = 4;
 
-a : |(int, [<[int],[float]>]),Pessoa|;
-
-
+a : (int, int) = (|"oi"?2|);

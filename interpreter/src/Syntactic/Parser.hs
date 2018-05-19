@@ -78,6 +78,47 @@ startIdent = do
                     <|> 
                     return (ArithTerm (IdTerm i))
 
+{- Literals
+ -
+ -}
+listLit :: GenParser GphTokenPos st ArithExpr
+listLit = do
+                (tok GTokLSquare)
+                l <- expressionList
+                (tok GTokRSquare)
+                return (ExprLiteral (ListLit l))
+
+tupleLit :: GenParser GphTokenPos st ArithExpr
+tupleLit = do
+                (tok GTokLParen)
+                l <- expressionList
+                (tok GTokRParen)
+                return (ExprLiteral (TupleLit l))
+
+dictEntry :: GenParser GphTokenPos st DictEntry
+dictEntry = do
+                k <- expression
+                (tok GTokQuestion)
+                v <- expression
+                return (k,v)
+
+dictEntryList :: GenParser GphTokenPos st [DictEntry]
+dictEntryList = do
+                    d <- dictEntry
+                    do
+                        do
+                            (tok GTokComma)
+                            next <- dictEntryList
+                            return (d : next)
+                        <|> return [d]
+
+dictLit :: GenParser GphTokenPos st ArithExpr
+dictLit = do
+                    (tok GTokPipe)
+                    l <- dictEntryList 
+                    (tok GTokPipe)
+                    return (ExprLiteral (DictLit l))
+
 {- If stmt.
  -
  -}
@@ -420,17 +461,16 @@ postfixExpr = do
 
 primaryExpr :: GenParser GphTokenPos st ArithExpr
 primaryExpr = do
+                    try $ do
+                        tupleLit
+                    <|>
                     do
                         (tok GTokLParen)
                         e <- expression
                         (tok GTokRParen)
                         return e
-                    <|>
-                    do
-                        startIdent -- ident or subprogcall
-                    <|>
-                    do
-                        constant
+                    <|> startIdent -- ident or subprogcall
+                    <|> constant <|> listLit <|> dictLit 
                     
 
 constant :: GenParser GphTokenPos st ArithExpr
