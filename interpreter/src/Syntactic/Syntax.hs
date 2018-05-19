@@ -2,7 +2,48 @@ module Syntactic.Syntax where
 
 import Syntactic.Values
 
+import qualified Text.Read as TRead
+
 type Type = String
+    
+data GType =    GInteger        |
+                GFloat          |
+                GString         |
+                GChar           |
+                GBool           |
+                GList GType     |
+                GPair GType GType   |
+                GTriple GType GType GType  |
+                GQuadruple GType GType GType GType |
+                GDict GType GType |
+                GGraphVertex GType |
+                GGraphVertexEdge GType GType |
+                GUserType Identifier
+                deriving (Show, Eq)
+
+instance Read GType where
+    readPrec = (TRead.prec 10 $
+                    do 
+                        TRead.Ident s <- TRead.lexP
+                        case s of
+                            "int" -> return GInteger
+                            "float" -> return GFloat
+                            "string" -> return GString
+                            "char" -> return GChar
+                            "bool" -> return GBool
+                            )
+                TRead.+++
+                (TRead.prec 5 $
+                    do
+                        TRead.Punc s <- TRead.lexP
+                        case s of 
+                            "[" -> do
+                                        a <- TRead.readPrec
+                                        TRead.Punc "]" <- TRead.lexP
+                                        return (GList a)
+                    )
+
+type GTypeList = [GType]
 
 data Identifier = Ident String deriving(Show, Eq)
 
@@ -12,7 +53,7 @@ data SubprogCall = SubprogCall Identifier [ArithExpr] deriving(Show, Eq) -- chan
 
 data Stmt = ReadStmt Identifier | 
             PrintStmt Term | 
-            DeclStmt [Identifier] Type [ArithExpr] | 
+            DeclStmt [Identifier] GType [ArithExpr] | 
             AttrStmt [Identifier] [ArithExpr] |
             IfStmt ArithExpr
             deriving (Show, Eq)
@@ -80,7 +121,7 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     ListAccess Identifier ArithExpr |
                     StructAccess Identifier ArithExpr |
                     TupleAccess Identifier ArithExpr |
-                    CastExpr ArithExpr Type |
+                    CastExpr ArithExpr GType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |
                     ArithEqExpr EqOp ArithExpr ArithExpr |
                     LogicalBinExpr BoolBinOp ArithExpr ArithExpr
