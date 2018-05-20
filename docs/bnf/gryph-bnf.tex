@@ -24,10 +24,10 @@
 
     \subsection{Statements}
     \begin{bnf*}
-        \bnfprod{stmt-list}{\bnfpn{stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{stmt}\bnfsp\bnfts{;}\bnfsp\bnfpn{stmt-list}}\\
+        \bnfprod{stmt-list}{\bnfpn{stmt} \bnfsp \bnfpn{stmt}\bnfpn{stmt-list}}\\
         \bnfprod{stmt-block}{\bnfts{\{} \bnfsp \bnfpn{stmt-list} \bnfsp \bnfts{\}}}\\
-        \bnfprod{block-or-matched}{\bnfpn{stmt-block} \bnfor \bnfpn{matched-stmt}\bnfts{;}}\\
-        \bnfprod{com-stmt}{\bnfpn{read-stmt} \bnfor \bnfpn{print-stmt} \bnfor \bnfpn{var-decl-stmt}}\\
+        \bnfprod{block-or-matched}{\bnfpn{stmt-block} \bnfor \bnfpn{matched-stmt}}\\
+        \bnfprod{com-stmt}{(\bnfpn{read-stmt} \bnfor \bnfpn{print-stmt} \bnfor \bnfpn{var-decl-stmt})\bnfts{;}}\\
         \bnfprod{stmt}{\bnfpn{matched-stmt} \bnfor \bnfpn{unmatched-stmt}}\\
         \bnfprod{matched-stmt}{\bnfpn{matched-if-else} \bnfor \bnfpn{com-stmt}}\\
         \bnfprod{unmatched-stmt}{\bnfpn{if-stmt} \bnfor \bnfpn{unmatched-if-else}}\\
