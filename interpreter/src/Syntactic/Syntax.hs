@@ -57,9 +57,15 @@ data Stmt = ReadStmt Identifier |
             PrintStmt Term | 
             DeclStmt [Identifier] GType [ArithExpr] | 
             AttrStmt [Identifier] [ArithExpr] |
-            IfStmt ArithExpr
+            IfStmt ArithExpr IfBody ElseBody 
             deriving (Show, Eq)
-    
+
+data IfBody =  IfBody CondBody deriving(Eq, Show)
+data ElseBody = NoElse | ElseBody CondBody deriving(Eq, Show)
+
+data Block = Block [Stmt] deriving(Show, Eq)
+
+data CondBody = CondStmt Stmt | CondBlock Block deriving(Eq, Show)
 
 data ArithUnOp =    MinusUnOp | 
                     PlusUnOp |

@@ -14,10 +14,47 @@ gryphParser =
        return result
 
 stmt :: GenParser GphTokenPos st Stmt
-stmt = readStmt
-    <|> printStmt
-    <|> startIdentListStmt
-    <|> ifStmt
+stmt = do
+            matchedStmt <|> unmatchedStmt
+
+stmtList :: GenParser GphTokenPos st [Stmt]
+stmtList = do
+                s <- stmt
+                do 
+                    next <- stmtList
+                    return (s:next)
+                    <|> return [s]
+
+stmtBlock :: GenParser GphTokenPos st Block
+stmtBlock = do
+                (tok GTokLCurly)
+                ss <- stmtList
+                (tok GTokRCurly)
+                return (Block ss)
+
+blockOrStmt :: GenParser GphTokenPos st CondBody
+blockOrStmt =   do 
+                    b <- stmtBlock 
+                    return (CondBlock b)
+                <|>
+                do 
+                    ms <- matchedStmt
+                    return (CondStmt ms)
+
+matchedStmt :: GenParser GphTokenPos st Stmt
+matchedStmt = do
+                matchedIfElse <|> commonStmt
+
+unmatchedStmt :: GenParser GphTokenPos st Stmt
+unmatchedStmt = do
+                ifStmt <|> unmatchedIfElse
+
+commonStmt :: GenParser GphTokenPos st Stmt
+commonStmt = do 
+                s <- (readStmt <|> printStmt <|> startIdentListStmt)
+                (tok GTokSemicolon)
+                return s
+
 
 startIdentListStmt :: GenParser GphTokenPos st Stmt
 startIdentListStmt = do
@@ -29,7 +66,6 @@ attrStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
 attrStmt is = do 
                 (tok GTokAssignment)
                 vs <- expressionList
-                (tok GTokSemicolon)
                 return (AttrStmt is vs)
 
 declStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
@@ -37,13 +73,11 @@ declStmt is = do
                 (tok GTokColon)
                 t <- gryphType
                 do
-                    (tok GTokSemicolon)
                     return (DeclStmt is t [])
                     <|>
                     do
                         (tok GTokAssignment)
                         es <- expressionList
-                        (tok GTokSemicolon)
                         return (DeclStmt is t es)
                     
 
@@ -51,7 +85,6 @@ readStmt :: GenParser GphTokenPos st Stmt
 readStmt = do 
                 (tok GTokRead) 
                 i <- anyIdent
-                (tok GTokSemicolon)
                 return (ReadStmt i) 
 
 printStmt :: GenParser GphTokenPos st Stmt
@@ -60,12 +93,10 @@ printStmt = do
                 do
                     do
                         i <- anyIdent 
-                        (tok GTokSemicolon)
                         return (PrintStmt (IdTerm i)) 
                     <|>
                     do
                         i <- stringLit
-                        (tok GTokSemicolon)
                         return (PrintStmt (LitTerm i)) 
 
 startIdent :: GenParser GphTokenPos st ArithExpr 
@@ -122,14 +153,41 @@ dictLit = do
 {- If stmt.
  -
  -}
-ifStmt :: GenParser GphTokenPos st Stmt
-ifStmt = do
+ifExpr :: GenParser GphTokenPos st ArithExpr
+ifExpr = do
             (tok GTokIf)
             (tok GTokLParen)
             e <- expression
             (tok GTokRParen)
-            return (IfStmt e)
+            return e
 
+ifStmt :: GenParser GphTokenPos st Stmt
+ifStmt = do
+                e <- ifExpr
+                s <- stmt
+                (tok GTokSemicolon)
+                return (IfStmt e (IfBody (CondStmt s)) NoElse)
+
+unmatchedIfElse :: GenParser GphTokenPos st Stmt
+unmatchedIfElse = do
+                        e <- ifExpr
+                        ms <- matchedStmt
+                        (tok GTokSemicolon)
+                        (tok GTokElse)
+                        us <- unmatchedStmt
+                        return (IfStmt e (IfBody (CondStmt ms)) (ElseBody (CondStmt us)))
+                        
+matchedIfElse :: GenParser GphTokenPos st Stmt
+matchedIfElse = do
+                    e <- ifExpr
+                    b1 <- blockOrStmt
+                    do
+                        do
+                            (tok GTokElse)
+                            b2 <- blockOrStmt
+                            return (IfStmt e (IfBody b1) (ElseBody b2))
+                        <|>
+                            return (IfStmt e (IfBody b1) NoElse)
 
 {- Subprogram calls.
  -
@@ -424,45 +482,47 @@ unaryExpr = do
 
 postfixExpr :: GenParser GphTokenPos st ArithExpr
 postfixExpr = do
-                    try $ do
-                        i <- anyIdent
-                        do
+                    do
+                        try $ do
+                            i <- anyIdent
                             do
-                                (tok GTokLess) 
-                                e <- expression
-                                (tok GTokGreater)
-                                return (GraphAccess i e)
-                            <|>
-                            do
-                                (tok GTokPipe) 
-                                e <- expression
-                                (tok GTokPipe)
-                                return (DictAccess i e)
-                            <|>
-                            do
-                                (tok GTokLSquare) 
-                                e <- expression
-                                (tok GTokRSquare)
-                                return (ListAccess i e)
-                            <|>
-                            do
-                                (tok GTokLCurly) 
-                                e <- expression
-                                (tok GTokRCurly)
-                                return (StructAccess i e)
-                            <|>
-                            do
-                                (tok GTokDot) 
-                                e <- expression
-                                return (TupleAccess i e)
+                                do
+                                    (tok GTokLess) 
+                                    e <- expression
+                                    (tok GTokGreater)
+                                    return (GraphAccess i e)
+                                <|>
+                                do
+                                    (tok GTokPipe) 
+                                    e <- expression
+                                    (tok GTokPipe)
+                                    return (DictAccess i e)
+                                <|>
+                                do
+                                    (tok GTokLSquare) 
+                                    e <- expression
+                                    (tok GTokRSquare)
+                                    return (ListAccess i e)
+                                <|>
+                                do
+                                    (tok GTokLCurly) 
+                                    e <- expression
+                                    (tok GTokRCurly)
+                                    return (StructAccess i e)
+                                <|>
+                                do
+                                    (tok GTokDot) 
+                                    e <- expression
+                                    return (TupleAccess i e)
                     <|>
                     do
                         primaryExpr
 
 primaryExpr :: GenParser GphTokenPos st ArithExpr
 primaryExpr = do
-                    try $ do
-                        tupleLit
+                    do
+                        try $ do
+                            tupleLit
                     <|>
                     do
                         (tok GTokLParen)
