@@ -5,4 +5,16 @@
 
 #a : <[int]> = 4;
 
-a : (int, int) = (|"oi"?2|);
+#a : (int, int) = (|"oi"?2|);
+
+a : int;
+b : int;
+
+
+a = n;
+
+if (a > b) {
+    print b;
+} else {
+    print b;
+}
