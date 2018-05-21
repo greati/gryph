@@ -75,7 +75,7 @@ blockOrStmt =   do
 
 matchedStmt :: GenParser GphTokenPos st Stmt
 matchedStmt = do
-                matchedIfElse <|> commonStmt <|> forStmt <|> whileStmt
+                matchedIfElse <|> commonStmt <|> forStmt <|> whileStmt <|> bfsStmt <|> dfsStmt
 
 unmatchedStmt :: GenParser GphTokenPos st Stmt
 unmatchedStmt = do
@@ -255,6 +255,46 @@ dictLit = do
                     l <- dictEntryList 
                     (tok GTokPipe)
                     return (ExprLiteral (DictLit l))
+
+{- BFS Stmt
+ -
+ - -}
+bfsStmt :: GenParser GphTokenPos st Stmt
+bfsStmt = do
+            (tok GTokBFS)
+            is <- identList
+            (tok GTokIn)
+            g <- expression
+            do
+                do
+                    (tok GTokFrom)
+                    v <- expression
+                    b <- blockOrStmt
+                    return (BfsStmt is g (Just v) b)
+                <|>
+                do
+                    b <- blockOrStmt
+                    return (BfsStmt is g Nothing b)
+{- DFS Stmt
+ -
+ - -}
+dfsStmt :: GenParser GphTokenPos st Stmt
+dfsStmt = do
+            (tok GTokDFS)
+            is <- identList
+            (tok GTokIn)
+            g <- expression
+            do
+                do
+                    (tok GTokFrom)
+                    v <- expression
+                    b <- blockOrStmt
+                    return (DfsStmt is g (Just v) b)
+                <|>
+                do
+                    b <- blockOrStmt
+                    return (DfsStmt is g Nothing b)
+            
 
 {- While stmt.
  -

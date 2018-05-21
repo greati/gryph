@@ -8,6 +8,8 @@ data GphToken =
     GTokIf                          |
     GTokElse                        |
     GTokFor                         |
+    GTokFrom                        |
+    GTokIn                          |
     GTokWhile                       |
     GTokReturn                      |
     GTokRead                        |

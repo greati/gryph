@@ -33,12 +33,14 @@ tokens :-
     else                                {\p s -> (GTokElse, p)}
     for                                 {\p s -> (GTokFor, p)}
     while                               {\p s -> (GTokWhile, p)}
+    in                                  {\p s -> (GTokIn, p)}
     where                               {\p s -> (GTokWhere, p)}
     when                                {\p s -> (GTokWhen, p)}
     over                                {\p s -> (GTokOver, p)}
     sub                                 {\p s -> (GTokSub, p)}
     dfs                                 {\p s -> (GTokDFS, p)}
     bfs                                 {\p s -> (GTokBFS, p)}
+    from                                {\p s -> (GTokFrom, p)}
     return                              {\p s -> (GTokReturn, p)}
     print                               {\p s -> (GTokPrint, p)}
     read                                {\p s -> (GTokRead, p)}

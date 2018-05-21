@@ -72,8 +72,10 @@ data Stmt = ReadStmt Identifier |
             IfStmt ArithExpr IfBody ElseBody |
             ReturnStmt ArithExpr |
             ForStmt [Identifier] [ArithExpr] CondBody |
-            WhileStmt ArithExpr CondBody
-            deriving (Show, Eq)
+            WhileStmt ArithExpr CondBody |
+            BfsStmt [Identifier] ArithExpr (Maybe ArithExpr) CondBody |
+            DfsStmt [Identifier] ArithExpr (Maybe ArithExpr) CondBody 
+            deriving (Show, Eq) 
 
 -- | a+1 for a,b over [1,2],[2,3] when a < 2 
 data ListComp = ListComp ArithExpr [Identifier] [ArithExpr] [ArithExpr] deriving (Show, Eq)
