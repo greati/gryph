@@ -300,6 +300,26 @@ dfsStmt = do
                     b <- blockOrStmt
                     return (DfsStmt is g Nothing b)
             
+{- Graphs.
+ -
+ -}
+graphLit :: GenParser GphTokenPos st ArithExpr
+graphLit = do
+                (tok GTokLess)
+                v <- expression
+                do
+                    do
+                        (tok GTokComma)
+                        ec <- edgeComp
+                        (tok GTokGreater)
+                        return (ExprLiteral (GraphLit (Just v) (Just ec)))
+                    <|>
+                    do 
+                        return (ExprLiteral (GraphLit (Just v) Nothing))
+
+edgeComp :: GenParser GphTokenPos st EdgeComp
+edgeComp = undefined
+                    
 
 {- While stmt.
  -
@@ -327,9 +347,8 @@ forStmt = do
                 b <- blockOrStmt
                 return (ForStmt is es b)
                 
-listComp :: GenParser GphTokenPos st ListComp
-listComp = do
-                e <- expression
+forIterator :: GenParser GphTokenPos st ForIterator
+forIterator = do
                 (tok GTokFor)
                 is <- identList
                 (tok GTokOver)
@@ -338,10 +357,18 @@ listComp = do
                     do
                         (tok GTokWhen)
                         bs <- expressionList
-                        return (ListComp e is es bs)
+                        return (ForIterator is es bs)
                     <|>
                     do
-                        return (ListComp e is es [])
+                        return (ForIterator is es [])
+
+                
+
+listComp :: GenParser GphTokenPos st ListComp
+listComp = do
+                e <- expression
+                f <- forIterator 
+                return (ListComp e f)
 
 {- If stmt.
  -
