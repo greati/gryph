@@ -75,7 +75,7 @@ blockOrStmt =   do
 
 matchedStmt :: GenParser GphTokenPos st Stmt
 matchedStmt = do
-                matchedIfElse <|> commonStmt
+                matchedIfElse <|> commonStmt <|> forStmt
 
 unmatchedStmt :: GenParser GphTokenPos st Stmt
 unmatchedStmt = do
@@ -213,9 +213,17 @@ subprogDeclAux i ds = do
 listLit :: GenParser GphTokenPos st ArithExpr
 listLit = do
                 (tok GTokLSquare)
-                l <- expressionList
-                (tok GTokRSquare)
-                return (ExprLiteral (ListLit l))
+                do
+                    do 
+                        try $ do
+                            lc <- listComp
+                            (tok GTokRSquare)
+                            return (ExprLiteral (ListCompLit lc))
+                    <|>
+                    do
+                        l <- expressionList
+                        (tok GTokRSquare)
+                        return (ExprLiteral (ListLit l))
 
 tupleLit :: GenParser GphTokenPos st ArithExpr
 tupleLit = do
@@ -247,6 +255,35 @@ dictLit = do
                     l <- dictEntryList 
                     (tok GTokPipe)
                     return (ExprLiteral (DictLit l))
+
+{- For stmt.
+ -
+ -
+ -}
+forStmt :: GenParser GphTokenPos st Stmt
+forStmt = do
+                (tok GTokFor)
+                is <- identList
+                (tok GTokOver)
+                es <- expressionList
+                b <- blockOrStmt
+                return (ForStmt is es b)
+                
+listComp :: GenParser GphTokenPos st ListComp
+listComp = do
+                e <- expression
+                (tok GTokFor)
+                is <- identList
+                (tok GTokOver)
+                es <- expressionList
+                do
+                    do
+                        (tok GTokWhen)
+                        bs <- expressionList
+                        return (ListComp e is es bs)
+                    <|>
+                    do
+                        return (ListComp e is es [])
 
 {- If stmt.
  -

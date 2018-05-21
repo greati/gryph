@@ -61,7 +61,7 @@ data Identifier = Ident String deriving(Show, Eq)
 
 data Literal = Lit Value deriving(Show, Eq)
 type DictEntry = (ArithExpr, ArithExpr)
-data ExprLiteral = ListLit [ArithExpr] | TupleLit [ArithExpr] | DictLit [DictEntry] deriving (Show, Eq)
+data ExprLiteral = ListLit [ArithExpr] | ListCompLit ListComp | TupleLit [ArithExpr] | DictLit [DictEntry] deriving (Show, Eq)
 
 data SubprogCall = SubprogCall Identifier [ArithExpr] deriving(Show, Eq) -- change to anyExpr
 
@@ -70,8 +70,12 @@ data Stmt = ReadStmt Identifier |
             DeclStmt VarDeclaration | --[Identifier] GType [ArithExpr] | 
             AttrStmt [Identifier] [ArithExpr] |
             IfStmt ArithExpr IfBody ElseBody |
-            ReturnStmt ArithExpr
+            ReturnStmt ArithExpr |
+            ForStmt [Identifier] [ArithExpr] CondBody
             deriving (Show, Eq)
+
+-- | a+1 for a,b over [1,2],[2,3] when a < 2 
+data ListComp = ListComp ArithExpr [Identifier] [ArithExpr] [ArithExpr] deriving (Show, Eq)
 
 data IfBody =  IfBody CondBody deriving(Eq, Show)
 data ElseBody = NoElse | ElseBody CondBody deriving(Eq, Show)

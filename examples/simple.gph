@@ -40,6 +40,6 @@ a = n;
 
 if (a > b) {
     print b;
-} else {
+} else if(a<b) {
     print b;
 }
