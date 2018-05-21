@@ -48,13 +48,13 @@ fromEdges es = Graph (S.fromList vertices) (M.fromList edges)
 fromEdges' :: [Edge a b] -> ([Vertex a], [(Int, [Edge a b])])
 fromEdges' []                                                      = ([],[])
 fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _)]       = (vx : vy : [], (idx, [ed]) : [] )
-fromEdges' (ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _) : eds) = (vx : vy : T.fst (fromEdges' eds), updateEdge idx ed (T.snd (fromEdges' eds)))
+fromEdges' (ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _) : eds) = (vx : vy : T.fst (fromEdges' eds), fromEdges'' idx ed (T.snd (fromEdges' eds)))
 
-updateEdge :: Int -> Edge a b -> [(Int, [Edge a b])] -> [(Int, [Edge a b])]
-updateEdge n ed []     = (n, [ed]) : []
-updateEdge n ed (e'@(id,e):es) 
+fromEdges'' :: Int -> Edge a b -> [(Int, [Edge a b])] -> [(Int, [Edge a b])]
+fromEdges'' n ed []     = (n, [ed]) : []
+fromEdges'' n ed (e'@(id,e):es) 
     | n == id   = (id, ed : e) : es
-    | otherwise = e' : updateEdge n ed es  
+    | otherwise = e' : fromEdges'' n ed es  
 
 -- |Create an edge from a tuple of its components
 edgeFromTuple :: (Vertex a, Vertex a, b) -> Edge a b
