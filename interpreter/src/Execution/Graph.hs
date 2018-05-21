@@ -1,7 +1,7 @@
 module Execution.Graph where
 
-import qualified Data.Map as M
-import qualified Data.Set as S
+import qualified Data.Map.Strict as M
+import qualified Data.Set        as S
 
 
 -- |Vertex indexed by integer values, holding data of type a
@@ -37,6 +37,18 @@ g = fromVertices [1#2]
 -- |Create a graph from a list of vertices, with no edges
 fromVertices :: [Vertex a] -> Graph a b
 fromVertices vs = Graph (S.fromList vs) M.empty
+
+fromEdges :: [Edge a b] -> Graph a b
+fromEdges es = Graph (S.fromList vertexes) (M.fromList edges)
+    where
+        (vertexes, edges) = fromEdges' es
+        fromEdges' []                                                      = ([],[])
+        fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) w)]       = (vx : vy : [], (idx, [ed]) : [] )
+        fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) w) : eds] = (vx : vy : p1, updateEdge idx ed p2)
+        (p1,p2)                                                            = fromEdges' eds 
+
+updateEdge :: Int -> Edge a b -> [(Int, Edge a b)] -> [(Int, [Edge a b])]
+updateEdge = undefined
 
 -- |Create an edge from a tuple of its components
 edgeFromTuple :: (Vertex a, Vertex a, b) -> Edge a b
