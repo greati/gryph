@@ -15,6 +15,10 @@ gryphParser =
 
 programUnit :: GenParser GphTokenPos st ProgramUnit
 programUnit = do 
+                    do
+                        s <- structDecl
+                        return (StructDecl s)
+                    <|>
                     do 
                         s <- stmt
                         return (Stmt s)
@@ -22,6 +26,14 @@ programUnit = do
                     do
                         s <- subprogDecl
                         return (Subprogram s)
+
+structDecl :: GenParser GphTokenPos st StructDecl
+structDecl = do
+                t <- userType
+                (tok GTokLCurly)
+                d <- declStmtList
+                (tok GTokRCurly)
+                return (Struct t d)
 
 stmt :: GenParser GphTokenPos st Stmt
 stmt = do
@@ -34,6 +46,16 @@ stmtList = do
                     next <- stmtList
                     return (s:next)
                     <|> return [s]
+
+declStmtList :: GenParser GphTokenPos st [Stmt]
+declStmtList = do
+                s <- declStmt
+                (tok GTokSemicolon)
+                do 
+                    next <- declStmtList
+                    return (s:next)
+                    <|> return [s]
+
 
 stmtBlock :: GenParser GphTokenPos st Block
 stmtBlock = do
@@ -75,7 +97,7 @@ startIdentListStmt :: GenParser GphTokenPos st Stmt
 startIdentListStmt = do
                     i <- identList
                     do
-                        attrStmt i <|> declStmt i
+                        attrStmt i <|> declStmtAux i
 
 attrStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
 attrStmt is = do 
@@ -83,17 +105,23 @@ attrStmt is = do
                 vs <- expressionList
                 return (AttrStmt is vs)
 
-declStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
-declStmt is = do
-                (tok GTokColon)
-                t <- gryphType
-                do
-                    return (DeclStmt (VarDeclaration is t []))
-                    <|>
+declStmt :: GenParser GphTokenPos st Stmt
+declStmt = do
+                    i <- identList
                     do
-                        (tok GTokAssignment)
-                        es <- expressionList
-                        return (DeclStmt (VarDeclaration is t es))
+                        declStmtAux i
+
+declStmtAux :: [Identifier] -> GenParser GphTokenPos st Stmt
+declStmtAux is = do
+                    (tok GTokColon)
+                    t <- gryphType
+                    do
+                        do
+                            (tok GTokAssignment)
+                            es <- expressionList
+                            return (DeclStmt (VarDeclaration is t es))
+                        <|>
+                        return (DeclStmt (VarDeclaration is t []))
                     
 
 readStmt :: GenParser GphTokenPos st Stmt
@@ -124,19 +152,6 @@ startIdent = do
                     <|> 
                     return (ArithTerm (IdTerm i))
 
-{-
-identList :: GenParser GphTokenPos st [Identifier]
-identList = do
-                i <- anyIdent 
-                do
-                    do
-                        (GTokComma)
-                        next <- identList
-                        return ((Ident i):next)
-                    <|>
-                        return [(Ident i)]
--}
-
 varDecl :: GenParser GphTokenPos st VarDeclaration
 varDecl = do
                 i <- identList
@@ -150,16 +165,16 @@ varDecl = do
                     <|>
                     return (VarDeclaration i t [])
                 
-varDeclList :: GenParser GphTokenPos st [VarDeclaration]
-varDeclList = do
-                    a <- varDecl
-                    do
+varDeclList :: GphToken -> GenParser GphTokenPos st [VarDeclaration]
+varDeclList sep = do
+                        a <- varDecl
                         do
-                            (tok GTokComma)
-                            next <- varDeclList
-                            return (a:next)
-                        <|>
-                            return [a]
+                            do
+                                (tok sep)
+                                next <- varDeclList sep
+                                return (a:next)
+                            <|>
+                                return [a]
 
 {- Subprograms
  -
@@ -175,23 +190,9 @@ subprogDecl = do
                             subprogDeclAux i []
                         <|>
                         do
-                            ds <- varDeclList
+                            ds <- varDeclList (GTokComma)
                             (tok GTokRParen)
                             subprogDeclAux i ds
-{-
-                            ds <- varDeclList
-                            (tok GTokRParen)
-                            do
-                                do
-                                    (tok GTokColon)
-                                    t <- gryphType 
-                                    b <- stmtBlock
-                                    return (Function i ds t b)
-                                <|>
-                                do
-                                    b <- stmtBlock
-                                    return (Procedure i ds b)
--}
 
 subprogDeclAux :: Identifier -> [VarDeclaration] -> GenParser GphTokenPos st Subprogram
 subprogDeclAux i ds = do         
