@@ -43,7 +43,14 @@ instance Read GType where
                                         return (GList a)
                     )
 
+data ProgramUnit = Stmt Stmt | Subprogram Subprogram deriving (Show, Eq)
+
 type GTypeList = [GType]
+
+data VarDeclaration = VarDeclaration [Identifier] GType [ArithExpr] deriving (Show, Eq)
+
+data Subprogram = Function Identifier [VarDeclaration] GType Block | 
+                Procedure Identifier [VarDeclaration] Block deriving (Show, Eq)
 
 data Identifier = Ident String deriving(Show, Eq)
 
@@ -55,9 +62,10 @@ data SubprogCall = SubprogCall Identifier [ArithExpr] deriving(Show, Eq) -- chan
 
 data Stmt = ReadStmt Identifier | 
             PrintStmt Term | 
-            DeclStmt [Identifier] GType [ArithExpr] | 
+            DeclStmt VarDeclaration | --[Identifier] GType [ArithExpr] | 
             AttrStmt [Identifier] [ArithExpr] |
-            IfStmt ArithExpr IfBody ElseBody 
+            IfStmt ArithExpr IfBody ElseBody |
+            ReturnStmt ArithExpr
             deriving (Show, Eq)
 
 data IfBody =  IfBody CondBody deriving(Eq, Show)

@@ -7,6 +7,18 @@
 
 #a : (int, int) = (|"oi"?2|);
 
+sub m (a:|int,string|=|1?"oi",2?"vitor"|) {
+    a = 2;    
+}
+
+sub g (a,b:int) : int {
+    return a + b;
+}
+
+sub f (a,b:int, k:string, m:[bool]) : [int] {
+    a = 2;
+}
+
 a : int;
 b : int;
 

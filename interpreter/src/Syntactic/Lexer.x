@@ -36,8 +36,7 @@ tokens :-
     where                               {\p s -> (GTokWhere, p)}
     when                                {\p s -> (GTokWhen, p)}
     over                                {\p s -> (GTokOver, p)}
-    fun                                 {\p s -> (GTokFunction, p)}
-    proc                                {\p s -> (GTokProc, p)}
+    sub                                 {\p s -> (GTokSub, p)}
     dfs                                 {\p s -> (GTokDFS, p)}
     bfs                                 {\p s -> (GTokBFS, p)}
     return                              {\p s -> (GTokReturn, p)}
