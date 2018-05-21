@@ -83,7 +83,7 @@ unmatchedStmt = do
 
 commonStmt :: GenParser GphTokenPos st Stmt
 commonStmt = do 
-                s <- (readStmt <|> printStmt <|> startIdentListStmt <|> returnStmt)
+                s <- (readStmt <|> printStmt <|> attrStmt <|> declStmt <|> returnStmt)
                 (tok GTokSemicolon)
                 return s
 
@@ -93,17 +93,22 @@ returnStmt = do
                 e <- expression
                 return (ReturnStmt e)
 
-startIdentListStmt :: GenParser GphTokenPos st Stmt
-startIdentListStmt = do
-                    i <- identList
-                    do
-                        attrStmt i <|> declStmtAux i
+--startIdentListStmt :: GenParser GphTokenPos st Stmt
+--startIdentListStmt = do
+--                    i <- identList
+--                    do
+--                        attrStmt i <|> declStmtAux i
 
-attrStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
-attrStmt is = do 
-                (tok GTokAssignment)
-                vs <- expressionList
-                return (AttrStmt is vs)
+attrStmt :: GenParser GphTokenPos st Stmt
+attrStmt = do 
+                do
+                    es <- try $ 
+                            do 
+                                es <- postfixExprList
+                                (tok GTokAssignment)
+                                return es
+                    vs <- expressionList
+                    return (AttrStmt es vs)
 
 declStmt :: GenParser GphTokenPos st Stmt
 declStmt = do
@@ -667,11 +672,22 @@ unaryExpr = do
                 do
                     postfixExpr
 
+postfixExprList :: GenParser GphTokenPos st [ArithExpr]
+postfixExprList = do
+                        e <- postfixExpr
+                        do
+                            do
+                                (tok GTokComma)
+                                next <- postfixExprList
+                                return (e:next)
+                            <|>
+                            return [e]
+
 postfixExpr :: GenParser GphTokenPos st ArithExpr
 postfixExpr = do
                     do
                         try $ do
-                            i <- anyIdent
+                            i <- primaryExpr
                             do
                                 do
                                     (tok GTokLess) 
