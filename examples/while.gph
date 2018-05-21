@@ -1,0 +1,9 @@
+while (True)
+    if (a==2)
+        a = 2;
+
+if (True)
+    while(True) {
+        a = 2;
+        c = 1;
+    }

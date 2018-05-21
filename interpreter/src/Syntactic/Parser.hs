@@ -75,7 +75,7 @@ blockOrStmt =   do
 
 matchedStmt :: GenParser GphTokenPos st Stmt
 matchedStmt = do
-                matchedIfElse <|> commonStmt <|> forStmt
+                matchedIfElse <|> commonStmt <|> forStmt <|> whileStmt
 
 unmatchedStmt :: GenParser GphTokenPos st Stmt
 unmatchedStmt = do
@@ -255,6 +255,19 @@ dictLit = do
                     l <- dictEntryList 
                     (tok GTokPipe)
                     return (ExprLiteral (DictLit l))
+
+{- While stmt.
+ -
+ --}
+whileStmt :: GenParser GphTokenPos st Stmt
+whileStmt = do
+                (tok GTokWhile)
+                (tok GTokLParen)
+                be <- expression
+                (tok GTokRParen)
+                b <- blockOrStmt
+                return (WhileStmt be b)
+                
 
 {- For stmt.
  -

@@ -71,7 +71,8 @@ data Stmt = ReadStmt Identifier |
             AttrStmt [Identifier] [ArithExpr] |
             IfStmt ArithExpr IfBody ElseBody |
             ReturnStmt ArithExpr |
-            ForStmt [Identifier] [ArithExpr] CondBody
+            ForStmt [Identifier] [ArithExpr] CondBody |
+            WhileStmt ArithExpr CondBody
             deriving (Show, Eq)
 
 -- | a+1 for a,b over [1,2],[2,3] when a < 2 
