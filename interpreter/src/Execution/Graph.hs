@@ -2,6 +2,7 @@ module Execution.Graph where
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set        as S
+import qualified Data.Tuple      as T
 
 
 -- |Vertex indexed by integer values, holding data of type a
@@ -38,17 +39,22 @@ g = fromVertices [1#2]
 fromVertices :: [Vertex a] -> Graph a b
 fromVertices vs = Graph (S.fromList vs) M.empty
 
+-- |Create a graph from a list of edges, with no vertices
 fromEdges :: [Edge a b] -> Graph a b
-fromEdges es = Graph (S.fromList vertexes) (M.fromList edges)
+fromEdges es = Graph (S.fromList vertices) (M.fromList edges)
     where
-        (vertexes, edges) = fromEdges' es
-        fromEdges' []                                                      = ([],[])
-        fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) w)]       = (vx : vy : [], (idx, [ed]) : [] )
-        fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) w) : eds] = (vx : vy : p1, updateEdge idx ed p2)
-        (p1,p2)                                                            = fromEdges' eds 
+        (vertices, edges) = fromEdges' es
 
-updateEdge :: Int -> Edge a b -> [(Int, Edge a b)] -> [(Int, [Edge a b])]
-updateEdge = undefined
+fromEdges' :: [Edge a b] -> ([Vertex a], [(Int, [Edge a b])])
+fromEdges' []                                                      = ([],[])
+fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _)]       = (vx : vy : [], (idx, [ed]) : [] )
+fromEdges' (ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _) : eds) = (vx : vy : T.fst (fromEdges' eds), updateEdge idx ed (T.snd (fromEdges' eds)))
+
+updateEdge :: Int -> Edge a b -> [(Int, [Edge a b])] -> [(Int, [Edge a b])]
+updateEdge n ed []     = (n, [ed]) : []
+updateEdge n ed (e'@(id,e):es) 
+    | n == id   = (id, ed : e) : es
+    | otherwise = e' : updateEdge n ed es  
 
 -- |Create an edge from a tuple of its components
 edgeFromTuple :: (Vertex a, Vertex a, b) -> Edge a b
@@ -82,7 +88,9 @@ connect g@(Graph vs es) v1@(Vertex x1 p1) v2@(Vertex x2 p2) p
 
 -- |Insert an edge. Error if vertices aren't in the list
 insertEdge :: Graph a b -> Edge a b -> Graph a b
-insertEdge (Graph vs es) (Edge v1 v2 p) = undefined
+insertEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
+    | not (elem v1 vs) || not(elem v2 vs) = error "both vertices must be present"
+    | otherwise = Graph vs (M.insertWith (++) id [ed] es)
 
 
 
