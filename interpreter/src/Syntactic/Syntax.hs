@@ -68,7 +68,7 @@ data SubprogCall = SubprogCall Identifier [ArithExpr] deriving(Show, Eq) -- chan
 data Stmt = ReadStmt Identifier | 
             PrintStmt Term | 
             DeclStmt VarDeclaration | --[Identifier] GType [ArithExpr] | 
-            AttrStmt [Identifier] [ArithExpr] |
+            AttrStmt [ArithExpr] [ArithExpr] |
             IfStmt ArithExpr IfBody ElseBody |
             ReturnStmt ArithExpr |
             ForStmt [Identifier] [ArithExpr] CondBody |
@@ -145,11 +145,11 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     ArithBinExpr ArithBinOp ArithExpr ArithExpr | 
                     ArithTerm Term |
                     ExprLiteral ExprLiteral |
-                    GraphAccess Identifier ArithExpr |
-                    DictAccess Identifier ArithExpr |
-                    ListAccess Identifier ArithExpr |
-                    StructAccess Identifier ArithExpr |
-                    TupleAccess Identifier ArithExpr |
+                    GraphAccess ArithExpr ArithExpr |
+                    DictAccess ArithExpr ArithExpr |
+                    ListAccess ArithExpr ArithExpr |
+                    StructAccess ArithExpr ArithExpr |
+                    TupleAccess ArithExpr ArithExpr |
                     CastExpr ArithExpr GType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |
                     ArithEqExpr EqOp ArithExpr ArithExpr |
