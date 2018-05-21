@@ -43,7 +43,12 @@ instance Read GType where
                                         return (GList a)
                     )
 
-data ProgramUnit = Stmt Stmt | Subprogram Subprogram deriving (Show, Eq)
+data ProgramUnit =  Stmt Stmt | 
+                    Subprogram Subprogram |
+                    StructDecl StructDecl
+                    deriving (Show, Eq)
+
+data StructDecl = Struct GType [Stmt] deriving (Show, Eq)
 
 type GTypeList = [GType]
 
