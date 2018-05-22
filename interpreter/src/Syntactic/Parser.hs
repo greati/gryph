@@ -27,6 +27,9 @@ programUnit = do
                         s <- subprogDecl
                         return (Subprogram s)
 
+{- Structs.
+ -
+ --}
 structDecl :: GenParser GphTokenPos st StructDecl
 structDecl = do
                 t <- userType
@@ -34,6 +37,17 @@ structDecl = do
                 d <- declStmtList
                 (tok GTokRCurly)
                 return (Struct t d)
+
+structInit :: GenParser GphTokenPos st StructInit
+structInit = do
+                (tok GTokLCurly)
+                is <- identAssignmentList
+                (tok GTokRCurly)
+                return (StructInit is)
+
+{- Stmts.
+ -
+ -}
 
 stmt :: GenParser GphTokenPos st Stmt
 stmt = do
@@ -83,9 +97,14 @@ unmatchedStmt = do
 
 commonStmt :: GenParser GphTokenPos st Stmt
 commonStmt = do 
-                s <- (readStmt <|> printStmt <|> attrStmt <|> declStmt <|> returnStmt)
+                s <- (readStmt <|> printStmt <|> attrStmt <|> subprogCallStmt <|> declStmt <|> returnStmt)
                 (tok GTokSemicolon)
                 return s
+
+subprogCallStmt :: GenParser GphTokenPos st Stmt
+subprogCallStmt = do
+                        s <- subprogCall
+                        return (SubCallStmt s)
 
 returnStmt :: GenParser GphTokenPos st Stmt
 returnStmt = do
@@ -152,7 +171,7 @@ startIdent = do
                 i <- anyIdent
                 do
                     do
-                        s <- subprogCall i
+                        s <- subprogCallAux i
                         return (ArithTerm (SubcallTerm s))
                     <|> 
                     return (ArithTerm (IdTerm i))
@@ -195,7 +214,7 @@ subprogDecl = do
                             subprogDeclAux i []
                         <|>
                         do
-                            ds <- varDeclList (GTokComma)
+                            ds <- varDeclList (GTokSemicolon)
                             (tok GTokRParen)
                             subprogDeclAux i ds
 
@@ -442,9 +461,9 @@ matchedIfElse = do
 identAssignment :: GenParser GphTokenPos st IdentAssign
 identAssignment = do
                     i <- try $ do 
-                            i <- identList
+                            i <- anyIdent
                             (tok GTokAssignment)
-                            return i
+                            return [i]
                     e <- expression
                     return (IdentAssign i e)
 
@@ -482,12 +501,18 @@ subprogArgList = do
                         do
                             return [s]
 
-subprogCall :: Identifier -> GenParser GphTokenPos st SubprogCall
-subprogCall i = do
-                (tok GTokLParen)
-                es <- subprogArgList -- change to anyExprList
-                (tok GTokRParen)
-                return (SubprogCall i es)
+subprogCall :: GenParser GphTokenPos st SubprogCall
+subprogCall = do
+                try $ do
+                    i <- anyIdent
+                    subprogCallAux i
+
+subprogCallAux :: Identifier -> GenParser GphTokenPos st SubprogCall
+subprogCallAux i = do
+                    (tok GTokLParen)
+                    es <- subprogArgList -- change to anyExprList
+                    (tok GTokRParen)
+                    return (SubprogCall i es)
                 
 
 {- Stmt lists.
@@ -830,8 +855,13 @@ primaryExpr = do
                         e <- expression
                         (tok GTokRParen)
                         return e
-                    <|> startIdent -- ident or subprogcall
-                    <|> constant <|> listLit <|> dictLit <|> graphLit
+                    <|>
+                    do
+                        e <- structInit
+                        return (StructInitExpr e)
+                    <|> 
+                        startIdent -- ident or subprogcall
+                    <|> constant <|> listLit <|> dictLit <|> graphLit 
                     
 
 constant :: GenParser GphTokenPos st ArithExpr
@@ -928,6 +958,4 @@ parseFile file =
        case parse gryphParser "" (alexScanTokens program) of
             Left e  -> print e >> fail "parse error"
             Right r -> return r
-
-
 
