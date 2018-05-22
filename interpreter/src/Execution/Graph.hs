@@ -106,4 +106,20 @@ updateEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
         updateEdge''' ed    [x]    = [ed]
         updateEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
             | v1 == x1 && v2 == x2 = (ed : xs)
-            | otherwise            = x : updateEdge''' ed xs   
+            | otherwise            = x : updateEdge''' ed xs
+
+-- |Delete an edge. Error if the vertices aren't in the list
+deleteEdge :: Graph a b -> Edge a b -> Graph a b
+deleteEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
+    | not (elem v1 vs) || not(elem v2 vs) = error "both vertices must be present"
+    | otherwise = Graph vs (deleteEdge' es id ed)
+    where
+        deleteEdge' es id ed 
+            | not (M.member id es) = error "the edge must have exist"
+            | otherwise            = deleteEdge'' id ed (es M.! id)
+        deleteEdge'' id ed  [x]    = M.fromList [] 
+        deleteEdge'' id ed   xs    = M.fromList [(id, deleteEdge''' ed xs)]
+        deleteEdge''' ed    [x]    = []
+        deleteEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
+            | v1 == x1 && v2 == x2 = xs
+            | otherwise            = x : deleteEdge''' ed xs   
