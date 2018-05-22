@@ -15,6 +15,7 @@ data GphToken =
     GTokRead                        |
     GTokPrint                       |
     GTokWhere                       |
+    GTokAmpersand                   |
     GTokWhen                        |
     GTokOver                        |   
     GTokDFS                         |

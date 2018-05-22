@@ -138,7 +138,8 @@ declStmt = do
 declStmtAux :: [Identifier] -> GenParser GphTokenPos st Stmt
 declStmtAux is = do
                     (tok GTokColon)
-                    t <- gryphType
+                    t <- gryphVarType
+                    --t <- gryphType
                     do
                         do
                             (tok GTokAssignment)
@@ -180,7 +181,8 @@ varDecl :: GenParser GphTokenPos st VarDeclaration
 varDecl = do
                 i <- identList
                 (tok GTokColon)
-                t <- gryphType
+                --t <- gryphType
+                t <- gryphVarType
                 do
                     do
                         (tok GTokAssignment)
@@ -223,6 +225,7 @@ subprogDeclAux i ds = do
                             do
                                 (tok GTokColon)
                                 t <- gryphType 
+                                --t <- gryphVarType 
                                 b <- stmtBlock
                                 return (Function i ds t b)
                             <|>
@@ -533,7 +536,8 @@ identList = do
 
 typeList :: GenParser GphTokenPos st GTypeList
 typeList = do
-                t <- gryphType
+                t <- gryphVarType
+                --t <- gryphType
                 do
                     do
                         (tok GTokComma)
@@ -541,6 +545,14 @@ typeList = do
                         return (t : next)
                     <|> return [t]
                     
+gryphVarType :: GenParser GphTokenPos st GVarType
+gryphVarType = do
+                    t <- gryphType
+                    do
+                        do
+                            (tok GTokAmpersand)
+                            return (GRef t)
+                        <|> return (GType t)
 
 gryphType :: GenParser GphTokenPos st GType
 gryphType = nativeType <|> userType
@@ -552,32 +564,39 @@ compositiveType :: GenParser GphTokenPos st GType
 compositiveType = do
                         do
                             (tok GTokLSquare)
-                            t <- gryphType
+                            --t <- gryphType
+                            t <- gryphVarType
                             (tok GTokRSquare)
                             return (GList t)
                         <|>
                         do
                             (tok GTokPipe)
                             t <- gryphType
+                            --t <- gryphVarType
                             (tok GTokComma)
-                            a <- gryphType
+                            --a <- gryphType
+                            a <- gryphVarType
                             (tok GTokPipe)
                             return (GDict t a)
                         <|>
                         do
                             (tok GTokLParen)
                             do
-                                t1 <- gryphType
+                                --t1 <- gryphType
+                                t1 <- gryphVarType
                                 (tok GTokComma)
-                                t2 <- gryphType
+                                --t2 <- gryphType
+                                t2 <- gryphVarType
                                 do
                                     do
                                         (tok GTokComma)
-                                        t3 <- gryphType
+                                        --t3 <- gryphType
+                                        t3 <- gryphVarType
                                         do
                                             do 
                                                 (tok GTokComma)
-                                                t4 <- gryphType
+                                                --t4 <- gryphType
+                                                t4 <- gryphVarType
                                                 (tok GTokRParen)
                                                 return (GQuadruple t1 t2 t3 t4)
                                             <|>
@@ -606,11 +625,13 @@ primitiveType = do
 graphType :: GenParser GphTokenPos st GType
 graphType = do
                 (tok GTokLess)
-                t <- gryphType
+                t <- gryphVarType
+                --t <- gryphType
                 do
                     do
                         (tok GTokComma)
-                        a <- gryphType
+                        --a <- gryphType
+                        a <- gryphVarType
                         (tok GTokGreater)
                         return (GGraphVertexEdge t a)
                     <|>
@@ -776,7 +797,8 @@ castExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
 castExprAux e = do
                     do
                         (tok GTokAt)
-                        t <- gryphType
+                        --t <- gryphType
+                        t <- gryphVarType
                         do
                             do
                                 castExprAux (CastExpr e t)

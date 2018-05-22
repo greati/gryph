@@ -5,43 +5,23 @@ import Syntactic.Values
 import qualified Text.Read as TRead
 
 type Type = String
-    
+
 data GType =    GInteger        |
                 GFloat          |
                 GString         |
                 GChar           |
                 GBool           |
-                GList GType     |
-                GPair GType GType   |
-                GTriple GType GType GType  |
-                GQuadruple GType GType GType GType |
-                GDict GType GType |
-                GGraphVertex GType |
-                GGraphVertexEdge GType GType |
+                GList GVarType     |
+                GPair GVarType GVarType   |
+                GTriple GVarType GVarType GVarType  |
+                GQuadruple GVarType GVarType GVarType GVarType |
+                GDict GType GVarType |
+                GGraphVertex GVarType |
+                GGraphVertexEdge GVarType GVarType |
                 GUserType Identifier
                 deriving (Show, Eq)
 
-instance Read GType where
-    readPrec = (TRead.prec 10 $
-                    do 
-                        TRead.Ident s <- TRead.lexP
-                        case s of
-                            "int" -> return GInteger
-                            "float" -> return GFloat
-                            "string" -> return GString
-                            "char" -> return GChar
-                            "bool" -> return GBool
-                            )
-                TRead.+++
-                (TRead.prec 5 $
-                    do
-                        TRead.Punc s <- TRead.lexP
-                        case s of 
-                            "[" -> do
-                                        a <- TRead.readPrec
-                                        TRead.Punc "]" <- TRead.lexP
-                                        return (GList a)
-                    )
+data GVarType = GType GType | GRef GType deriving (Show, Eq)
 
 data ProgramUnit =  Stmt Stmt | 
                     Subprogram Subprogram |
@@ -52,9 +32,9 @@ data StructDecl = Struct GType [Stmt] deriving (Show, Eq)
 
 data StructInit = StructInit [IdentAssign] deriving (Show, Eq)
 
-type GTypeList = [GType]
+type GTypeList = [GVarType]
 
-data VarDeclaration = VarDeclaration [Identifier] GType [ArithExpr] deriving (Show, Eq)
+data VarDeclaration = VarDeclaration [Identifier] GVarType [ArithExpr] deriving (Show, Eq)
 
 data Subprogram = Function Identifier [VarDeclaration] GType Block | 
                 Procedure Identifier [VarDeclaration] Block deriving (Show, Eq)
@@ -170,7 +150,7 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     ListAccess ArithExpr ArithExpr |
                     StructAccess ArithExpr ArithExpr |
                     TupleAccess ArithExpr ArithExpr |
-                    CastExpr ArithExpr GType |
+                    CastExpr ArithExpr GVarType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |
                     ArithEqExpr EqOp ArithExpr ArithExpr |
                     LogicalBinExpr BoolBinOp ArithExpr ArithExpr |
