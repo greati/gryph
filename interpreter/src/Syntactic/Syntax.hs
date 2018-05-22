@@ -59,11 +59,15 @@ data Subprogram = Function Identifier [VarDeclaration] GType Block |
 
 data Identifier = Ident String deriving(Show, Eq)
 
+data IdentAssign = IdentAssign [Identifier] ArithExpr deriving (Show, Eq)
+
 data Literal = Lit Value deriving(Show, Eq)
 type DictEntry = (ArithExpr, ArithExpr)
 data ExprLiteral = ListLit [ArithExpr] | ListCompLit ListComp | TupleLit [ArithExpr] | DictLit [DictEntry] | GraphLit (Maybe ArithExpr) (Maybe EdgeComp) deriving (Show, Eq)
 
-data SubprogCall = SubprogCall Identifier [ArithExpr] deriving(Show, Eq) -- change to anyExpr
+data SubprogArg = ArgIdentAssign IdentAssign | ArgExpr ArithExpr deriving (Show, Eq)
+
+data SubprogCall = SubprogCall Identifier [SubprogArg] deriving(Show, Eq) -- change to anyExpr
 
 data EdgeComp = EdgeComp (Maybe ArithExpr) Edge ForIterator deriving (Show, Eq)
 

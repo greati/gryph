@@ -438,10 +438,54 @@ matchedIfElse = do
 {- Subprogram calls.
  -
  - -}
+
+identAssignment :: GenParser GphTokenPos st IdentAssign
+identAssignment = do
+                    i <- try $ do 
+                            i <- identList
+                            (tok GTokAssignment)
+                            return i
+                    e <- expression
+                    return (IdentAssign i e)
+
+identAssignmentList :: GenParser GphTokenPos st [IdentAssign]
+identAssignmentList = do
+                            a <- identAssignment
+                            do
+                                do
+                                    (tok GTokComma)
+                                    next <- identAssignmentList
+                                    return (a : next)
+                                <|>
+                                do
+                                    return [a]
+
+subprogArg :: GenParser GphTokenPos st SubprogArg
+subprogArg = do
+                do
+                    i <- identAssignment 
+                    return (ArgIdentAssign i) 
+                <|> 
+                do 
+                    e <- expression
+                    return (ArgExpr e)
+
+subprogArgList :: GenParser GphTokenPos st [SubprogArg]
+subprogArgList = do
+                    s <- subprogArg
+                    do
+                        do
+                            (tok GTokComma)
+                            next <- subprogArgList
+                            return (s:next)
+                        <|>
+                        do
+                            return [s]
+
 subprogCall :: Identifier -> GenParser GphTokenPos st SubprogCall
 subprogCall i = do
                 (tok GTokLParen)
-                es <- expressionList -- change to anyExprList
+                es <- subprogArgList -- change to anyExprList
                 (tok GTokRParen)
                 return (SubprogCall i es)
                 
