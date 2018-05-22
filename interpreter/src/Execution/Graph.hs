@@ -101,8 +101,8 @@ updateEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
         updateEdge' es id ed 
             | not (M.member id es) = error "the edge must have exist"
             | otherwise            = updateEdge'' id ed (es M.! id)
-        updateEdge'' id ed  [x]    = M.fromList [(id , [ed])] 
-        updateEdge'' id ed   xs    = M.fromList [(id, updateEdge''' ed xs)]
+        updateEdge'' id ed  [x]    = (M.insert id [ed] es) 
+        updateEdge'' id ed   xs    = (M.insert id (updateEdge''' ed xs) es)
         updateEdge''' ed    [x]    = [ed]
         updateEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
             | v1 == x1 && v2 == x2 = (ed : xs)
@@ -117,8 +117,8 @@ deleteEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
         deleteEdge' es id ed 
             | not (M.member id es) = error "the edge must have exist"
             | otherwise            = deleteEdge'' id ed (es M.! id)
-        deleteEdge'' id ed  [x]    = M.fromList [] 
-        deleteEdge'' id ed   xs    = M.fromList [(id, deleteEdge''' ed xs)]
+        deleteEdge'' id ed  [x]    = M.delete id es 
+        deleteEdge'' id ed   xs    = M.insert id (deleteEdge''' ed xs) es
         deleteEdge''' ed    [x]    = []
         deleteEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
             | v1 == x1 && v2 == x2 = xs
