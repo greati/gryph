@@ -640,12 +640,13 @@ relExpr = do
 
 relExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
 relExprAux e = do
-                    op <- relOp
-                    a <- addExpr
-                    do
+                    try $ do
+                        op <- relOp
+                        a <- addExpr
                         do
-                            relExprAux (ArithRelExpr op e a)
-                            <|> return (ArithRelExpr op e a) 
+                            do
+                                relExprAux (ArithRelExpr op e a)
+                                <|> return (ArithRelExpr op e a) 
                         
 
 addExpr :: GenParser GphTokenPos st ArithExpr
