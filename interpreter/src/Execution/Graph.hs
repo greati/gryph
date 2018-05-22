@@ -95,7 +95,15 @@ insertEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
 -- |Update an edge. Error if vertices aren't in the list
 updateEdge :: Graph a b -> Edge a b -> Graph a b
 updateEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
-    | not (elem v1 vs) || not(elem v2 vs) = error "both vertices mu    st be present"
+    | not (elem v1 vs) || not(elem v2 vs) = error "both vertices must be present"
     | otherwise = Graph vs (updateEdge' es id ed)
     where
-        updateEdge' es id ed | not (M.member id es) = error "the edge must have exist"
+        updateEdge' es id ed 
+            | not (M.member id es) = error "the edge must have exist"
+            | otherwise            = updateEdge'' id ed (es M.! id)
+        updateEdge'' id ed  [x]    = M.fromList [(id , [ed])] 
+        updateEdge'' id ed   xs    = M.fromList [(id, updateEdge''' ed xs)]
+        updateEdge''' ed    [x]    = [ed]
+        updateEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
+            | v1 == x1 && v2 == x2 = (ed : xs)
+            | otherwise            = x : updateEdge''' ed xs   
