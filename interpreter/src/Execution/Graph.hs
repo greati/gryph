@@ -1,9 +1,8 @@
 module Execution.Graph where
 
-import qualified Data.Map.Strict as M
-import qualified Data.Set        as S
-import qualified Data.Tuple      as T
-
+import qualified Data.Map.Strict   as M
+import qualified Data.Set          as S
+import qualified Data.Tuple        as T
 
 -- |Vertex indexed by integer values, holding data of type a
 data Vertex a = Vertex Int a
@@ -44,17 +43,15 @@ fromEdges :: [Edge a b] -> Graph a b
 fromEdges es = Graph (S.fromList vertices) (M.fromList edges)
     where
         (vertices, edges) = fromEdges' es
-
-fromEdges' :: [Edge a b] -> ([Vertex a], [(Int, [Edge a b])])
-fromEdges' []                                                      = ([],[])
-fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _)]       = (vx : vy : [], (idx, [ed]) : [] )
-fromEdges' (ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _) : eds) = (vx : vy : T.fst (fromEdges' eds), fromEdges'' idx ed (T.snd (fromEdges' eds)))
-
-fromEdges'' :: Int -> Edge a b -> [(Int, [Edge a b])] -> [(Int, [Edge a b])]
-fromEdges'' n ed []     = (n, [ed]) : []
-fromEdges'' n ed (e'@(id,e):es) 
-    | n == id   = (id, ed : e) : es
-    | otherwise = e' : fromEdges'' n ed es  
+        
+        fromEdges' []                                                      = ([],[])
+        fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _)]       = (vx : vy : [], (idx, [ed]) : [] )
+        fromEdges' (ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _) : eds) = (vx : vy : T.fst (fromEdges' eds), fromEdges'' idx ed (T.snd (fromEdges' eds)))
+        
+        fromEdges'' n ed [] = (n, [ed]) : []
+        fromEdges'' n ed (e'@(id,e):es) 
+            | n == id   = (id, ed : e) : es
+            | otherwise = e' : fromEdges'' n ed es  
 
 -- |Create an edge from a tuple of its components
 edgeFromTuple :: (Vertex a, Vertex a, b) -> Edge a b
@@ -123,3 +120,13 @@ deleteEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
         deleteEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
             | v1 == x1 && v2 == x2 = xs
             | otherwise            = x : deleteEdge''' ed xs   
+
+-- |Get edges of a vertex
+getEdges :: Graph a b -> Vertex a -> [Edge a b]
+getEdges (Graph vs es) v@(Vertex n _) 
+    | not (elem v vs) = error "the vertex must be present"
+    | otherwise       = es M.! n
+                
+-- |Get the vertices of a graph
+getVertices :: Graph a b -> [Vertex a]
+getVertices (Graph vs _) = S.toList vs
