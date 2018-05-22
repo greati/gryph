@@ -21,7 +21,9 @@ tokens :-
     $digit+\.$digit+                    {\p s -> (GTokFloatLit s, p)}
     \.\.                                {\p s -> (GTokRangeOp, p)}
     $digit+                             {\p s -> (GTokIntLit s, p)}
-    @edges                              {\p s -> (GTokEdgeSym s, p)}
+    \-\>                                {\p s -> (GTokRightEdge, p)}
+    \<\-                                {\p s -> (GTokLeftEdge, p)}
+    \-\-                                {\p s -> (GTokDoubleEdge, p)}
     @type                               {\p s -> (GTokType s, p)}
     true                                {\p s -> (GTokTrue, p)}
     false                               {\p s -> (GTokFalse, p)}

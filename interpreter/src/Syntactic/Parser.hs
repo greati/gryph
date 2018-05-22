@@ -300,6 +300,52 @@ dfsStmt = do
                     b <- blockOrStmt
                     return (DfsStmt is g Nothing b)
             
+{- Graphs.
+ -
+ -}
+graphLit :: GenParser GphTokenPos st ArithExpr
+graphLit = do
+                (tok GTokLess)
+                v <- primaryExpr
+                do
+                    do
+                        (tok GTokComma)
+                        ec <- edgeComp
+                        (tok GTokGreater)
+                        return (ExprLiteral (GraphLit (Just v) (Just ec)))
+                    <|>
+                    do 
+                        (tok GTokGreater)
+                        return (ExprLiteral (GraphLit (Just v) Nothing))
+
+edgeComp :: GenParser GphTokenPos st EdgeComp
+edgeComp = do
+                do
+                    ex <- try $ do
+                            es <- expression
+                            (tok GTokWhere)
+                            return es
+                    ed <- edge
+                    f <- forIterator
+                    return (EdgeComp (Just ex) ed f)
+                <|>
+                do
+                    ed <- edge
+                    f <- forIterator
+                    return (EdgeComp Nothing ed f)
+                        
+                    
+edge :: GenParser GphTokenPos st Edge
+edge = do
+            e1 <- expression
+            t <- edgeType
+            e2 <- expression
+            return (Edge t e1 e2)
+
+edgeType :: GenParser GphTokenPos st EdgeType
+edgeType = do (tok GTokRightEdge) >> return (RightEdge)
+            <|> do (tok GTokLeftEdge) >> return (LeftEdge)
+            <|> do (tok GTokDoubleEdge) >> return (DoubleEdge)
 
 {- While stmt.
  -
@@ -327,9 +373,8 @@ forStmt = do
                 b <- blockOrStmt
                 return (ForStmt is es b)
                 
-listComp :: GenParser GphTokenPos st ListComp
-listComp = do
-                e <- expression
+forIterator :: GenParser GphTokenPos st ForIterator
+forIterator = do
                 (tok GTokFor)
                 is <- identList
                 (tok GTokOver)
@@ -338,10 +383,18 @@ listComp = do
                     do
                         (tok GTokWhen)
                         bs <- expressionList
-                        return (ListComp e is es bs)
+                        return (ForIterator is es bs)
                     <|>
                     do
-                        return (ListComp e is es [])
+                        return (ForIterator is es [])
+
+                
+
+listComp :: GenParser GphTokenPos st ListComp
+listComp = do
+                e <- expression
+                f <- forIterator 
+                return (ListComp e f)
 
 {- If stmt.
  -
@@ -587,12 +640,13 @@ relExpr = do
 
 relExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
 relExprAux e = do
-                    op <- relOp
-                    a <- addExpr
-                    do
+                    try $ do
+                        op <- relOp
+                        a <- addExpr
                         do
-                            relExprAux (ArithRelExpr op e a)
-                            <|> return (ArithRelExpr op e a) 
+                            do
+                                relExprAux (ArithRelExpr op e a)
+                                <|> return (ArithRelExpr op e a) 
                         
 
 addExpr :: GenParser GphTokenPos st ArithExpr
@@ -733,7 +787,7 @@ primaryExpr = do
                         (tok GTokRParen)
                         return e
                     <|> startIdent -- ident or subprogcall
-                    <|> constant <|> listLit <|> dictLit 
+                    <|> constant <|> listLit <|> dictLit <|> graphLit
                     
 
 constant :: GenParser GphTokenPos st ArithExpr
