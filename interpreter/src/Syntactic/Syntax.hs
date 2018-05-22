@@ -50,6 +50,8 @@ data ProgramUnit =  Stmt Stmt |
 
 data StructDecl = Struct GType [Stmt] deriving (Show, Eq)
 
+data StructInit = StructInit [IdentAssign] deriving (Show, Eq)
+
 type GTypeList = [GType]
 
 data VarDeclaration = VarDeclaration [Identifier] GType [ArithExpr] deriving (Show, Eq)
@@ -63,7 +65,12 @@ data IdentAssign = IdentAssign [Identifier] ArithExpr deriving (Show, Eq)
 
 data Literal = Lit Value deriving(Show, Eq)
 type DictEntry = (ArithExpr, ArithExpr)
-data ExprLiteral = ListLit [ArithExpr] | ListCompLit ListComp | TupleLit [ArithExpr] | DictLit [DictEntry] | GraphLit (Maybe ArithExpr) (Maybe EdgeComp) deriving (Show, Eq)
+data ExprLiteral =  ListLit [ArithExpr] | 
+                    ListCompLit ListComp | 
+                    TupleLit [ArithExpr] | 
+                    DictLit [DictEntry] | 
+                    GraphLit (Maybe ArithExpr) (Maybe EdgeComp) 
+                    deriving (Show, Eq)
 
 data SubprogArg = ArgIdentAssign IdentAssign | ArgExpr ArithExpr deriving (Show, Eq)
 
@@ -79,6 +86,7 @@ data Stmt = ReadStmt Identifier |
             PrintStmt Term | 
             DeclStmt VarDeclaration | --[Identifier] GType [ArithExpr] | 
             AttrStmt [ArithExpr] [ArithExpr] |
+            SubCallStmt SubprogCall |
             IfStmt ArithExpr IfBody ElseBody |
             ReturnStmt ArithExpr |
             ForStmt [Identifier] [ArithExpr] CondBody |
@@ -165,7 +173,8 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     CastExpr ArithExpr GType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |
                     ArithEqExpr EqOp ArithExpr ArithExpr |
-                    LogicalBinExpr BoolBinOp ArithExpr ArithExpr
+                    LogicalBinExpr BoolBinOp ArithExpr ArithExpr |
+                    StructInitExpr StructInit
                     deriving (Show, Eq)
 
 data IdentList = IdentList [Identifier] deriving (Show, Eq)
