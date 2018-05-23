@@ -11,17 +11,17 @@ data GType =    GInteger        |
                 GString         |
                 GChar           |
                 GBool           |
-                GList GVarType     |
-                GPair GVarType GVarType   |
-                GTriple GVarType GVarType GVarType  |
-                GQuadruple GVarType GVarType GVarType GVarType |
-                GDict GType GVarType |
-                GGraphVertex GVarType |
-                GGraphVertexEdge GVarType GVarType |
+                GList GType     |
+                GPair GType GType   |
+                GTriple GType GType GType  |
+                GQuadruple GType GType GType GType |
+                GDict GType GType |
+                GGraphVertex GType |
+                GGraphVertexEdge GType GType |
                 GUserType Identifier
                 deriving (Show, Eq)
 
-data GVarType = GType GType | GRef GType deriving (Show, Eq)
+data GParamType = GType GType | GRef GType deriving (Show, Eq)
 
 data ProgramUnit =  Stmt Stmt | 
                     Subprogram Subprogram |
@@ -32,12 +32,13 @@ data StructDecl = Struct GType [Stmt] deriving (Show, Eq)
 
 data StructInit = StructInit [IdentAssign] deriving (Show, Eq)
 
-type GTypeList = [GVarType]
+type GTypeList = [GType]
 
-data VarDeclaration = VarDeclaration [Identifier] GVarType [ArithExpr] deriving (Show, Eq)
+data VarDeclaration = VarDeclaration [Identifier] GType [ArithExpr] deriving (Show, Eq)
+data ParamDeclaration = ParamDeclaration [Identifier] GParamType [ArithExpr] deriving (Show, Eq)
 
-data Subprogram = Function Identifier [VarDeclaration] GType Block | 
-                Procedure Identifier [VarDeclaration] Block deriving (Show, Eq)
+data Subprogram = Function Identifier [ParamDeclaration] GType Block | 
+                Procedure Identifier [ParamDeclaration] Block deriving (Show, Eq)
 
 data Identifier = Ident String deriving(Show, Eq)
 
@@ -150,7 +151,7 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     ListAccess ArithExpr ArithExpr |
                     StructAccess ArithExpr ArithExpr |
                     TupleAccess ArithExpr ArithExpr |
-                    CastExpr ArithExpr GVarType |
+                    CastExpr ArithExpr GType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |
                     ArithEqExpr EqOp ArithExpr ArithExpr |
                     LogicalBinExpr BoolBinOp ArithExpr ArithExpr |
