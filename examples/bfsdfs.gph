@@ -1,0 +1,7 @@
+bfs a,b,c in g from 2
+    bfs a in f from k
+        a = 2;
+
+dfs a, b in f(a) from g(b,c) {
+    a = 1+s;
+}

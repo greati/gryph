@@ -59,19 +59,38 @@ data Subprogram = Function Identifier [VarDeclaration] GType Block |
 
 data Identifier = Ident String deriving(Show, Eq)
 
+data IdentAssign = IdentAssign [Identifier] ArithExpr deriving (Show, Eq)
+
 data Literal = Lit Value deriving(Show, Eq)
 type DictEntry = (ArithExpr, ArithExpr)
-data ExprLiteral = ListLit [ArithExpr] | TupleLit [ArithExpr] | DictLit [DictEntry] deriving (Show, Eq)
+data ExprLiteral = ListLit [ArithExpr] | ListCompLit ListComp | TupleLit [ArithExpr] | DictLit [DictEntry] | GraphLit (Maybe ArithExpr) (Maybe EdgeComp) deriving (Show, Eq)
 
-data SubprogCall = SubprogCall Identifier [ArithExpr] deriving(Show, Eq) -- change to anyExpr
+data SubprogArg = ArgIdentAssign IdentAssign | ArgExpr ArithExpr deriving (Show, Eq)
+
+data SubprogCall = SubprogCall Identifier [SubprogArg] deriving(Show, Eq) -- change to anyExpr
+
+data EdgeComp = EdgeComp (Maybe ArithExpr) Edge ForIterator deriving (Show, Eq)
+
+data EdgeType = LeftEdge | RightEdge | DoubleEdge deriving (Show, Eq)
+
+data Edge = Edge EdgeType ArithExpr ArithExpr deriving (Show, Eq)
 
 data Stmt = ReadStmt Identifier | 
             PrintStmt Term | 
             DeclStmt VarDeclaration | --[Identifier] GType [ArithExpr] | 
-            AttrStmt [Identifier] [ArithExpr] |
+            AttrStmt [ArithExpr] [ArithExpr] |
             IfStmt ArithExpr IfBody ElseBody |
-            ReturnStmt ArithExpr
-            deriving (Show, Eq)
+            ReturnStmt ArithExpr |
+            ForStmt [Identifier] [ArithExpr] CondBody |
+            WhileStmt ArithExpr CondBody |
+            BfsStmt [Identifier] ArithExpr (Maybe ArithExpr) CondBody |
+            DfsStmt [Identifier] ArithExpr (Maybe ArithExpr) CondBody 
+            deriving (Show, Eq) 
+
+data ForIterator = ForIterator [Identifier] [ArithExpr] [ArithExpr] deriving (Show, Eq)
+
+-- | a+1 for a,b over [1,2],[2,3] when a < 2 
+data ListComp = ListComp ArithExpr ForIterator deriving (Show, Eq)
 
 data IfBody =  IfBody CondBody deriving(Eq, Show)
 data ElseBody = NoElse | ElseBody CondBody deriving(Eq, Show)
@@ -138,11 +157,11 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     ArithBinExpr ArithBinOp ArithExpr ArithExpr | 
                     ArithTerm Term |
                     ExprLiteral ExprLiteral |
-                    GraphAccess Identifier ArithExpr |
-                    DictAccess Identifier ArithExpr |
-                    ListAccess Identifier ArithExpr |
-                    StructAccess Identifier ArithExpr |
-                    TupleAccess Identifier ArithExpr |
+                    GraphAccess ArithExpr ArithExpr |
+                    DictAccess ArithExpr ArithExpr |
+                    ListAccess ArithExpr ArithExpr |
+                    StructAccess ArithExpr ArithExpr |
+                    TupleAccess ArithExpr ArithExpr |
                     CastExpr ArithExpr GType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |
                     ArithEqExpr EqOp ArithExpr ArithExpr |

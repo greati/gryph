@@ -1,0 +1,10 @@
+if (a < b)
+    c = a;
+else if (b == a) {
+    d = a;
+} else if (a + b == 2) 
+    m = c;
+else {
+    k = a;
+    a = a +2;
+}

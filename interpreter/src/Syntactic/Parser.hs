@@ -75,7 +75,7 @@ blockOrStmt =   do
 
 matchedStmt :: GenParser GphTokenPos st Stmt
 matchedStmt = do
-                matchedIfElse <|> commonStmt
+                matchedIfElse <|> commonStmt <|> forStmt <|> whileStmt <|> bfsStmt <|> dfsStmt
 
 unmatchedStmt :: GenParser GphTokenPos st Stmt
 unmatchedStmt = do
@@ -83,7 +83,7 @@ unmatchedStmt = do
 
 commonStmt :: GenParser GphTokenPos st Stmt
 commonStmt = do 
-                s <- (readStmt <|> printStmt <|> startIdentListStmt <|> returnStmt)
+                s <- (readStmt <|> printStmt <|> attrStmt <|> declStmt <|> returnStmt)
                 (tok GTokSemicolon)
                 return s
 
@@ -93,17 +93,22 @@ returnStmt = do
                 e <- expression
                 return (ReturnStmt e)
 
-startIdentListStmt :: GenParser GphTokenPos st Stmt
-startIdentListStmt = do
-                    i <- identList
-                    do
-                        attrStmt i <|> declStmtAux i
+--startIdentListStmt :: GenParser GphTokenPos st Stmt
+--startIdentListStmt = do
+--                    i <- identList
+--                    do
+--                        attrStmt i <|> declStmtAux i
 
-attrStmt :: [Identifier] -> GenParser GphTokenPos st Stmt
-attrStmt is = do 
-                (tok GTokAssignment)
-                vs <- expressionList
-                return (AttrStmt is vs)
+attrStmt :: GenParser GphTokenPos st Stmt
+attrStmt = do 
+                do
+                    es <- try $ 
+                            do 
+                                es <- postfixExprList
+                                (tok GTokAssignment)
+                                return es
+                    vs <- expressionList
+                    return (AttrStmt es vs)
 
 declStmt :: GenParser GphTokenPos st Stmt
 declStmt = do
@@ -213,9 +218,17 @@ subprogDeclAux i ds = do
 listLit :: GenParser GphTokenPos st ArithExpr
 listLit = do
                 (tok GTokLSquare)
-                l <- expressionList
-                (tok GTokRSquare)
-                return (ExprLiteral (ListLit l))
+                do
+                    do 
+                        try $ do
+                            lc <- listComp
+                            (tok GTokRSquare)
+                            return (ExprLiteral (ListCompLit lc))
+                    <|>
+                    do
+                        l <- expressionList
+                        (tok GTokRSquare)
+                        return (ExprLiteral (ListLit l))
 
 tupleLit :: GenParser GphTokenPos st ArithExpr
 tupleLit = do
@@ -247,6 +260,141 @@ dictLit = do
                     l <- dictEntryList 
                     (tok GTokPipe)
                     return (ExprLiteral (DictLit l))
+
+{- BFS Stmt
+ -
+ - -}
+bfsStmt :: GenParser GphTokenPos st Stmt
+bfsStmt = do
+            (tok GTokBFS)
+            is <- identList
+            (tok GTokIn)
+            g <- expression
+            do
+                do
+                    (tok GTokFrom)
+                    v <- expression
+                    b <- blockOrStmt
+                    return (BfsStmt is g (Just v) b)
+                <|>
+                do
+                    b <- blockOrStmt
+                    return (BfsStmt is g Nothing b)
+{- DFS Stmt
+ -
+ - -}
+dfsStmt :: GenParser GphTokenPos st Stmt
+dfsStmt = do
+            (tok GTokDFS)
+            is <- identList
+            (tok GTokIn)
+            g <- expression
+            do
+                do
+                    (tok GTokFrom)
+                    v <- expression
+                    b <- blockOrStmt
+                    return (DfsStmt is g (Just v) b)
+                <|>
+                do
+                    b <- blockOrStmt
+                    return (DfsStmt is g Nothing b)
+            
+{- Graphs.
+ -
+ -}
+graphLit :: GenParser GphTokenPos st ArithExpr
+graphLit = do
+                (tok GTokLess)
+                v <- primaryExpr
+                do
+                    do
+                        (tok GTokComma)
+                        ec <- edgeComp
+                        (tok GTokGreater)
+                        return (ExprLiteral (GraphLit (Just v) (Just ec)))
+                    <|>
+                    do 
+                        (tok GTokGreater)
+                        return (ExprLiteral (GraphLit (Just v) Nothing))
+
+edgeComp :: GenParser GphTokenPos st EdgeComp
+edgeComp = do
+                do
+                    ex <- try $ do
+                            es <- expression
+                            (tok GTokWhere)
+                            return es
+                    ed <- edge
+                    f <- forIterator
+                    return (EdgeComp (Just ex) ed f)
+                <|>
+                do
+                    ed <- edge
+                    f <- forIterator
+                    return (EdgeComp Nothing ed f)
+                        
+                    
+edge :: GenParser GphTokenPos st Edge
+edge = do
+            e1 <- expression
+            t <- edgeType
+            e2 <- expression
+            return (Edge t e1 e2)
+
+edgeType :: GenParser GphTokenPos st EdgeType
+edgeType = do (tok GTokRightEdge) >> return (RightEdge)
+            <|> do (tok GTokLeftEdge) >> return (LeftEdge)
+            <|> do (tok GTokDoubleEdge) >> return (DoubleEdge)
+
+{- While stmt.
+ -
+ --}
+whileStmt :: GenParser GphTokenPos st Stmt
+whileStmt = do
+                (tok GTokWhile)
+                (tok GTokLParen)
+                be <- expression
+                (tok GTokRParen)
+                b <- blockOrStmt
+                return (WhileStmt be b)
+                
+
+{- For stmt.
+ -
+ -
+ -}
+forStmt :: GenParser GphTokenPos st Stmt
+forStmt = do
+                (tok GTokFor)
+                is <- identList
+                (tok GTokOver)
+                es <- expressionList
+                b <- blockOrStmt
+                return (ForStmt is es b)
+                
+forIterator :: GenParser GphTokenPos st ForIterator
+forIterator = do
+                (tok GTokFor)
+                is <- identList
+                (tok GTokOver)
+                es <- expressionList
+                do
+                    do
+                        (tok GTokWhen)
+                        bs <- expressionList
+                        return (ForIterator is es bs)
+                    <|>
+                    do
+                        return (ForIterator is es [])
+
+                
+
+listComp :: GenParser GphTokenPos st ListComp
+listComp = do
+                e <- expression
+                f <- forIterator 
+                return (ListComp e f)
 
 {- If stmt.
  -
@@ -290,10 +438,54 @@ matchedIfElse = do
 {- Subprogram calls.
  -
  - -}
+
+identAssignment :: GenParser GphTokenPos st IdentAssign
+identAssignment = do
+                    i <- try $ do 
+                            i <- identList
+                            (tok GTokAssignment)
+                            return i
+                    e <- expression
+                    return (IdentAssign i e)
+
+identAssignmentList :: GenParser GphTokenPos st [IdentAssign]
+identAssignmentList = do
+                            a <- identAssignment
+                            do
+                                do
+                                    (tok GTokComma)
+                                    next <- identAssignmentList
+                                    return (a : next)
+                                <|>
+                                do
+                                    return [a]
+
+subprogArg :: GenParser GphTokenPos st SubprogArg
+subprogArg = do
+                do
+                    i <- identAssignment 
+                    return (ArgIdentAssign i) 
+                <|> 
+                do 
+                    e <- expression
+                    return (ArgExpr e)
+
+subprogArgList :: GenParser GphTokenPos st [SubprogArg]
+subprogArgList = do
+                    s <- subprogArg
+                    do
+                        do
+                            (tok GTokComma)
+                            next <- subprogArgList
+                            return (s:next)
+                        <|>
+                        do
+                            return [s]
+
 subprogCall :: Identifier -> GenParser GphTokenPos st SubprogCall
 subprogCall i = do
                 (tok GTokLParen)
-                es <- expressionList -- change to anyExprList
+                es <- subprogArgList -- change to anyExprList
                 (tok GTokRParen)
                 return (SubprogCall i es)
                 
@@ -492,12 +684,13 @@ relExpr = do
 
 relExprAux :: ArithExpr -> GenParser GphTokenPos st ArithExpr
 relExprAux e = do
-                    op <- relOp
-                    a <- addExpr
-                    do
+                    try $ do
+                        op <- relOp
+                        a <- addExpr
                         do
-                            relExprAux (ArithRelExpr op e a)
-                            <|> return (ArithRelExpr op e a) 
+                            do
+                                relExprAux (ArithRelExpr op e a)
+                                <|> return (ArithRelExpr op e a) 
                         
 
 addExpr :: GenParser GphTokenPos st ArithExpr
@@ -577,11 +770,22 @@ unaryExpr = do
                 do
                     postfixExpr
 
+postfixExprList :: GenParser GphTokenPos st [ArithExpr]
+postfixExprList = do
+                        e <- postfixExpr
+                        do
+                            do
+                                (tok GTokComma)
+                                next <- postfixExprList
+                                return (e:next)
+                            <|>
+                            return [e]
+
 postfixExpr :: GenParser GphTokenPos st ArithExpr
 postfixExpr = do
                     do
                         try $ do
-                            i <- anyIdent
+                            i <- primaryExpr
                             do
                                 do
                                     (tok GTokLess) 
@@ -627,7 +831,7 @@ primaryExpr = do
                         (tok GTokRParen)
                         return e
                     <|> startIdent -- ident or subprogcall
-                    <|> constant <|> listLit <|> dictLit 
+                    <|> constant <|> listLit <|> dictLit <|> graphLit
                     
 
 constant :: GenParser GphTokenPos st ArithExpr
