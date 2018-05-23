@@ -255,9 +255,19 @@ listLit = do
 tupleLit :: GenParser GphTokenPos st ArithExpr
 tupleLit = do
                 (tok GTokLParen)
-                l <- expressionList
-                (tok GTokRParen)
-                return (ExprLiteral (TupleLit l))
+                e1 <- expression
+                (tok GTokComma)
+                e2 <- expression
+                do
+                    do
+                        (tok GTokRParen)
+                        return (ExprLiteral (TupleLit (e1:[e2])))
+                    <|>
+                    do
+                        (tok GTokComma)
+                        l <- expressionList
+                        (tok GTokRParen)
+                        return (ExprLiteral (TupleLit (e1:(e2:l))))
 
 dictEntry :: GenParser GphTokenPos st DictEntry
 dictEntry = do
