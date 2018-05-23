@@ -7,18 +7,61 @@ import Syntactic.Parser
 
 
 type Filename = String
+type Scopes = [Scope]
 
-scopes = []
+-- |Scopes in the execution.
+scopes :: Scopes
+scopes = ["global"]
 
-gryph :: Filename -> IO()
---gryph s = exec memory scopes (parseFile s) 
-gryph = undefined
+-- |Main interpreter function.
+igryph :: Filename -> IO()
+igryph s = do
+                us <- parseFile s
+                exec memory scopes us
 
-exec :: Memory -> [Scope] -> [ProgramUnit] -> IO() 
-exec = undefined
+-- |Execute a program represented as a list of program units.
+exec :: Memory -> Scopes -> [ProgramUnit] -> IO() 
+exec m ss [] = return ()
+exec m ss (u:us) = do
+                        execUnit u m ss
+                        exec m ss us 
 
-execStmt :: Stmt -> IO()
-execStmt (DeclStmt (VarDeclaration [x] t [e])) = undefined
+-- |Executes a program unit.
+execUnit :: ProgramUnit -> Memory -> Scopes -> IO()
+execUnit (Subprogram sub) m ss = execSubDecl sub m
+execUnit (StructDecl struct) m ss = execStructDecl struct m
+execUnit (Stmt stmt) m ss = execStmt stmt m ss
+
+execSubDecl :: Subprogram -> Memory -> IO()
+execSubDecl s m = undefined
+
+execStructDecl :: StructDecl -> Memory -> IO()
+execStructDecl s m = undefined
+
+-- |Executes any statement.
+execStmt :: Stmt -> Memory -> Scopes -> IO()
+execStmt d@(DeclStmt _) = varDeclStmt d
+
+-- |Executes a declaration statement.
+varDeclStmt :: Stmt -> Memory -> Scopes -> IO()
+varDeclStmt (DeclStmt (VarDeclaration [] t [])) m ss =         do 
+                                                                return ()
+varDeclStmt (DeclStmt (VarDeclaration [] t (_:es))) m ss =     do 
+                                                                print "Too many expressions in right side."
+varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:[]))) m ss = do 
+                                                                do
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval e])) m of
+                                                                        (Left i) -> print i
+                                                                        (Right i) -> return ()
+                                                                execStmt (DeclStmt (VarDeclaration xs t (e:[]))) m ss
+varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m ss = do 
+                                                                do
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval e])) m of
+                                                                        (Left i) -> print i
+                                                                        (Right i) -> return ()
+                                                                execStmt (DeclStmt (VarDeclaration xs t es)) m ss
+
+
 
 getType :: Value -> GType
 getType (Integer i)      = GInteger
