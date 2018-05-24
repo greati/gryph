@@ -1,0 +1,3 @@
+c : int;
+c : float;
+a, b : int = 2 + 2, 2^3;

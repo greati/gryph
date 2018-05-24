@@ -4,21 +4,73 @@ import Syntactic.Values
 import Syntactic.Syntax
 import Execution.Memory
 import Syntactic.Parser 
+import qualified Data.Map as M
 
 
 type Filename = String
+type Scopes = [Scope]
 
-scopes = []
+-- |Scopes in the execution.
+scopes :: Scopes
+scopes = ["global"]
 
-gryph :: Filename -> IO()
---gryph s = exec memory scopes (parseFile s) 
-gryph = undefined
+-- |Main interpreter function.
+igryph :: Filename -> IO()
+igryph s = do
+                us <- parseFile s
+                exec memory scopes us
 
-exec :: Memory -> [Scope] -> [ProgramUnit] -> IO() 
-exec = undefined
+-- |Execute a program represented as a list of program units.
+exec :: Memory -> Scopes -> [ProgramUnit] -> IO() 
+exec m ss [] = return ()
+exec m ss (u:us) = do
+                        (m', ss') <- execUnit u m ss
+                        print (show m')
+                        exec m' ss' us 
 
-execStmt :: Stmt -> IO()
-execStmt (DeclStmt (VarDeclaration [x] t [e])) = undefined
+-- |Executes a program unit.
+execUnit :: ProgramUnit -> Memory -> Scopes -> IO (Memory, Scopes)
+execUnit (Subprogram sub) m ss = do 
+                                    execSubDecl sub m
+                                    return (m,ss)
+execUnit (StructDecl struct) m ss = 
+                                do
+                                    execStructDecl struct m
+                                    return (m,ss)
+execUnit (Stmt stmt) m ss = execStmt stmt m ss
+
+execSubDecl :: Subprogram -> Memory -> IO ()
+execSubDecl s m = undefined
+
+execStructDecl :: StructDecl -> Memory -> IO ()
+execStructDecl s m = undefined
+
+-- |Executes any statement.
+execStmt :: Stmt -> Memory -> Scopes -> IO (Memory, Scopes)
+execStmt d@(DeclStmt _) m ss = do
+                            m' <- varDeclStmt d m ss
+                            return (m', ss)
+
+-- |Executes a declaration statement.
+varDeclStmt :: Stmt -> Memory -> Scopes -> IO Memory
+varDeclStmt (DeclStmt (VarDeclaration (x:xs) t [])) m ss =     do 
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([defaultValue t])) m of
+                                                                        (Left i) -> error i
+                                                                        (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t [])) i ss
+varDeclStmt (DeclStmt (VarDeclaration [] t [])) m ss =         do 
+                                                                return m
+varDeclStmt (DeclStmt (VarDeclaration [] t (_:es))) m ss =     do 
+                                                                error "Too many expressions in right side."
+varDeclStmt (DeclStmt (VarDeclaration (x:xs'@(y:xs)) t (e:[]))) m ss = do 
+                                                                do
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval e])) m of
+                                                                        (Left i) -> error i
+                                                                        (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs' t (e:[]))) i ss
+varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m ss = do 
+                                                                do
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval e])) m of
+                                                                        (Left i) -> error i
+                                                                        (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i ss
 
 getType :: Value -> GType
 getType (Integer i)      = GInteger
@@ -33,6 +85,19 @@ evalList [x]      =  [eval x]
 evalList (x:y:xs) =  if getType z /= getType (eval y) then error "Type mismatch in List "
                      else  z:(evalList (y:xs)) 
 		     where z = (eval x)
+
+
+-- | Default values for each type
+defaultValue :: GType -> Value
+defaultValue GInteger = Integer 0
+defaultValue GFloat = Float 0.0
+defaultValue GString = String []
+defaultValue (GList t) = List []
+defaultValue (GPair t1 t2) = Pair (defaultValue t1, defaultValue t2)
+defaultValue (GTriple t1 t2 t3) = Triple (defaultValue t1, defaultValue t2, defaultValue t3)
+defaultValue (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue t1, defaultValue t2, defaultValue t3, defaultValue t4)
+defaultValue (GDict k v) = Map (M.empty)
+
 
 fromValue :: Value -> Integer
 fromValue (Integer i) = i  
