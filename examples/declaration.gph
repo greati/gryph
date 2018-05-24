@@ -4,4 +4,4 @@ c : int = b + 1;
 
 d : [int] = [1,2,5] % a;
 
-print d;
+print d[0];

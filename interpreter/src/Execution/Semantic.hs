@@ -128,6 +128,11 @@ eval m ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr DivB
 eval m ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ExpBinOp e1 e2) expBin  
 eval m ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ModBinOp e1 e2) modBin  
 eval m ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
+eval m ss (ListAccess e1 e2 )                = case eval m ss e1 of
+                                                (List l) -> case eval m ss e2 of
+                                                             Integer i ->  l !! (fromIntegral i)
+                                                             _ -> error "Acess List mismatch"
+                                                _ -> error "Acess List mismatch"
 eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
                                                 l1@(List (x:xs)) -> case eval m ss e2 of
                                                                         l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2
