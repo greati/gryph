@@ -105,25 +105,28 @@ defaultValue (GDict k v) = Map (M.empty)
 fromValue :: Value -> Integer
 fromValue (Integer i) = i  
 
+evalBinOp ::Memory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> Value
+evalBinOp m ss (ArithBinExpr _  e1 e2) f = case eval m ss e1 of
+                                                     l1@(List (x:xs)) -> if (getType k == getType x) then f l1 k
+                                                                         else error "Type mismatch operation"
+                                                                          where k = eval m ss e2 
+                                                     k -> case eval m ss e2 of 
+                                                           l2@(List (x:xs) ) -> if (getType k == getType x) then f l2 k 
+                                                                         else error "Type mismatch  operation"
+                                                           x -> if (getType k == getType x) then f k  x
+                                                                         else error "Type mismatch  operation"
 
 eval :: Memory -> Scopes -> ArithExpr -> Value
 eval m ss (ArithTerm (LitTerm (Lit v)))      = v
 eval m ss (ArithUnExpr MinusUnOp e)          = minusUn (eval m ss e)
 eval m ss (ArithUnExpr PlusUnOp e)           = plusUn (eval m ss e)
 eval m ss (ArithUnExpr NotUnOp e)            = not' (eval m ss e)
-eval m ss (ArithBinExpr MinusBinOp  e1 e2)   = minusBin (eval m ss e1) (eval m ss e2)  
-eval m ss (ArithBinExpr PlusBinOp  e1 e2)    = case eval m ss e1 of
-                                                l1@(List (x:xs)) -> if (getType k == getType x) then plusBin l1 k
-                                                                    else error "Type mismatch + operation"
-                                                                     where k = eval m ss e2 
-                                                k -> case eval m ss e2 of 
-                                                      l2@(List (x:xs) ) -> if (getType k == getType x) then plusBin l2 k 
-                                                                    else error "Type mismatch + operation"
-                                                      x -> if (getType k == getType x) then plusBin k  x
-                                                                    else error "Type mismatch + operation"
-eval m ss (ArithBinExpr TimesBinOp  e1 e2)   = timesBin (eval m ss e1) (eval m ss e2)  
-eval m ss (ArithBinExpr DivBinOp  e1 e2)     = divBin (eval m ss e1) (eval m ss e2)  
-eval m ss (ArithBinExpr ExpBinOp  e1 e2)     = expBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ArithBinExpr MinusBinOp  e1 e2)   = evalBinOp m ss (ArithBinExpr MinusBinOp  e1 e2) minusBin  
+eval m ss (ArithBinExpr PlusBinOp  e1 e2)    = evalBinOp m ss (ArithBinExpr PlusBinOp  e1 e2) plusBin
+eval m ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m ss (ArithBinExpr TimesBinOp e1 e2) timesBin
+eval m ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr DivBinOp e1 e2) divBin
+eval m ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ExpBinOp e1 e2) expBin  
+eval m ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ModBinOp e1 e2) modBin  
 eval m ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
 eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
                                                 l1@(List (x:xs)) -> case eval m ss e2 of
@@ -152,24 +155,32 @@ plusPlusBin (List xs'@(x:xs)) k = if getType (k) /= tl then error "Type mismatch
 
 modBin ::  Value -> Value -> Value
 modBin (Integer i) (Integer j) = (Integer (i `mod`  j)) 
+modBin (List l)  i             =   List ( map ((flip modBin) i) l)
+modBin  i (List l)             =   List ( map (modBin i) l)
 
 expBin ::  Value -> Value -> Value
 expBin (Integer i) (Integer j) = (Integer (i ^ j)) 
 expBin (Float f) (Integer i )  = ( Float (f ** (fromInteger i)))
 expBin (Integer i) ( Float f)  = ( Float ((fromInteger i) ** f))  
 expBin (Float f1) (Float f2)   = ( Float (f1 ** f2))
+expBin (List l)  i             =   List ( map ((flip expBin) i) l)
+expBin  i (List l)             =   List ( map (expBin i) l)
 
 divBin ::  Value -> Value -> Value
 divBin (Integer i) (Integer j) = (Integer (i `div` j)) 
 divBin (Float f) (Integer i )  = ( Float (f / (fromInteger i)))
 divBin (Integer i) ( Float f)  = ( Float ((fromInteger i) / f))  
 divBin (Float f1) (Float f2)   = ( Float (f1 / f2))
+divBin (List l)  i             =   List ( map ((flip divBin) i) l)
+divBin  i (List l)             =   List ( map (divBin i) l)
 
 timesBin ::  Value -> Value -> Value
 timesBin (Integer i) (Integer j) = (Integer (i*j)) 
 timesBin (Float f) (Integer i )  = ( Float (f * (fromInteger i)))
 timesBin (Integer i) ( Float f)  = ( Float ((fromInteger i) * f))  
 timesBin (Float f1) (Float f2)   = ( Float (f1 * f2))
+timesBin (List l)  i             =   List ( map (timesBin i) l)
+timesBin  i (List l)             =   List ( map (timesBin i) l)
 
 plusBin ::  Value -> Value -> Value
 plusBin (Integer i) (Integer j) = (Integer (i+j)) 
@@ -184,6 +195,8 @@ minusBin (Integer i) (Integer j) = (Integer (i-j))
 minusBin (Float f) (Integer i )  = ( Float (f - (fromInteger i)))
 minusBin (Integer i) ( Float f)  = ( Float ((fromInteger i) - f))  
 minusBin (Float f1) (Float f2)   = ( Float (f1 - f2))
+minusBin (List l)  i             =   List ( map ((flip minusBin) i) l)
+minusBin  i (List l)             =   List ( map (minusBin i) l)
 
 plusUn :: Value -> Value
 plusUn (Integer i) = Integer i

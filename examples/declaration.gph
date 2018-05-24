@@ -2,6 +2,6 @@ a, b : int = 2 + 2, 2^3;
 
 c : int = b + 1;
 
-d : [int] = a + [1,2,3];
+d : [int] = [1,2,5] % a;
 
 print d;
