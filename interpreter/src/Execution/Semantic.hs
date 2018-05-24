@@ -107,16 +107,24 @@ fromValue (Integer i) = i
 
 
 eval :: Memory -> Scopes -> ArithExpr -> Value
-eval m ss (ArithTerm (LitTerm (Lit v)))     = v
-eval m ss (ArithUnExpr MinusUnOp e)         = minusUn (eval m ss e)
-eval m ss (ArithUnExpr PlusUnOp e)          = plusUn (eval m ss e)
-eval m ss (ArithUnExpr NotUnOp e)           = not' (eval m ss e)
-eval m ss (ArithBinExpr MinusBinOp  e1 e2)  = minusBin (eval m ss e1) (eval m ss e2)  
-eval m ss (ArithBinExpr PlusBinOp  e1 e2)   = plusBin (eval m ss e1) (eval m ss e2)  
-eval m ss (ArithBinExpr TimesBinOp  e1 e2)  = timesBin (eval m ss e1) (eval m ss e2)  
-eval m ss (ArithBinExpr DivBinOp  e1 e2)    = divBin (eval m ss e1) (eval m ss e2)  
-eval m ss (ArithBinExpr ExpBinOp  e1 e2)    = expBin (eval m ss e1) (eval m ss e2)  
-eval m ss (ExprLiteral (ListLit es ))       = List (evalList m ss es)
+eval m ss (ArithTerm (LitTerm (Lit v)))      = v
+eval m ss (ArithUnExpr MinusUnOp e)          = minusUn (eval m ss e)
+eval m ss (ArithUnExpr PlusUnOp e)           = plusUn (eval m ss e)
+eval m ss (ArithUnExpr NotUnOp e)            = not' (eval m ss e)
+eval m ss (ArithBinExpr MinusBinOp  e1 e2)   = minusBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ArithBinExpr PlusBinOp  e1 e2)    = case eval m ss e1 of
+                                                l1@(List (x:xs)) -> if (getType k == getType x) then plusBin l1 k
+                                                                    else error "Type mismatch + operation"
+                                                                     where k = eval m ss e2 
+                                                k -> case eval m ss e2 of 
+                                                      l2@(List (x:xs) ) -> if (getType k == getType x) then plusBin l2 k 
+                                                                    else error "Type mismatch + operation"
+                                                      x -> if (getType k == getType x) then plusBin k  x
+                                                                    else error "Type mismatch + operation"
+eval m ss (ArithBinExpr TimesBinOp  e1 e2)   = timesBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ArithBinExpr DivBinOp  e1 e2)     = divBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ArithBinExpr ExpBinOp  e1 e2)     = expBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
 eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
                                                 l1@(List (x:xs)) -> case eval m ss e2 of
                                                                         l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2
@@ -168,6 +176,8 @@ plusBin (Integer i) (Integer j) = (Integer (i+j))
 plusBin (Float f) (Integer i )  = ( Float (f + (fromInteger i)))
 plusBin (Integer i) ( Float f)  = ( Float ((fromInteger i) +f))  
 plusBin (Float f1) (Float f2)   = ( Float (f1 + f2))
+plusBin (List l)  i             =   List ( map (plusBin i) l)
+plusBin  i (List l)             =   List ( map (plusBin i) l)
 
 minusBin ::  Value -> Value -> Value
 minusBin (Integer i) (Integer j) = (Integer (i-j)) 

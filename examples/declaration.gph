@@ -2,5 +2,6 @@ a, b : int = 2 + 2, 2^3;
 
 c : int = b + 1;
 
+d : [int] = a + [1,2,3];
 
-print a;
+print d;
