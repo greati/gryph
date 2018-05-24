@@ -22,7 +22,7 @@ memory = M.empty
 
 elabVar :: Scope -> Name -> Cell -> Memory -> Either String Memory
 elabVar s n c m 
-    | M.member ci m = Left ("Variable " ++ n ++ " in scope " ++ s ++ "already declared.")
+    | M.member ci m = Left ("Variable " ++ n ++ " in scope " ++ s ++ " already declared.")
     | otherwise     = Right (M.insert ci c m)
         where ci = (n,s)
 
