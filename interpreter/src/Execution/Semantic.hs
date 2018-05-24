@@ -87,7 +87,7 @@ evalList :: Memory -> Scopes -> [ArithExpr] -> [Value]
 evalList m ss [x]      =  [eval m ss x]
 evalList m ss (x:y:xs) =  if getType z /= getType (eval m ss y) then error "Type mismatch in List "
                      else  z:(evalList m ss (y:xs)) 
-		     where z = (eval m ss x)
+                     where z = (eval m ss x)
 
 
 -- | Default values for each type
@@ -118,12 +118,14 @@ eval m ss (ArithBinExpr DivBinOp  e1 e2)    = divBin (eval m ss e1) (eval m ss e
 eval m ss (ArithBinExpr ExpBinOp  e1 e2)    = expBin (eval m ss e1) (eval m ss e2)  
 eval m ss (ExprLiteral (ListLit es ))       = List (evalList m ss es)
 eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
-						l1@(List (x:xs)) -> case eval m ss e2 of
-									l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2
-                                                      					    else plusPlusBin l1 l2
-						k -> case eval m ss e2 of 
-							l2@(List (y:ys)) -> if (getType k == getType y) then plusPlusBin k l2
-									    else error "Type mismatch ++ operator "
+                                                l1@(List (x:xs)) -> case eval m ss e2 of
+                                                                        l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2
+                                                                                            else plusPlusBin l1 l2
+                                                                        k -> if (getType k == getType x) then plusPlusBin l1 k
+                                                                             else error "Type mismatch ++ opeator "
+                                                k -> case eval m ss e2 of 
+                                                        l2@(List (y:ys)) -> if (getType k == getType y) then plusPlusBin k l2
+                                                                            else error "Type mismatch ++ operator "
 eval m ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
                                                 Left i -> error i
                                                 Right i -> i
@@ -134,9 +136,11 @@ plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 
 plusPlusBin :: Value -> Value -> Value
 plusPlusBin k (List xs'@(x:xs)) = if getType (k) /= tl then error "Type mismatch in operation ++"
-			   else List (k:xs')
-				where tl = getType x 
-
+                           else List (k:xs')
+                                where tl = getType x 
+plusPlusBin (List xs'@(x:xs)) k = if getType (k) /= tl then error "Type mismatch in operation ++"
+                           else List (xs' ++ [k])
+                                where tl = getType x
 
 modBin ::  Value -> Value -> Value
 modBin (Integer i) (Integer j) = (Integer (i `mod`  j)) 
