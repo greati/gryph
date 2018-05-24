@@ -125,8 +125,13 @@ deleteEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
 getEdges :: Graph a b -> Vertex a -> [Edge a b]
 getEdges (Graph vs es) v@(Vertex n _) 
     | not (elem v vs) = error "the vertex must be present"
+    | not (M.member n es) = []
     | otherwise       = es M.! n
                 
 -- |Get the vertices of a graph
 getVertices :: Graph a b -> [Vertex a]
 getVertices (Graph vs _) = S.toList vs
+
+-- |Delete a vertex of a graph
+deleteVertex :: Vertex a -> Graph a b -> Graph a b
+deleteVertex = undefined

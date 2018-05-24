@@ -14,7 +14,7 @@ join i [[]]   = [[]]
 join i [x]    = [(i : x)]
 join i (x:xs) = (i : x) : (join i xs)
 
---for :: [String] -> [[a]] -> IO ()
+for :: (Eq b, Show b, Show a, Ord a) => [a] -> [[b]] -> Bool -> IO ()
 for is xss exp = do 
     let (ys:yss) = over xss
     -- Memory simulation
@@ -23,6 +23,7 @@ for is xss exp = do
     for' is yss memory exp
     return ()
 
+for' :: (Eq b, Show a, Show b, Ord a) => [a] -> [[b]] -> M.Map a b -> Bool -> IO ()
 for' is xss memory exp = do 
     if xss /= [] 
     then do
