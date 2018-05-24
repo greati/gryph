@@ -1,3 +1,6 @@
-c : int;
-c : float;
 a, b : int = 2 + 2, 2^3;
+
+c : int = b + 1;
+
+
+print a;

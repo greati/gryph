@@ -10,6 +10,7 @@ import Syntactic.Syntax
 -- Variable attributes
 type Name   = String
 type Scope  = String
+type Scopes = [Scope]
 type Values = [Value]
 
 -- Memory structure
@@ -26,8 +27,14 @@ elabVar s n c m
     | otherwise     = Right (M.insert ci c m)
         where ci = (n,s)
 
-fetchVarValue :: Memory -> Name -> Scope -> Either String Value
-fetchVarValue m n s
+fetchVarValue :: Memory -> Name -> Scopes -> Either String Value
+fetchVarValue m n [] = Left ("Variable " ++ n ++ " not found in any scope.")
+fetchVarValue m n (s:ss) = case getVarScopeValue m n s of
+                                Left i -> fetchVarValue m n ss
+                                Right i -> Right i
+
+getVarScopeValue :: Memory -> Name -> Scope -> Either String Value
+getVarScopeValue m n s
     | M.notMember (n,s) m   = Left ("Variable " ++ n ++ " in scope " ++ s ++ " not declared.")
     | otherwise             = Right (head v)
         where (_,v) = (m M.!(n,s))

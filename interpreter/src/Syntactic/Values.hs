@@ -15,18 +15,18 @@ data Value =    Integer Integer |
                 Quadruple (Value, Value, Value, Value) | 
                 Map (M.Map Value Value) |
                 Graph (G.Graph Value Value)
-                deriving (Eq, Show)
+                deriving (Eq)
 
---instance Show Value where
---    show (Integer x) = show x
---    show (Float x) = show x
---    show (Char x) = show x
---    show (String x) = show x
---    show (Bool x) = show x
---    show (List x) = show x
---    show (Pair x) = show x
---    show (Triple x) = show x
---    show (Quadruple x) = show x
---    show (Map x) = show x
---    show (Graph x) = show x
+instance Show Value where
+    show (Integer x) = show x
+    show (Float x) = show x
+    show (Char x) = show x
+    show (String x) = show x
+    show (Bool x) = show x
+    show (List x) = show x
+    show (Pair x) = show x
+    show (Triple x) = show x
+    show (Quadruple x) = show x
+    show (Map x) = show x
+    show (Graph x) = show x
 

@@ -158,14 +158,8 @@ readStmt = do
 printStmt :: GenParser GphTokenPos st Stmt
 printStmt = do
                 (tok GTokPrint) 
-                do
-                    do
-                        i <- anyIdent 
-                        return (PrintStmt (IdTerm i)) 
-                    <|>
-                    do
-                        i <- stringLit
-                        return (PrintStmt (LitTerm i)) 
+                e <- expression
+                return (PrintStmt e)
 
 startIdent :: GenParser GphTokenPos st ArithExpr 
 startIdent = do

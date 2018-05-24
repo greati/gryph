@@ -8,7 +8,6 @@ import qualified Data.Map as M
 
 
 type Filename = String
-type Scopes = [Scope]
 
 -- |Scopes in the execution.
 scopes :: Scopes
@@ -50,6 +49,10 @@ execStmt :: Stmt -> Memory -> Scopes -> IO (Memory, Scopes)
 execStmt d@(DeclStmt _) m ss = do
                             m' <- varDeclStmt d m ss
                             return (m', ss)
+execStmt (PrintStmt e) m ss = do
+                                putStrLn (show (eval m ss e))
+                                return (m, ss)
+                            
 
 -- |Executes a declaration statement.
 varDeclStmt :: Stmt -> Memory -> Scopes -> IO Memory
@@ -63,12 +66,12 @@ varDeclStmt (DeclStmt (VarDeclaration [] t (_:es))) m ss =     do
                                                                 error "Too many expressions in right side."
 varDeclStmt (DeclStmt (VarDeclaration (x:xs'@(y:xs)) t (e:[]))) m ss = do 
                                                                 do
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval e])) m of
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval m ss e])) m of
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs' t (e:[]))) i ss
 varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m ss = do 
                                                                 do
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval e])) m of
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval m ss e])) m of
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i ss
 
@@ -80,11 +83,11 @@ getType (Char c)         = GChar
 getType (Bool b)         = GBool
 getType (List (x:_))     = GList (getType x)
 
-evalList :: [ArithExpr] -> [Value]
-evalList [x]      =  [eval x]
-evalList (x:y:xs) =  if getType z /= getType (eval y) then error "Type mismatch in List "
-                     else  z:(evalList (y:xs)) 
-		     where z = (eval x)
+evalList :: Memory -> Scopes -> [ArithExpr] -> [Value]
+evalList m ss [x]      =  [eval m ss x]
+evalList m ss (x:y:xs) =  if getType z /= getType (eval m ss y) then error "Type mismatch in List "
+                     else  z:(evalList m ss (y:xs)) 
+		     where z = (eval m ss x)
 
 
 -- | Default values for each type
@@ -103,24 +106,27 @@ fromValue :: Value -> Integer
 fromValue (Integer i) = i  
 
 
-eval :: ArithExpr -> Value
-eval (ArithTerm (LitTerm (Lit v)))     = v
-eval (ArithUnExpr MinusUnOp e)         = minusUn (eval e)
-eval (ArithUnExpr PlusUnOp e)          = plusUn (eval e)
-eval (ArithUnExpr NotUnOp e)           = not' (eval e)
-eval (ArithBinExpr MinusBinOp  e1 e2)  = minusBin (eval e1) (eval e2)  
-eval (ArithBinExpr PlusBinOp  e1 e2)   = plusBin (eval e1) (eval e2)  
-eval (ArithBinExpr TimesBinOp  e1 e2)  = timesBin (eval e1) (eval e2)  
-eval (ArithBinExpr DivBinOp  e1 e2)    = divBin (eval e1) (eval e2)  
-eval (ArithBinExpr ExpBinOp  e1 e2)    = expBin (eval e1) (eval e2)  
-eval (ExprLiteral (ListLit es ))       = List (evalList es)
-eval (ArithBinExpr PlusPlusBinOp e1 e2) = case eval e1 of
-						l1@(List (x:xs)) -> case eval e2 of
+eval :: Memory -> Scopes -> ArithExpr -> Value
+eval m ss (ArithTerm (LitTerm (Lit v)))     = v
+eval m ss (ArithUnExpr MinusUnOp e)         = minusUn (eval m ss e)
+eval m ss (ArithUnExpr PlusUnOp e)          = plusUn (eval m ss e)
+eval m ss (ArithUnExpr NotUnOp e)           = not' (eval m ss e)
+eval m ss (ArithBinExpr MinusBinOp  e1 e2)  = minusBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ArithBinExpr PlusBinOp  e1 e2)   = plusBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ArithBinExpr TimesBinOp  e1 e2)  = timesBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ArithBinExpr DivBinOp  e1 e2)    = divBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ArithBinExpr ExpBinOp  e1 e2)    = expBin (eval m ss e1) (eval m ss e2)  
+eval m ss (ExprLiteral (ListLit es ))       = List (evalList m ss es)
+eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
+						l1@(List (x:xs)) -> case eval m ss e2 of
 									l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2
                                                       					    else plusPlusBin l1 l2
-						k -> case eval e2 of 
+						k -> case eval m ss e2 of 
 							l2@(List (y:ys)) -> if (getType k == getType y) then plusPlusBin k l2
 									    else error "Type mismatch ++ operator "
+eval m ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
+                                                Left i -> error i
+                                                Right i -> i
 
 
 plusPlusBinList :: Value -> Value -> Value
