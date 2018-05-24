@@ -49,10 +49,38 @@ execStmt :: Stmt -> Memory -> Scopes -> IO (Memory, Scopes)
 execStmt d@(DeclStmt _) m ss = do
                             m' <- varDeclStmt d m ss
                             return (m', ss)
+execStmt a@(AttrStmt _ _) m ss = do
+                            m' <- execAttrStmt a m ss
+                            return (m', ss)
 execStmt (PrintStmt e) m ss = do
                                 putStrLn (show (eval m ss e))
                                 return (m, ss)
                             
+execAttrStmt :: Stmt -> Memory -> Scopes -> IO Memory
+execAttrStmt (AttrStmt (t:ts) (v:vs)) m ss = case t of
+                                                (ArithTerm (IdTerm (Ident i))) -> do case updateVar m i ss (t', [k]) of
+                                                                                            Right m' -> return m'
+                                                                                            Left i -> error i
+                                                                                        where k = eval m ss v
+                                                                                              t' = getType k
+                                                (ListAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do case updateVar m i ss (t', [k]) of
+                                                                                                            Right m' -> return m'
+                                                                                                            Left i -> error i 
+                                                                                        where k = case (eval m ss id) of
+                                                                                                        (List xs) -> List (setElemList xs index' (eval m ss v))
+                                                                                                        _ -> error "You must access a list."
+                                                                                              t' = getType k
+                                                                                              index' = case (eval m ss index) of
+                                                                                                        (Integer int) -> int
+                                                                                                        _ -> error "List index must be an integer."
+
+-- | Set the i-element of a list.
+setElemList :: Integral i => [a] -> i -> a -> [a]
+setElemList [] i k 
+    | i >= 0 = error "Index out of range"
+    | otherwise = []
+setElemList (x:xs) 0 k = k : xs
+setElemList (x:xs) i k = x : setElemList xs (i-1) k
 
 -- |Executes a declaration statement.
 varDeclStmt :: Stmt -> Memory -> Scopes -> IO Memory
