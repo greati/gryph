@@ -126,15 +126,17 @@ varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m ss = do
 
 
 getType :: Value -> GType
-getType (Integer i)          = GInteger
-getType (Float f)            = GFloat
-getType (String s )          = GString
-getType (Char c)             = GChar
-getType (Bool b)             = GBool
-getType (List (x:_))         = GList (getType x)
-getType (List [])            = GList GEmpty
-getType (Map (m))            = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
-
+getType (Integer i)                   = GInteger
+getType (Float f)                     = GFloat
+getType (String s )                   = GString
+getType (Char c)                      = GChar
+getType (Bool b)                      = GBool
+getType (List (x:_))                  = GList (getType x)
+getType (List [])                     = GList GEmpty
+getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
+getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
+getType (Triple (v1,v2, v3))         = GTriple (getType v1) (getType v2 ) (getType v3)
+getType (Quadruple (v1,v2, v3, v4))  = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
 
 getKeyType :: Value -> GType
 getKeyType (Map m)            = getType (head (M.keys m))
@@ -222,9 +224,25 @@ eval m ss (DictAccess e1 e2)                 = case eval m ss e1 of
                                                              else error "Access Dict with invalid key type"
                                                               where k = eval m ss e2 
                                                 _ -> error "Access on Dict type mismatch"
---eval m ss (DictAccess e1 e2)                 = case eval m ss e1 of
---                                               (Map m) -> lookup m eval 
- --                                              _ -> error "Access Dict mismatch"
+eval m ss (TupleAccess e1 e2)                = case eval m ss e1 of
+                                                (Pair (v1, v2)) -> case eval m ss e2 of
+                                                                    Integer 0 -> v1
+                                                                    Integer 1 -> v2
+                                                                    _         -> error "Acessing Pair"
+                                                Triple (v1,v2,v3)-> case eval m ss e2 of
+                                                                    Integer 0 -> v1
+                                                                    Integer 1 -> v2
+                                                                    Integer 2 -> v3
+                                                                    _         -> error "Acessing Pair"
+                                                Quadruple (v1,v2,v3,v4)-> case eval m ss e2 of
+                                                                    Integer 0 -> v1
+                                                                    Integer 1 -> v2
+                                                                    Integer 2 -> v3
+                                                                    Integer 3 -> v4
+                                                                    _         -> error "Acessing Pair"
+                                                 
+                                                _ -> error "Tuple error " 
+
 eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
                                                 l1@(List (x:xs)) -> case eval m ss e2 of
                                                                         l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2
