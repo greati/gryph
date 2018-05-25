@@ -4,14 +4,12 @@
 
 i : int = 0;
 
-while (i != 4) {
-    x : int = 10;
 
-    print x + i;
-
-    i = i + 1;
-
+while (i != 10) {
+    x : int = i + 1;
     print i;
+    print x;
+    i = i + 1;
 }
 
 #e = |"b" ? 1|;

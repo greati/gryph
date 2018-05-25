@@ -64,6 +64,28 @@ execStmt (PrintStmt e) m ss = do
                                 putStrLn (show (eval m ss e))
                                 return (m, ss)
 
+execStmt (IfStmt e (IfBody ifbody) elsebody) m ss = let ss' = (show (length ss):ss) in
+                                                        if test then
+                                                            case ifbody of
+                                                                (CondStmt st) -> do 
+                                                                                    (m',ss'') <- execStmt st m ss'
+                                                                                    return (clearScope (head ss') m', tail ss')
+                                                                (CondBlock block) -> do 
+                                                                                    (m',ss'') <- execBlock block m ss'
+                                                                                    return (clearScope (head ss') m', tail ss')
+                                                        else
+                                                            case elsebody of
+                                                                NoElse -> do return (m,ss)
+                                                                ElseBody (CondStmt st) -> do 
+                                                                                            (m',ss'') <- execStmt st m ss
+                                                                                            return (clearScope (head ss') m', tail ss')
+                                                                ElseBody (CondBlock block) -> do 
+                                                                                            (m',ss'') <- execBlock block m ss
+                                                                                            return (clearScope (head ss') m', tail ss')
+                                        where test = case makeBooleanFromValue (eval m ss e) of
+                                                        Left i -> error i
+                                                        Right i -> i
+
 execStmt (WhileStmt e body) m ss =  let ss' = (show (length ss):ss) in repeatWhile body m ss'
                                     where
                                         repeatWhile body m ss' = if test then do
