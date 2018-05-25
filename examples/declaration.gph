@@ -4,12 +4,11 @@
 
 i : int = 0;
 
+x : string;
 
-while (i != 10) {
-    x : int = i + 1;
-    print i;
+while (true) {
+    read x;
     print x;
-    i = i + 1;
 }
 
 #e = |"b" ? 1|;
