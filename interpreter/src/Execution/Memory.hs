@@ -53,7 +53,7 @@ getVarScopeValue m n s
         where (_,v) = (m M.!(n,s))
 
 clearScope :: Scope -> Memory -> Memory
-clearScope s m = M.filterWithKey (\(_,s') _ -> s' == s) m 
+clearScope s m = M.filterWithKey (\(_,s') _ -> s' /= s) m 
 
 
 
