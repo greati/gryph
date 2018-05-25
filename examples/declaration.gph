@@ -1,13 +1,8 @@
-#a, b : int = 2 + 2, 2^3;
-
-#c : int = b + 1;
 d : [[int]];
 
-#d = [[1,2,3]];
+g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
-#a : bool = true;
-
-e : |string, int| = | "a" ? 0, "b" ? 1,  "c" ? 2 |;
+f : (int, string, int, string) = (0, "a", 0, "c");
 
 e = |"b" ? 1|;
 

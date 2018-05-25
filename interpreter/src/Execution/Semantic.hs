@@ -136,14 +136,23 @@ getType (List [])            = GList GEmpty
 getType (Map (m))            = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 
 
+getKeyType :: Value -> GType
+getKeyType (Map m)            = getType (head (M.keys m))
+
+getValueType :: Value -> GType 
+getValueType (Map m)          = getType (head (M.elems m))
+
 evalList :: Memory -> Scopes -> [ArithExpr] -> [Value]
 evalList m ss [x]      =  [eval m ss x]
 evalList m ss (x:y:xs) =  if getType z /= getType (eval m ss y) then error "Type mismatch in List "
-                     else  z:(evalList m ss (y:xs)) 
+                     else  (z:(evalList m ss (y:xs))) 
                      where z = (eval m ss x)
 
 
-
+evalTuple :: Memory -> Scopes -> [ArithExpr] -> [Value]
+evalTuple m ss [x] = [eval m ss x]
+evalTuple m ss (x:xs) = (z:(evalTuple m ss xs))
+                         where z = eval m ss x
 evalDict :: Memory -> Scopes -> [DictEntry] -> M.Map Value Value -> M.Map Value Value
 evalDict m ss [] m1                   = M.empty
 evalDict m ss ((k1,v1):(k2,v2):xs) m1 = if (getType ek1) == (getType ek2) && (getType ev1 == getType ev2)
@@ -196,11 +205,23 @@ eval m ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ModB
 eval m ss (ExprLiteral (ListLit [] ))        = List []
 eval m ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
 eval m ss (ExprLiteral (DictLit de))         = Map (evalDict m ss de M.empty )
+eval m ss (ExprLiteral (TupleLit te))        = if length l == 2 then Pair ((l !! 0), (l !! 1))
+                                               else if length l == 3 then Triple ((l !! 0), (l !! 1), (l !! 2))
+                                                    else if length  l == 4 then Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3))
+                                                     else error "Limit of Quadruples"
+                                                       where l = evalTuple m ss te
 eval m ss (ListAccess e1 e2 )                = case eval m ss e1 of
                                                 (List l) -> case eval m ss e2 of
                                                              Integer i ->  l !! (fromIntegral i)
                                                              _ -> error "Access List mismatch"
                                                 _ -> error "Access List mismatch"
+eval m ss (DictAccess e1 e2)                 = case eval m ss e1 of
+                                                d@(Map ma) -> if getKeyType d == getType k then case  M.lookup k ma of
+                                                                                                      Nothing -> error "No key on Dict "
+                                                                                                      Just k  -> k
+                                                             else error "Access Dict with invalid key type"
+                                                              where k = eval m ss e2 
+                                                _ -> error "Access on Dict type mismatch"
 --eval m ss (DictAccess e1 e2)                 = case eval m ss e1 of
 --                                               (Map m) -> lookup m eval 
  --                                              _ -> error "Access Dict mismatch"
