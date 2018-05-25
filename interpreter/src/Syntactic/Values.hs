@@ -10,10 +10,12 @@ data Value =    Integer Integer |
                 String String | 
                 Bool Bool | 
                 List [Value] | 
+                EmptyList |
                 Pair (Value, Value) | 
                 Triple (Value, Value, Value) | 
                 Quadruple (Value, Value, Value, Value) | 
                 Map (M.Map Value  Value) |
+                EmptyMap |
 		Graph (G.Graph Value Value) 
                 deriving (Eq, Ord)
 

@@ -268,6 +268,10 @@ listLit = do
                             return (ExprLiteral (ListCompLit lc))
                     <|>
                     do
+                        (tok GTokRSquare)
+                        return (ExprLiteral (ListLit [])) 
+                    <|>
+                    do
                         l <- expressionList
                         (tok GTokRSquare)
                         return (ExprLiteral (ListLit l))

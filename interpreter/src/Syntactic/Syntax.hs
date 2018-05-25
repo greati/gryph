@@ -11,6 +11,7 @@ data GType =    GInteger        |
                 GString         |
                 GChar           |
                 GBool           |
+                GEmpty |
                 GList GType     |
                 GPair GType GType   |
                 GTriple GType GType GType  |
