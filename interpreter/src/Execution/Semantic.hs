@@ -63,6 +63,12 @@ execStmt a@(AttrStmt _ _) m ss = do
 execStmt (PrintStmt e) m ss = do
                                 putStrLn (show (eval m ss e))
                                 return (m, ss)
+execStmt (ReadStmt i) m ss = do
+                                value <- getLine
+                                case updateVar m ((\(Ident i) -> i) i) ss (makeCompatibleAssignTypes GString (String value)) of
+                                    Left e -> error e
+                                    Right m' -> return (m', ss)
+                                
 
 execStmt (IfStmt e (IfBody ifbody) elsebody) m ss = let ss' = (show (length ss):ss) in
                                                         if test then
