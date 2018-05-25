@@ -31,14 +31,15 @@ bfs' g v queue vis = do
         putStrLn (show v)
         let n_vis    = S.insert v vis
         let n_queue  = queue ++ (verticesOfEdges (G.getEdges g v))
-
+        putStrLn (show n_queue)
+        
         if n_queue == []
         then do
             return ()
         else do
             if L.length n_queue == 1
             then do
-                bfs' g (L.head queue) [] vis
+                bfs' g (L.head n_queue) [] vis
                 return () 
             else do
                 bfs' g (L.head n_queue) (L.tail n_queue) n_vis 
@@ -60,10 +61,10 @@ dfs' g v stack vis = do
         else do
             if L.length stack == 1
             then do
-                bfs' g (L.head stack) [] vis
+                dfs' g (L.head stack) [] vis
                 return ()
             else do
-                bfs' g (L.head stack) (L.tail stack) vis
+                dfs' g (L.head stack) (L.tail stack) vis
                 return ()
     else do
         putStrLn (show v)
@@ -76,10 +77,10 @@ dfs' g v stack vis = do
         else do
             if L.length n_stack == 1
             then do
-                bfs' g (L.head stack) [] vis
+                dfs' g (L.head n_stack) [] vis
                 return () 
             else do
-                bfs' g (L.head n_stack) (L.tail n_stack) n_vis 
+                dfs' g (L.head n_stack) (L.tail n_stack) n_vis 
                 return ()
 
 verticesOfEdges :: [G.Edge a b] -> [Vertex a]
