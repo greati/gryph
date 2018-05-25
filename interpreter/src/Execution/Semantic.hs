@@ -83,12 +83,21 @@ getType (Char c)         = GChar
 getType (Bool b)         = GBool
 getType (List (x:_))     = GList (getType x)
 
+
 evalList :: Memory -> Scopes -> [ArithExpr] -> [Value]
 evalList m ss [x]      =  [eval m ss x]
 evalList m ss (x:y:xs) =  if getType z /= getType (eval m ss y) then error "Type mismatch in List "
                      else  z:(evalList m ss (y:xs)) 
                      where z = (eval m ss x)
 
+evalDict :: Memory -> Scopes -> [DictEntry] -> M.Map Value Value -> M.Map Value Value
+evalDict m ss [] m1         =  M.empty
+evalDict m ss ((k,v):xs) m1   = M.insert (eval m ss k) (eval m ss v) (evalDict m ss xs m1)
+--                              Integer i -> case 
+--evalDict m ss ((e1,e2):(e3,e4):es) = if getType x /= getType (eval m ss e3) || getType y /= getType (eval m ss e4) then error "Dict type mismatch"
+--                                     else  (x,y):(evalDict m ss ((e3,e4):es)) 
+--                                      where x = eval m ss e1
+--                                           y = eval m ss e2
 
 -- | Default values for each type
 defaultValue :: GType -> Value
@@ -128,11 +137,16 @@ eval m ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr DivB
 eval m ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ExpBinOp e1 e2) expBin  
 eval m ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ModBinOp e1 e2) modBin  
 eval m ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
+eval m ss (ExprLiteral (DictLit de))         = Map (evalDict m ss de M.empty )
 eval m ss (ListAccess e1 e2 )                = case eval m ss e1 of
                                                 (List l) -> case eval m ss e2 of
                                                              Integer i ->  l !! (fromIntegral i)
-                                                             _ -> error "Acess List mismatch"
-                                                _ -> error "Acess List mismatch"
+                                                             _ -> error "Access List mismatch"
+                                                _ -> error "Access List mismatch"
+--eval m ss (DictAccess e1 e2)                 = case eval m ss e1 of
+--                                                Map m@(M.Map k v) -> if getType k == getType k1 then m ! k1
+ --                                                                     else error "Access Dict mismatch"
+--						_ -> error "Access Dict mismatch"
 eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
                                                 l1@(List (x:xs)) -> case eval m ss e2 of
                                                                         l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2

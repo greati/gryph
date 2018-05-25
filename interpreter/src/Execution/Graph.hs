@@ -6,7 +6,7 @@ import qualified Data.Set as S
 
 -- |Vertex indexed by integer values, holding data of type a
 data Vertex a = Vertex Int a
-
+               
 instance (Show a) => Show (Vertex a) where
     show (Vertex x p) = show x ++ "(" ++ show p ++ ")"
 
@@ -18,7 +18,7 @@ instance Ord (Vertex a) where
 
 -- |Edge with vertices storing values of type a, holding data of type b
 data Edge a b = Edge (Vertex a) (Vertex a) b
-
+                deriving (Ord)                
 instance Eq (Edge a b) where
     (==) (Edge x1 y1 _) (Edge x2 y2 _) = (x1 == y1) && (x2 == y2)
 
@@ -26,8 +26,7 @@ instance (Show b, Show a) => Show (Edge a b) where
     show (Edge v1 v2 p) = show v1 ++ " -> " ++ show v2 ++ " [" ++ show p ++ "]"
 
 -- |Graph with vertices indexed by integers holding data of type a, and edges holding data of type b
-data Graph a b = Graph (S.Set (Vertex a)) (M.Map Int [Edge a b]) deriving Eq
-
+data Graph a b = Graph (S.Set (Vertex a)) (M.Map Int [Edge a b]) deriving (Eq, Ord)
 instance (Show a, Show b) => Show (Graph a b) where
     show (Graph vs es) = show vs ++ "\n\n" ++ show es 
 
