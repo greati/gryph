@@ -58,12 +58,12 @@ execStmt (PrintStmt e) m ss = do
                             
 execAttrStmt :: Stmt -> Memory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m ss = case t of
-                                                (ArithTerm (IdTerm (Ident i))) -> do case updateVar m i ss (t', [k]) of
+                                                (ArithTerm (IdTerm (Ident i))) -> do case updateVar m i ss (makeCompatibleAssignTypes t' k) of
                                                                                             Right m' -> return m'
                                                                                             Left i -> error i
                                                                                         where k = eval m ss v
                                                                                               t' = getType k
-                                                (ListAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do case updateVar m i ss (t', [k]) of
+                                                (ListAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do case updateVar m i ss (makeCompatibleAssignTypes t' k) of
                                                                                                             Right m' -> return m'
                                                                                                             Left i -> error i 
                                                                                         where k = case (eval m ss id) of
@@ -73,6 +73,27 @@ execAttrStmt (AttrStmt (t:ts) (v:vs)) m ss = case t of
                                                                                               index' = case (eval m ss index) of
                                                                                                         (Integer int) -> int
                                                                                                         _ -> error "List index must be an integer."
+                                                (DictAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do case updateVar m i ss (makeCompatibleAssignTypes t' k) of
+                                                                                                            Right m' -> return m'
+                                                                                                            Left i -> error i
+                                                                                        where   k = case (eval m ss id) of
+                                                                                                        (Map m') -> Map (M.insert index' (eval m ss v) m')
+                                                                                                        _ -> error "You must access a dictionary." 
+                                                                                                t' = getType k
+                                                                                                index' = case getType (eval m ss index) of
+                                                                                                            kt -> (eval m ss index)
+                                                                                                            _ -> error "Incompatible index type."
+                                                                                                (GDict kt _) = getType (eval m ss id)
+    
+                                                                                                        
+-- | Given type t and value v, return (t,v) if they are compatible.
+makeCompatibleAssignTypes :: GType -> Value -> (GType, Value)
+makeCompatibleAssignTypes t@(GList _) v@(List []) = (t,v)
+makeCompatibleAssignTypes t v = if t' == t 
+                                    then (t,v) 
+                                    else error ("Incompatible types " ++ show t' ++ " and " ++ show t)
+                                where
+                                    t' = getType v
 
 -- | Set the i-element of a list.
 setElemList :: Integral i => [a] -> i -> a -> [a]
@@ -85,7 +106,7 @@ setElemList (x:xs) i k = x : setElemList xs (i-1) k
 -- |Executes a declaration statement.
 varDeclStmt :: Stmt -> Memory -> Scopes -> IO Memory
 varDeclStmt (DeclStmt (VarDeclaration (x:xs) t [])) m ss =     do 
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([defaultValue t])) m of
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes t (defaultValue t)) m of
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t [])) i ss
 varDeclStmt (DeclStmt (VarDeclaration [] t [])) m ss =         do 
@@ -94,12 +115,12 @@ varDeclStmt (DeclStmt (VarDeclaration [] t (_:es))) m ss =     do
                                                                 error "Too many expressions in right side."
 varDeclStmt (DeclStmt (VarDeclaration (x:xs'@(y:xs)) t (e:[]))) m ss = do 
                                                                 do
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval m ss e])) m of
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes t (eval m ss e)) m of
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs' t (e:[]))) i ss
 varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m ss = do 
                                                                 do
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (t, ([eval m ss e])) m of
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes t (eval m ss e)) m of
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i ss
 
@@ -111,6 +132,7 @@ getType (String s )          = GString
 getType (Char c)             = GChar
 getType (Bool b)             = GBool
 getType (List (x:_))         = GList (getType x)
+getType (List [])            = GList GEmpty
 getType (Map (m))            = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 
 
@@ -138,7 +160,8 @@ defaultValue :: GType -> Value
 defaultValue GInteger = Integer 0
 defaultValue GFloat = Float 0.0
 defaultValue GString = String []
-defaultValue (GList t) = List []
+defaultValue GBool = Bool False
+defaultValue (GList _) = List []
 defaultValue (GPair t1 t2) = Pair (defaultValue t1, defaultValue t2)
 defaultValue (GTriple t1 t2 t3) = Triple (defaultValue t1, defaultValue t2, defaultValue t3)
 defaultValue (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue t1, defaultValue t2, defaultValue t3, defaultValue t4)
@@ -170,6 +193,7 @@ eval m ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m ss (ArithBinExpr Time
 eval m ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr DivBinOp e1 e2) divBin
 eval m ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ExpBinOp e1 e2) expBin  
 eval m ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ModBinOp e1 e2) modBin  
+eval m ss (ExprLiteral (ListLit [] ))        = List []
 eval m ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
 eval m ss (ExprLiteral (DictLit de))         = Map (evalDict m ss de M.empty )
 eval m ss (ListAccess e1 e2 )                = case eval m ss e1 of
