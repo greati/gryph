@@ -1,15 +1,20 @@
-d : [[int]];
+#d : [[int]];
 
-g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
+#g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
-f : (int, string, int, string) = (0, "a", 0, "c");
+f : (int, string) = (0, "a");
 
-e = |"b" ? 1|;
+#e = |"b" ? 1|;
 
-l : [int] = [];
+#l : [int] = [];
 
-l = [1,2,3];
+#l = [1,2,3];
 
-l = [];
+#l = [];
 
-#print (d % a )[0];
+
+#k : (int, int) = (0,1);
+
+#j : int = k.1;
+
+#print j;
