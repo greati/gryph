@@ -2,7 +2,17 @@
 
 #g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
-f : (int, string) = (0, "a");
+i : int = 0;
+
+while (i != 4) {
+    x : int = 10;
+
+    print x + i;
+
+    i = i + 1;
+
+    print i;
+}
 
 #e = |"b" ? 1|;
 
@@ -12,9 +22,9 @@ f : (int, string) = (0, "a");
 
 #l = [];
 
-j : int = f.0;
+# j : int = f.0;
 #k : (int, int) = (0,1);
 
 #j : int = k.1;
 
-print j;
+# print j;

@@ -51,3 +51,10 @@ getVarScopeValue m n s
     | M.notMember (n,s) m   = Left ("Variable " ++ n ++ " in scope " ++ s ++ " not declared.")
     | otherwise             = Right v
         where (_,v) = (m M.!(n,s))
+
+clearScope :: Scope -> Memory -> Memory
+clearScope s m = M.filterWithKey (\(_,s') _ -> s' /= s) m 
+
+
+
+

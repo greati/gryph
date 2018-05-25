@@ -25,6 +25,7 @@ exec m ss [] = return ()
 exec m ss (u:us) = do
                         (m', ss') <- execUnit u m ss
                         print (show m')
+                        print (show ss')
                         exec m' ss' us 
 
 -- |Executes a program unit.
@@ -44,6 +45,13 @@ execSubDecl s m = undefined
 execStructDecl :: StructDecl -> Memory -> IO ()
 execStructDecl s m = undefined
 
+-- |Executes a block of statement, creating a new scope. When finish, clear the scope.
+execBlock :: Block -> Memory -> Scopes -> IO (Memory, Scopes)
+execBlock (Block []) m ss = return (m, ss)
+execBlock (Block (st:sts)) m ss = do
+                                    (m',ss') <- execStmt st m ss
+                                    execBlock (Block sts) m' ss' 
+
 -- |Executes any statement.
 execStmt :: Stmt -> Memory -> Scopes -> IO (Memory, Scopes)
 execStmt d@(DeclStmt _) m ss = do
@@ -55,7 +63,22 @@ execStmt a@(AttrStmt _ _) m ss = do
 execStmt (PrintStmt e) m ss = do
                                 putStrLn (show (eval m ss e))
                                 return (m, ss)
-                            
+
+execStmt (WhileStmt e body) m ss =  let ss' = (show (length ss):ss) in repeatWhile body m ss'
+                                    where
+                                        repeatWhile body m ss' = if test then do
+                                                                        case body of
+                                                                            (CondStmt st) -> do 
+                                                                                                (m',ss'') <- execStmt st m ss'
+                                                                                                repeatWhile body (clearScope (head ss') m') ss''
+                                                                            (CondBlock block) -> do 
+                                                                                                (m',ss'') <- execBlock block m ss'
+                                                                                                repeatWhile body (clearScope (head ss') m') ss''
+                                                                 else return (clearScope (head ss') m, tail ss')
+                                                where test = case makeBooleanFromValue (eval m ss' e) of
+                                                                Left i -> error i
+                                                                Right i -> i
+
 execAttrStmt :: Stmt -> Memory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m ss = case t of
                                                 (ArithTerm (IdTerm (Ident i))) -> do case updateVar m i ss (makeCompatibleAssignTypes t' k) of
@@ -86,6 +109,12 @@ execAttrStmt (AttrStmt (t:ts) (v:vs)) m ss = case t of
                                                                                                 (GDict kt _) = getType (eval m ss id)
     
                                                                                                         
+
+-- |From value, guaarantee boolean value
+makeBooleanFromValue :: Value -> Either String Bool
+makeBooleanFromValue (Bool v) = Right v
+makeBooleanFromValue _        = Left "Expected boolean value"
+
 -- | Given type t and value v, return (t,v) if they are compatible.
 makeCompatibleAssignTypes :: GType -> Value -> (GType, Value)
 makeCompatibleAssignTypes t@(GList _) v@(List []) = (t,v)
@@ -207,6 +236,8 @@ eval m ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ModB
 eval m ss (ExprLiteral (ListLit [] ))        = List []
 eval m ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
 eval m ss (ExprLiteral (DictLit de))         = Map (evalDict m ss de M.empty )
+eval m ss (ArithEqExpr Equals e1 e2)         = Bool (eval m ss e1 == eval m ss e2)
+eval m ss (ArithEqExpr NotEquals e1 e2)      = Bool (eval m ss e1 /= eval m ss e2)
 eval m ss (ExprLiteral (TupleLit te))        = if length l == 2 then Pair ((l !! 0), (l !! 1))
                                                else if length l == 3 then Triple ((l !! 0), (l !! 1), (l !! 2))
                                                     else if length  l == 4 then Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3))
