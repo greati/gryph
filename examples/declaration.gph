@@ -12,9 +12,9 @@ f : (int, string) = (0, "a");
 
 #l = [];
 
-
+j : int = f.0;
 #k : (int, int) = (0,1);
 
 #j : int = k.1;
 
-#print j;
+print j;

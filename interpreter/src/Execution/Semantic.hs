@@ -228,7 +228,21 @@ eval m ss (TupleAccess e1 e2)                = case eval m ss e1 of
                                                 (Pair (v1, v2)) -> case eval m ss e2 of
                                                                     Integer 0 -> v1
                                                                     Integer 1 -> v2
-                                                                    _         -> error "Acessing tuple"
+                                                                    _         -> error "Acessing Pair"
+                                                Triple (v1,v2,v3)-> case eval m ss e2 of
+                                                                    Integer 0 -> v1
+                                                                    Integer 1 -> v2
+                                                                    Integer 2 -> v3
+                                                                    _         -> error "Acessing Pair"
+                                                Quadruple (v1,v2,v3,v4)-> case eval m ss e2 of
+                                                                    Integer 0 -> v1
+                                                                    Integer 1 -> v2
+                                                                    Integer 2 -> v3
+                                                                    Integer 3 -> v4
+                                                                    _         -> error "Acessing Pair"
+                                                 
+                                                _ -> error "Tuple error " 
+
 eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
                                                 l1@(List (x:xs)) -> case eval m ss e2 of
                                                                         l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2
