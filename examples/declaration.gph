@@ -6,5 +6,6 @@
 
 e : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
+f : (int, string, int, string) = (0, "a", 0, "c");
 
-print e|"d"|;
+#print e|"d"|;
