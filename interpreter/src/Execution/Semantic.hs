@@ -86,6 +86,12 @@ getType (List (x:_))         = GList (getType x)
 getType (Map (m))            = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 
 
+getKeyType :: Value -> GType
+getKeyType (Map m)            = getType (head (M.keys m))
+
+getValueType :: Value -> GType 
+getValueType (Map m)          = getType (head (M.elems m))
+
 evalList :: Memory -> Scopes -> [ArithExpr] -> [Value]
 evalList m ss [x]      =  [eval m ss x]
 evalList m ss (x:y:xs) =  if getType z /= getType (eval m ss y) then error "Type mismatch in List "
@@ -149,6 +155,13 @@ eval m ss (ListAccess e1 e2 )                = case eval m ss e1 of
                                                              Integer i ->  l !! (fromIntegral i)
                                                              _ -> error "Access List mismatch"
                                                 _ -> error "Access List mismatch"
+eval m ss (DictAccess e1 e2)                 = case eval m ss e1 of
+                                                d@(Map ma) -> if getKeyType d == getType k then case  M.lookup k ma of
+                                                                                                      Nothing -> error "No key on Dict "
+                                                                                                      Just k  -> k
+                                                             else error "Access Dict with invalid key type"
+                                                              where k = eval m ss e2 
+                                                _ -> error "Access on Dict type mismatch"
 --eval m ss (DictAccess e1 e2)                 = case eval m ss e1 of
 --                                               (Map m) -> lookup m eval 
  --                                              _ -> error "Access Dict mismatch"
