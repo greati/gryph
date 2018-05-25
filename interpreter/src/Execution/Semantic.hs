@@ -44,6 +44,15 @@ execSubDecl s m = undefined
 execStructDecl :: StructDecl -> Memory -> IO ()
 execStructDecl s m = undefined
 
+-- |Executes a block of statement, creating a new scope. When finish, clear the scope.
+execBlock :: Block -> Memory -> Scopes -> IO (Memory, Scopes)
+execBlock b@(Block sts) m ss = execBlock' b m (show (length ss):ss)
+    where 
+            execBlock' (Block (st:sts)) m ss = do
+                                                (m',ss') <- execStmt st m ss
+                                                execBlock' (Block sts) m' ss' 
+            execBlock' (Block []) m ss = return (clearScope (head ss) m, tail ss)
+
 -- |Executes any statement.
 execStmt :: Stmt -> Memory -> Scopes -> IO (Memory, Scopes)
 execStmt d@(DeclStmt _) m ss = do
@@ -55,7 +64,11 @@ execStmt a@(AttrStmt _ _) m ss = do
 execStmt (PrintStmt e) m ss = do
                                 putStrLn (show (eval m ss e))
                                 return (m, ss)
-                            
+
+execStmt (WhileStmt e body) m ss = case body of
+                                        (CondStmt st) -> execStmt st m ss
+                                        (CondBlock block) -> execBlock block m ss
+
 execAttrStmt :: Stmt -> Memory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m ss = case t of
                                                 (ArithTerm (IdTerm (Ident i))) -> do case updateVar m i ss (makeCompatibleAssignTypes t' k) of
