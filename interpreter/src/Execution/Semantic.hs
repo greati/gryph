@@ -75,13 +75,15 @@ varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m ss = do
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i ss
 
+
 getType :: Value -> GType
-getType (Integer i)      = GInteger
-getType (Float f)        = GFloat
-getType (String s )      = GString
-getType (Char c)         = GChar
-getType (Bool b)         = GBool
-getType (List (x:_))     = GList (getType x)
+getType (Integer i)          = GInteger
+getType (Float f)            = GFloat
+getType (String s )          = GString
+getType (Char c)             = GChar
+getType (Bool b)             = GBool
+getType (List (x:_))         = GList (getType x)
+getType (Map (m))            = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 
 
 evalList :: Memory -> Scopes -> [ArithExpr] -> [Value]
@@ -90,9 +92,18 @@ evalList m ss (x:y:xs) =  if getType z /= getType (eval m ss y) then error "Type
                      else  z:(evalList m ss (y:xs)) 
                      where z = (eval m ss x)
 
+
+
 evalDict :: Memory -> Scopes -> [DictEntry] -> M.Map Value Value -> M.Map Value Value
-evalDict m ss [] m1         =  M.empty
-evalDict m ss ((k,v):xs) m1   = M.insert (eval m ss k) (eval m ss v) (evalDict m ss xs m1)
+evalDict m ss [] m1                   = M.empty
+evalDict m ss ((k1,v1):(k2,v2):xs) m1 = if (getType ek1) == (getType ek2) && (getType ev1 == getType ev2)
+                                         then M.insert ek1 ev1 (evalDict m ss ((k2,v2):xs) m1) 
+                                        else error "Dict Type mismatch"
+                                         where ek1 = eval m ss k1
+                                               ek2 = eval m ss k2
+                                               ev1 = eval m ss v1
+                                               ev2 = eval m ss v2
+evalDict m ss ((k,v):xs) m1           = M.insert (eval m ss k) (eval m ss v) (evalDict m ss xs m1)
 
 -- | Default values for each type
 defaultValue :: GType -> Value
@@ -138,6 +149,9 @@ eval m ss (ListAccess e1 e2 )                = case eval m ss e1 of
                                                              Integer i ->  l !! (fromIntegral i)
                                                              _ -> error "Access List mismatch"
                                                 _ -> error "Access List mismatch"
+--eval m ss (DictAccess e1 e2)                 = case eval m ss e1 of
+--                                               (Map m) -> lookup m eval 
+ --                                              _ -> error "Access Dict mismatch"
 eval m ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m ss e1 of
                                                 l1@(List (x:xs)) -> case eval m ss e2 of
                                                                         l2@(List (y:ys)) -> if (getType x == getType y) then plusPlusBinList l1 l2
