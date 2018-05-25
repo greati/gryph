@@ -70,10 +70,10 @@ execStmt (WhileStmt e body) m ss =  let ss' = (show (length ss):ss) in repeatWhi
                                                                         case body of
                                                                             (CondStmt st) -> do 
                                                                                                 (m',ss'') <- execStmt st m ss'
-                                                                                                repeatWhile body m' ss''
+                                                                                                repeatWhile body (clearScope (head ss') m') ss''
                                                                             (CondBlock block) -> do 
                                                                                                 (m',ss'') <- execBlock block m ss'
-                                                                                                repeatWhile body m' ss''
+                                                                                                repeatWhile body (clearScope (head ss') m') ss''
                                                                  else return (clearScope (head ss') m, tail ss')
                                                 where test = case makeBooleanFromValue (eval m ss' e) of
                                                                 Left i -> error i

@@ -4,16 +4,15 @@
 
 i : int = 0;
 
-ll : [int] = [1,2,3,4];
-
 while (i != 4) {
-    print ll[i];
+    x : int = 10;
+
+    print x + i;
+
     i = i + 1;
+
+    print i;
 }
-
-i = i + 1;
-print i;
-
 
 #e = |"b" ? 1|;
 
