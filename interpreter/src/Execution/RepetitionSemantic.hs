@@ -14,6 +14,26 @@ join i [[]]   = [[]]
 join i [x]    = [(i : x)]
 join i (x:xs) = (i : x) : (join i xs)
 
+while :: Bool -> IO ()
+while exp = do
+    if exp == False
+    then do
+        return ()
+    else do
+        -- Execute something
+        -- Provisional
+        n_exp <- getLine
+        if n_exp == "True"
+        then do 
+            while True
+        else do
+            while False
+        return ()
+        -- Correct
+        -- while exp
+        -- return ()
+            
+
 for :: (Eq b, Show b, Show a, Ord a) => [a] -> [[b]] -> Bool -> IO ()
 for is xss exp = do 
     let (ys:yss) = over xss
