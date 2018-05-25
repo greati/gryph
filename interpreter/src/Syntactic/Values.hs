@@ -13,8 +13,8 @@ data Value =    Integer Integer |
                 Pair (Value, Value) | 
                 Triple (Value, Value, Value) | 
                 Quadruple (Value, Value, Value, Value) | 
-                Map (M.Map Value  Value) 
-		Graph (G.Graph Value Value)
+                Map (M.Map Value  Value) |
+		Graph (G.Graph Value Value) 
                 deriving (Eq, Ord)
 
 instance Show Value where

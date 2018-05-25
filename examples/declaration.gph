@@ -4,6 +4,6 @@
 #d : [int] = [6,2,5];
 
 
-e : |string, int| = | "a" ? 'a'| ;
+e : |string, int| = | "a" ? 0, "b" ? 1|;
 
 #print (d % a )[0];
