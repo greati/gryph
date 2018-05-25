@@ -1,6 +1,9 @@
-a, b : int = 2 + 2, 2^3;
+#a, b : int = 2 + 2, 2^3;
 
-c : int = b + 1;
+#c : int = b + 1;
+#d : [int] = [6,2,5];
 
 
-print a;
+e : |string, int| = | "a" ? 0, "b" ? 1,  "c" ? 2 |;
+
+#print (d % a )[0];
