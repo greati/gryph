@@ -5,6 +5,25 @@ import qualified Data.Map.Strict as M
 import Syntactic.Values
 import Syntactic.Syntax
 
+{- Program memory implementation.
+ -
+ -}
+type SubIdentifier = (String, [GType]) 
+type SubContent = ([(CellIdentifier, Cell)], Maybe GType, Block)
+type ProgramMemory = M.Map SubIdentifier SubContent
+
+declareSubprogram :: SubIdentifier -> SubContent -> ProgramMemory -> Either String ProgramMemory 
+declareSubprogram id@(n,ts) content m
+    | M.member id m   = Left $ "Two equal declarations for subprogram " ++ n
+    | otherwise       = Right (M.insert id content m)
+
+setupSubprogramCall :: String -> [GType] -> ProgramMemory -> Scopes -> Memory -> Either String (Scopes, Memory, Block)
+setupSubprogramCall s ts pm ss m = undefined
+
+chooseSuitableSubprogram :: [GType] -> [SubIdentifier] -> Either String SubIdentifier
+chooseSuitableSubprogram ts is = undefined
+
+
 {- Data memory implementation -}
 
 -- Variable attributes
