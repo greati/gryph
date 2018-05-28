@@ -2,6 +2,11 @@
 
 #g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
+sub f(x,z:int&; y:int=0) {
+    a : int;
+    a = 2;
+}
+
 i : int = 0;
 
 x : string;

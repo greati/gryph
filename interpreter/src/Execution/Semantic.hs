@@ -18,6 +18,7 @@ exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO()
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
+                        print (show pm')
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
@@ -198,11 +199,15 @@ interpretSubDeclaration (Subprogram (Ident i) ps t b) m pm ss = ((i, paramTypes 
             formalParams (p:ps) = (interpretParamDeclaration p m pm ss) ++ formalParams ps
 
 interpretParamDeclaration :: ParamDeclaration -> Memory -> ProgramMemory -> Scopes -> [(String, GParamType, Maybe Value)]
-interpretParamDeclaration (ParamDeclaration [] _ []) _ _ _ = []
-interpretParamDeclaration (ParamDeclaration [] _ (_:_:_)) _ _ _ = error "Too many default values"
-interpretParamDeclaration (ParamDeclaration ((Ident i):is) gt []) m pm ss = (i, gt, Nothing) : interpretParamDeclaration (ParamDeclaration is gt []) m pm ss
-interpretParamDeclaration (ParamDeclaration ((Ident i):is) gt [e]) m pm ss = (i, gt, Just (eval m pm ss e)) : interpretParamDeclaration (ParamDeclaration is gt [e]) m pm ss
-interpretParamDeclaration (ParamDeclaration ((Ident i):is) gt (e:es)) m pm ss = (i, gt, Just (eval m pm ss e)) : interpretParamDeclaration (ParamDeclaration is gt es) m pm ss
+interpretParamDeclaration pd@(ParamDeclaration is _ es) m pm ss 
+    | length es > length is = error "Too many default values"
+    | otherwise = interpretParamDeclaration' pd m pm ss
+    where
+        interpretParamDeclaration' (ParamDeclaration [] _ []) _ _ _ = []
+        interpretParamDeclaration' (ParamDeclaration [(Ident i)] gt [e]) m pm ss = [(i, gt, Just (eval m pm ss e))]
+        interpretParamDeclaration' (ParamDeclaration ((Ident i):is) gt []) m pm ss = (i, gt, Nothing) : interpretParamDeclaration (ParamDeclaration is gt []) m pm ss
+        interpretParamDeclaration' (ParamDeclaration ((Ident i):is) gt [e]) m pm ss = (i, gt, Just (eval m pm ss e)) : interpretParamDeclaration (ParamDeclaration is gt [e]) m pm ss
+        interpretParamDeclaration' (ParamDeclaration ((Ident i):is) gt (e:es)) m pm ss = (i, gt, Just (eval m pm ss e)) : interpretParamDeclaration (ParamDeclaration is gt es) m pm ss
                 
 
 
