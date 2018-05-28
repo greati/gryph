@@ -12,5 +12,5 @@ main = undefined
 igryph :: Filename -> IO()
 igryph s = do
                 us <- parseFile s
-                exec memory scopes us
+                exec memory programMemory scopes us
 

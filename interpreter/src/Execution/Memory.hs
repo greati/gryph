@@ -9,8 +9,10 @@ import Syntactic.Syntax
  -
  -}
 type SubIdentifier = (String, [GParamType]) 
-type SubContent = ([(String, GParamType)], Maybe GType, Block)
+type SubContent = ([(String, GParamType, Maybe Value)], Maybe GType, Block)
 type ProgramMemory = M.Map SubIdentifier SubContent
+
+programMemory = M.empty
 
 declareSubprogram :: SubIdentifier -> SubContent -> ProgramMemory -> Either String ProgramMemory 
 declareSubprogram id@(n,ts) content m

@@ -6,9 +6,9 @@ i : int = 0;
 
 x : string;
 
-while (true) {
-    read x;
-    print x;
+while (i != 10) {
+    i = i + 1;
+    print i;
 }
 
 #e = |"b" ? 1|;
