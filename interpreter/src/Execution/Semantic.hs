@@ -107,6 +107,20 @@ execStmt (WhileStmt e body) m pm ss =  let ss' = (show (length ss):ss) in repeat
                                                 where test = case makeBooleanFromValue (eval m pm ss' e) of
                                                                 Left i -> error i
                                                                 Right i -> i
+execStmt (SubCallStmt (SubprogCall i as)) m pm ss = do 
+                                                        print (show (processSubArgsType as m pm ss))
+                                                        return (m, ss)
+
+processSubArgsType :: [SubprogArg] -> Memory -> ProgramMemory -> Scopes -> [(MemoryValue, GType)]
+processSubArgsType [] _ _ _ = []
+processSubArgsType (a:as) m pm ss = case a of
+                                        ArgIdentAssign (IdentAssign _ expr) -> getType ev : remaining
+                                        ArgExpr expr -> case expr of 
+                                                            ArithTerm (IdTerm i) -> (Ref ci, getType tc): remaining
+                                                            _ -> (Value ev, getType ev) : remaining
+    where remaining = processSubArgsType as m pm ss
+          ev = eval m pm ss expr
+          (ci, (_,tc)) = case fetchVar m i 
 
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of

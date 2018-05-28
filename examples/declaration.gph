@@ -2,10 +2,15 @@
 
 #g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
-sub f(x,z:int&; y:int=0) {
+sub f(a,b:int) {
     a : int;
     a = 2;
 }
+
+b : float;
+c : [int];
+
+f(1,b="oi", c);
 
 i : int = 0;
 
