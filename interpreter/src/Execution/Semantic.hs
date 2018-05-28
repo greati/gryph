@@ -3,7 +3,7 @@ module Execution.Semantic where
 import Syntactic.Values
 import Syntactic.Syntax
 import Execution.Memory
-import Syntactic.Parser 
+--import Syntactic.Parser 
 import qualified Data.Map as M
 
 
@@ -12,12 +12,6 @@ type Filename = String
 -- |Scopes in the execution.
 scopes :: Scopes
 scopes = ["global"]
-
--- |Main interpreter function.
-igryph :: Filename -> IO()
-igryph s = do
-                us <- parseFile s
-                exec memory scopes us
 
 -- |Execute a program represented as a list of program units.
 exec :: Memory -> Scopes -> [ProgramUnit] -> IO() 
@@ -30,7 +24,7 @@ exec m ss (u:us) = do
 
 -- |Executes a program unit.
 execUnit :: ProgramUnit -> Memory -> Scopes -> IO (Memory, Scopes)
-execUnit (Subprogram sub) m ss = do 
+execUnit (SubprogramDecl sub) m ss = do 
                                     execSubDecl sub m
                                     return (m,ss)
 execUnit (StructDecl struct) m ss = 
@@ -144,10 +138,10 @@ makeBooleanFromValue (Bool v) = Right v
 makeBooleanFromValue _        = Left "Expected boolean value"
 
 -- | Given type t and value v, return (t,v) if they are compatible.
-makeCompatibleAssignTypes :: GType -> Value -> (GType, Value)
-makeCompatibleAssignTypes t@(GList _) v@(List []) = (t,v)
+makeCompatibleAssignTypes :: GType -> Value -> (GType, MemoryValue)
+makeCompatibleAssignTypes t@(GList _) v@(List []) = (t, Value v)
 makeCompatibleAssignTypes t v = if t' == t 
-                                    then (t,v) 
+                                    then (t, Value v) 
                                     else error ("Incompatible types " ++ show t' ++ " and " ++ show t)
                                 where
                                     t' = getType v
@@ -181,6 +175,27 @@ varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m ss = do
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i ss
 
+
+{- ParamDeclaration [Identifier] GParamType [ArithExpr]
+ - GParamType = GType GType | GRef GRef
+ -
+ -}
+
+extractFormalTypes = undefined
+extractFormalDecls = undefined
+
+{--
+interpretFormalDeclarationList :: [ParamDeclaration] -> Scope -> Memory -> Scopes -> [((Name,Scope),(GType, MemoryValue))]
+interpretFormalDeclarationList [] s m ss = []
+interpretFormalDeclarationList (v:vs) s m ss = interpretFormalDeclaration v s m ss : (interpretFormalDeclarationList vs s m ss)
+
+
+interpretFormalDeclaration :: ParamDeclaration -> Scope -> Memory -> Scopes -> [((Name, Scope), (GType, MemoryValue))]
+interpretFormalDeclaration (ParamDeclaration [] t []) s m ss = []
+interpretFormalDeclaration (ParamDeclaration [] t (_:vs)) s m ss = error "Too many expressions in the right side of the declaration"
+interpretFormalDeclaration (ParamDeclaration ((Ident x):xs) t (v:[])) s m ss = ((x,s), makeCompatibleAssignTypes t (eval m ss v)) : (interpretFormalDeclaration (ParamDeclaration xs t [v]) s m ss)
+interpretFormalDeclaration (ParamDeclaration ((Ident x):xs) t (v:vs)) s m ss = ((x,s), makeCompatibleAssignTypes t (eval m ss v)) : (interpretFormalDeclaration (ParamDeclaration xs t vs) s m ss)
+--}
 
 getType :: Value -> GType
 getType (Integer i)                   = GInteger
