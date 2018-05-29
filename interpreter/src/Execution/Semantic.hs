@@ -18,7 +18,6 @@ exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO()
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
-                        print (show pm')
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
@@ -108,19 +107,33 @@ execStmt (WhileStmt e body) m pm ss =  let ss' = (show (length ss):ss) in repeat
                                                                 Left i -> error i
                                                                 Right i -> i
 execStmt (SubCallStmt (SubprogCall i as)) m pm ss = do 
-                                                        print (show (processSubArgsType as m pm ss))
+                                                        print (show (typeArgs as m pm ss))
                                                         return (m, ss)
 
-processSubArgsType :: [SubprogArg] -> Memory -> ProgramMemory -> Scopes -> [(MemoryValue, GType)]
-processSubArgsType [] _ _ _ = []
-processSubArgsType (a:as) m pm ss = case a of
-                                        ArgIdentAssign (IdentAssign _ expr) -> getType ev : remaining
+type ActualParamTypes = [GType]
+type ProcessedActualParams = [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
+
+execSubprogram :: Identifier -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
+execSubprogram = undefined
+
+-- | Obtain list of actual parameters types.
+typeArgs as m pm ss = map snd (processSubArgs as m pm ss)
+
+-- | Process list of actual parameters from a subprogram call.
+processSubArgs :: [SubprogArg] -> Memory -> ProgramMemory -> Scopes -> [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
+processSubArgs [] _ _ _ = []
+processSubArgs (a:as) m pm ss = case a of
+                                        ArgIdentAssign (IdentAssign [i] expr) -> (Left (i, Right (Just ev)), getType ev) : remaining
+                                                                                where ev = eval m pm ss expr
                                         ArgExpr expr -> case expr of 
-                                                            ArithTerm (IdTerm i) -> (Ref ci, getType tc): remaining
-                                                            _ -> (Value ev, getType ev) : remaining
-    where remaining = processSubArgsType as m pm ss
-          ev = eval m pm ss expr
-          (ci, (_,tc)) = case fetchVar m i 
+                                                            ArithTerm (IdTerm id@(Ident i)) -> (Left (id, Left ci), t): remaining
+                                                                where 
+                                                                      (ci, (t,tc)) = case fetchVar m i ss of
+                                                                                        Left err -> error err
+                                                                                        Right cell -> cell
+                                                            _ -> (Right ev, getType ev) : remaining
+                                                                 where ev = eval m pm ss expr
+                                        where remaining = processSubArgs as m pm ss
 
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
