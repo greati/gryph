@@ -106,25 +106,38 @@ execStmt (WhileStmt e body) m pm ss =  let ss' = (show (length ss):ss) in repeat
                                                 where test = case makeBooleanFromValue (eval m pm ss' e) of
                                                                 Left i -> error i
                                                                 Right i -> i
-execStmt (SubCallStmt (SubprogCall i as)) m pm ss = do 
-                                                        print (show (typeArgs as m pm ss))
-                                                        return (m, ss)
+execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do 
+                                                                case selected of
+                                                                    Nothing -> error ("No subprogram found for call to " ++ i)
+                                                                    x -> return (m, ss)
+                                                                    
+                                                                    where arguments = processSubArgs as [] m pm ss
+                                                                          selected = selectSubForCall i arguments pm
+    
 
 type ActualParamTypes = [GType]
-type ProcessedActualParams = [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
+--type ProcessedActualParams = [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
 
-execSubprogram :: Identifier -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
+execSubprogram :: (SubIdentifier, SubContent) -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
 execSubprogram = undefined
+    
+prepareSubcallElabs :: Memory -> ProgramMemory -> Scopes -> SubContent -> ProcessedActualParams -> [(Name, Cell)]
+prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) ((a,t):as) = case a of
+                                                  Left ((Ident i), Right (Just v)) -> (i, (t, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                                  Left ((Ident i), Left ci) -> undefined
+                                                  Right v -> undefined
 
 -- | Obtain list of actual parameters types.
-typeArgs as m pm ss = map snd (processSubArgs as m pm ss)
+typeArgs as m pm ss = map snd (processSubArgs as [] m pm ss)
 
 -- | Process list of actual parameters from a subprogram call.
-processSubArgs :: [SubprogArg] -> Memory -> ProgramMemory -> Scopes -> [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
-processSubArgs [] _ _ _ = []
-processSubArgs (a:as) m pm ss = case a of
-                                        ArgIdentAssign (IdentAssign [i] expr) -> (Left (i, Right (Just ev)), getType ev) : remaining
-                                                                                where ev = eval m pm ss expr
+processSubArgs :: [SubprogArg] -> [Identifier] -> Memory -> ProgramMemory -> Scopes -> [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
+processSubArgs [] _ _ _ _ = []
+processSubArgs (a:as) ids m pm ss = case a of
+                                        ArgIdentAssign (IdentAssign [i] expr) -> if elem i ids then error "Multiple assignment to same parameter"
+                                                                                    else (Left (i, Right (Just ev)), getType ev) : remaining
+                                                                                where   ev = eval m pm ss expr
+                                                                                        remaining = processSubArgs as (i:ids) m pm ss
                                         ArgExpr expr -> case expr of 
                                                             ArithTerm (IdTerm id@(Ident i)) -> (Left (id, Left ci), t): remaining
                                                                 where 
@@ -133,7 +146,7 @@ processSubArgs (a:as) m pm ss = case a of
                                                                                         Right cell -> cell
                                                             _ -> (Right ev, getType ev) : remaining
                                                                  where ev = eval m pm ss expr
-                                        where remaining = processSubArgs as m pm ss
+                                        where remaining = processSubArgs as ids m pm ss
 
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of

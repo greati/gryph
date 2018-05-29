@@ -10,7 +10,8 @@ sub f(a,b:int) {
 b : float;
 c : [int];
 
-f(1,b="oi", c);
+f(2,a=2);
+#f(1,b="oi", c);
 
 i : int = 0;
 

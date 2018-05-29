@@ -12,6 +12,8 @@ type SubIdentifier = (String, [GParamType])
 type SubContent = ([(String, GParamType, Maybe Value)], Maybe GType, Block)
 type ProgramMemory = M.Map SubIdentifier SubContent
 
+type ProcessedActualParams = [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
+
 programMemory = M.empty
 
 declareSubprogram :: SubIdentifier -> SubContent -> ProgramMemory -> Either String ProgramMemory 
@@ -19,11 +21,67 @@ declareSubprogram id@(n,ts) content m
     | M.member id m   = Left $ "Two equal declarations for subprogram " ++ n
     | otherwise       = Right (M.insert id content m)
 
-fetchForSubprogramCall :: String -> [GType] -> ProgramMemory -> Either String Block
-fetchForSubprogramCall s ts pm = undefined
+fetchSubprograms :: Name -> ProcessedActualParams -> ProgramMemory -> [(SubIdentifier, SubContent)]
+fetchSubprograms n ts pm = M.toAscList $ M.filterWithKey (\(n',_) (ps,_,_) -> n'==n && length ts >= countNecessaryParams ps && length ts <= length ps) pm
 
-chooseSuitableSubprogram :: [GType] -> [SubIdentifier] -> Either String SubIdentifier
-chooseSuitableSubprogram ts is = undefined
+selectSubForCall :: Name -> ProcessedActualParams -> ProgramMemory -> Maybe (SubIdentifier, SubContent)
+selectSubForCall n ts pm = case v of 
+                                Just _ -> Just (possibilities !! i)
+                                Nothing -> Nothing
+     where        
+            (v,i) = foldl maxMaybe (Nothing, (-1)) enumerated
+            maxMaybe (v,i) x''@(Nothing ,i') = (v,i)
+            maxMaybe (v,i) x''@(x'@(Just s'),i') = case v of
+                                                        Nothing -> x''
+                                                        Just s -> if s > s' then (v,i) 
+                                                                  else 
+                                                                    if s == s' then error "Ambiguous call"
+                                                                    else x''
+            enumerated = zip scores [0..(length scores - 1)]
+            scores = map (scoreSubForCall ts 0 []) possibilities
+            possibilities = fetchSubprograms n ts pm
+
+scoreSubForCall :: ProcessedActualParams -> Int -> [Name] -> (SubIdentifier, SubContent) -> Maybe Int
+-- named param, other cases
+scoreSubForCall [] _ _ _ = Just 0
+scoreSubForCall params@((p,t):ps) pos nameds contents@(si,(fs, _, _)) = case p of
+                                                                        Left ((Ident i), Right (Just v)) -> case scoreSubForCall ps pos (i:nameds) contents of
+                                                                                Just score -> if f' /= [] then 
+                                                                                                    if (getParamGType t') == t then 
+                                                                                                        Just (1 + score) 
+                                                                                                    else 
+                                                                                                        if compatType (getParamGType t') t then
+                                                                                                            Just (score) 
+                                                                                                        else Nothing
+                                                                                              else Nothing
+                                                                                    where 
+                                                                                        (_,t',_) = head f' 
+                                                                                        f' = filter (\(i',t', _)-> i == i') fs
+                                                                                Nothing -> Nothing
+                                                                        _ -> if nameds /= [] then Nothing
+                                                                                else case scoreSubForCall ps (pos + 1) nameds contents of
+                                                                                    Just score -> if getParamGType t' == t then
+                                                                                                        Just (1 + score)
+                                                                                                  else
+                                                                                                        if compatType (getParamGType t') t then
+                                                                                                            Just score
+                                                                                                        else Nothing
+                                                                                    Nothing -> Nothing
+                                                                                    where 
+                                                                                        (_,t',_) = fs !! pos
+compatType :: GType -> GType -> Bool
+compatType t t' = if t == t' then True
+                    else case (t,t') of
+                        (GFloat, GInteger) -> True
+
+getParamGType :: GParamType -> GType  
+getParamGType (GRef t) = t
+getParamGType (GType t) = t
+
+countNecessaryParams :: [(String, GParamType, Maybe Value)] -> Int
+countNecessaryParams ps = foldr (\(_,_,v) s -> if v == Nothing then s+1 else s) 0 ps
+
+
 
 
 {- Data memory implementation -}
