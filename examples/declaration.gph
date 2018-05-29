@@ -2,14 +2,14 @@
 
 #g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
-i : int = 0;
+#i : int = 0;
 
-x : string;
+#x : string;
 
-while (true) {
-    read x;
-    print x;
-}
+#while (true) {
+#    read x;
+#    print x;
+#}
 
 #e = |"b" ? 1|;
 
@@ -25,3 +25,6 @@ while (true) {
 #j : int = k.1;
 
 # print j;
+
+s : string = (1 + 2)@string;
+print(s);
