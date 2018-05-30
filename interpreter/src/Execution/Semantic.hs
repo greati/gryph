@@ -361,15 +361,15 @@ eval m pm ss (ArithTerm (LitTerm (Lit v)))      = v
 eval m pm ss (ArithUnExpr MinusUnOp e)          = minusUn (eval m pm ss e)
 eval m pm ss (ArithUnExpr PlusUnOp e)           = plusUn (eval m pm ss e)
 eval m pm ss (ArithUnExpr NotUnOp e)            = not' (eval m pm ss e)
-eval m pm ss (ArithBinExpr MinusBinOp  e1 e2)   = evalBinOp m ss (ArithBinExpr MinusBinOp  e1 e2) minusBin
-eval m pm ss (ArithBinExpr PlusBinOp  e1 e2)    = evalBinOp m ss (ArithBinExpr PlusBinOp  e1 e2) plusBin
-eval m pm ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m ss (ArithBinExpr TimesBinOp e1 e2) timesBin
-eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr DivBinOp e1 e2) divBin
-eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ExpBinOp e1 e2) expBin
-eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ModBinOp e1 e2) modBin
+eval m pm ss (ArithBinExpr MinusBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr MinusBinOp e1 e2) minusBin
+eval m pm ss (ArithBinExpr PlusBinOp  e1 e2)    = evalBinOp m pm ss (ArithBinExpr PlusBinOp e1 e2) plusBin
+eval m pm ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr TimesBinOp e1 e2) timesBin
+eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr DivBinOp e1 e2) divBin
+eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ExpBinOp e1 e2) expBin
+eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ModBinOp e1 e2) modBin
 eval m pm ss (ExprLiteral (ListLit [] ))        = List []
-eval m pm ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
-eval m pm ss (ExprLiteral (DictLit de))         = Map (evalDict m ss de M.empty )
+eval m pm ss (ExprLiteral (ListLit es ))        = List (evalList m pm ss es)
+eval m pm ss (ExprLiteral (DictLit de))         = Map (evalDict m pm ss de M.empty )
 eval m pm ss (ArithEqExpr Equals e1 e2)         = Bool (eval m pm ss e1 == eval m pm ss e2)
 eval m pm ss (ArithEqExpr NotEquals e1 e2)      = Bool (eval m pm ss e1 /= eval m pm ss e2)
 eval m pm ss (ArithRelExpr Greater e1 e2)       = Bool (eval m pm ss e1 >  eval m pm ss e2)
