@@ -2,6 +2,7 @@
 
 #g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
+
 sub f(a,b:int) {
     a : int;
     a = 2;
@@ -15,7 +16,8 @@ f(2,a=2);
 
 i : int = 0;
 
-x : string;
+#x : string;
+
 
 while (i != 10) {
     i = i + 1;
@@ -36,3 +38,6 @@ while (i != 10) {
 #j : int = k.1;
 
 # print j;
+
+s : string = (1 + 2)@string;
+print(s);

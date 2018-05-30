@@ -289,8 +289,8 @@ getType (List (x:_))                  = GList (getType x)
 getType (List [])                     = GList GEmpty
 getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
-getType (Triple (v1,v2, v3))         = GTriple (getType v1) (getType v2 ) (getType v3)
-getType (Quadruple (v1,v2, v3, v4))  = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
+getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
+getType (Quadruple (v1,v2, v3, v4))   = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
 
 getKeyType :: Value -> GType
 getKeyType (Map m)            = getType (head (M.keys m))
@@ -348,27 +348,73 @@ evalBinOp m pm ss (ArithBinExpr _  e1 e2) f = case eval m pm ss e1 of
                                                            x -> if (getType k == getType x) then f k  x
                                                                          else error "Type mismatch  operation"
 
+fromString::  String  -> GType -> Value
+fromString s (GInteger )        = Integer (read s::Integer)
+fromString s (GFloat  )         = Float (read s::Double)
+fromString s (GChar )           = Char (read s::Char)
+fromString s (GBool )           = Bool (read s::Bool)
+fromString _ _                  = error "No parser from String"
+
+
 eval :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> Value
 eval m pm ss (ArithTerm (LitTerm (Lit v)))      = v
 eval m pm ss (ArithUnExpr MinusUnOp e)          = minusUn (eval m pm ss e)
 eval m pm ss (ArithUnExpr PlusUnOp e)           = plusUn (eval m pm ss e)
 eval m pm ss (ArithUnExpr NotUnOp e)            = not' (eval m pm ss e)
-eval m pm ss (ArithBinExpr MinusBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr MinusBinOp  e1 e2) minusBin  
-eval m pm ss (ArithBinExpr PlusBinOp  e1 e2)    = evalBinOp m pm ss (ArithBinExpr PlusBinOp  e1 e2) plusBin
-eval m pm ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr TimesBinOp e1 e2) timesBin
-eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr DivBinOp e1 e2) divBin
-eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ExpBinOp e1 e2) expBin  
-eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ModBinOp e1 e2) modBin  
+eval m pm ss (ArithBinExpr MinusBinOp  e1 e2)   = evalBinOp m ss (ArithBinExpr MinusBinOp  e1 e2) minusBin
+eval m pm ss (ArithBinExpr PlusBinOp  e1 e2)    = evalBinOp m ss (ArithBinExpr PlusBinOp  e1 e2) plusBin
+eval m pm ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m ss (ArithBinExpr TimesBinOp e1 e2) timesBin
+eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr DivBinOp e1 e2) divBin
+eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ExpBinOp e1 e2) expBin
+eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m ss (ArithBinExpr ModBinOp e1 e2) modBin
 eval m pm ss (ExprLiteral (ListLit [] ))        = List []
-eval m pm ss (ExprLiteral (ListLit es ))        = List (evalList m pm ss es)
-eval m pm ss (ExprLiteral (DictLit de))         = Map (evalDict m pm ss de M.empty )
+eval m pm ss (ExprLiteral (ListLit es ))        = List (evalList m ss es)
+eval m pm ss (ExprLiteral (DictLit de))         = Map (evalDict m ss de M.empty )
 eval m pm ss (ArithEqExpr Equals e1 e2)         = Bool (eval m pm ss e1 == eval m pm ss e2)
 eval m pm ss (ArithEqExpr NotEquals e1 e2)      = Bool (eval m pm ss e1 /= eval m pm ss e2)
+eval m pm ss (ArithRelExpr Greater e1 e2)       = Bool (eval m pm ss e1 >  eval m pm ss e2)
+eval m pm ss (ArithRelExpr GreaterEq e1 e2)     = Bool (eval m pm ss e1 >= eval m pm ss e2)
+eval m pm ss (ArithRelExpr Less e1 e2)          = Bool (eval m pm ss e1 <  eval m pm ss e2)
+eval m pm ss (ArithRelExpr LessEq e1 e2)        = Bool (eval m pm ss e1 <= eval m pm ss e2)
+eval m pm ss (LogicalBinExpr And e1 e2)         = case eval m pm ss e1 of
+                                                Bool b1 -> case eval m pm ss e2 of
+                                                            Bool b2 -> Bool ( b1 && b2)
+                                                            _ -> error "And operator rhs type error"
+                                                _ -> error "And operator lhs type error "
+eval m pm ss (LogicalBinExpr Or e1 e2)         = case eval m pm ss e1 of
+                                                Bool b1 -> case eval m pm ss e2 of
+                                                            Bool b2 -> Bool ( b1 || b2)
+                                                            _ -> error "And operator rhs type error"
+                                                _ -> error "And operator lhs type error "
+eval m pm ss (LogicalBinExpr Xor e1 e2)         = case eval m pm ss e1 of
+                                                Bool b1 -> case eval m pm ss e2 of
+                                                            Bool b2 -> Bool (((not b1) &&  b2 ) || (b1 && (not b2)))
+                                                            _ -> error "And operator rhs type error"
+                                                _ -> error "And operator lhs type error "
+
+eval m pm ss (CastExpr e1 g)                    = case g of
+                                                GString     -> String (show (eval m pm ss e1))
+                                                GInteger    -> case eval m pm ss e1 of
+                                                                 Float f   -> Integer ( floor f)
+                                                                 Bool  b   -> if b then Integer 1 else Integer 0
+                                                                 String s  -> fromString s g
+                                                                 _         -> error "No cast avaliable"
+                                                GFloat      -> case eval m pm ss e1 of
+                                                                 Integer i -> Float (fromInteger i)
+                                                                 String s  -> fromString s g
+                                                                 _         -> error "No cast avaliable"
+                                                GBool       -> case eval m pm ss e1 of
+                                                                 Integer i -> if i /= 0 then Bool True else Bool False
+                                                                 Float   f -> if f /= 0 then Bool True else Bool False
+                                                                 String  s -> fromString s g
+                                                                 _         -> error "No cast avaliable"
+                                                _           ->  error "Type ??"
+
 eval m pm ss (ExprLiteral (TupleLit te))        = if length l == 2 then Pair ((l !! 0), (l !! 1))
-                                               else if length l == 3 then Triple ((l !! 0), (l !! 1), (l !! 2))
-                                                    else if length  l == 4 then Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3))
-                                                     else error "Limit of Quadruples"
-                                                       where l = evalTuple m pm ss te
+                                                   else if length l == 3 then Triple ((l !! 0), (l !! 1), (l !! 2))
+                                                        else if length  l == 4 then Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3))
+                                                         else error "Limit of Quadruples"
+                                                           where l = evalTuple m pm ss te
 eval m pm ss (ListAccess e1 e2 )                = case eval m pm ss e1 of
                                                 (List l) -> case eval m pm ss e2 of
                                                              Integer i ->  l !! (fromIntegral i)
@@ -412,6 +458,8 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) = case eval m pm ss e1 of
 eval m pm ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
                                                 Left i -> error i
                                                 Right i -> i
+
+
 
 
 plusPlusBinList :: Value -> Value -> Value
