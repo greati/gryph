@@ -5,6 +5,7 @@ import Text.ParserCombinators.Parsec
 import Syntactic.GTok
 import Syntactic.GphTokens
 import Execution.Memory
+import Execution.Semantic
 import Syntactic.Values
 import Syntactic.Syntax
 
@@ -25,7 +26,7 @@ programUnit = do
                     <|>
                     do
                         s <- subprogDecl
-                        return (Subprogram s)
+                        return (SubprogramDecl s)
 
 {- Structs.
  -
@@ -247,11 +248,14 @@ subprogDeclAux i ds = do
                                 t <- gryphType 
                                 --t <- gryphParamType 
                                 b <- stmtBlock
-                                return (Function i ds t b)
+--                                declareSubprogram ((\(Ident i)->i)i, extractFormalTypes ds) (extractFormalDecls ds, (Just t), b)                                 
+                                return (Subprogram i ds (Just t) b)
+                                --return (Function i ds t b)
                             <|>
                             do
                                 b <- stmtBlock
-                                return (Procedure i ds b)
+                                return (Subprogram i ds Nothing b)
+                                --return (Procedure i ds b)
 
                     
 {- Literals

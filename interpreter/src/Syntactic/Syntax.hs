@@ -20,12 +20,12 @@ data GType =    GInteger        |
                 GGraphVertex GType |
                 GGraphVertexEdge GType GType |
                 GUserType Identifier
-                deriving (Show, Eq)
+                deriving (Show, Eq, Ord)
 
-data GParamType = GType GType | GRef GType deriving (Show, Eq)
+data GParamType = GType GType | GRef GType deriving (Show, Eq, Ord)
 
 data ProgramUnit =  Stmt Stmt | 
-                    Subprogram Subprogram |
+                    SubprogramDecl Subprogram |
                     StructDecl StructDecl
                     deriving (Show, Eq)
 
@@ -38,10 +38,10 @@ type GTypeList = [GType]
 data VarDeclaration = VarDeclaration [Identifier] GType [ArithExpr] deriving (Show, Eq)
 data ParamDeclaration = ParamDeclaration [Identifier] GParamType [ArithExpr] deriving (Show, Eq)
 
-data Subprogram = Function Identifier [ParamDeclaration] GType Block | 
-                Procedure Identifier [ParamDeclaration] Block deriving (Show, Eq)
+data Subprogram = Subprogram Identifier [ParamDeclaration] (Maybe GType) Block 
+                deriving (Show, Eq)
 
-data Identifier = Ident String deriving(Show, Eq)
+data Identifier = Ident String deriving(Show, Eq, Ord)
 
 data IdentAssign = IdentAssign [Identifier] ArithExpr deriving (Show, Eq)
 
