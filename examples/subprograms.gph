@@ -1,5 +1,10 @@
-sub f (a,b:int) : int {
+
+b : int = 2;
+
+sub f (a,b:int&; c,b:int = 2) : int {
     return a+b;
 }
 
-c = f(1,2,3);
+a : int;
+
+c = f(a,b,c=1,2);

@@ -24,6 +24,7 @@ tokens :-
     \-\>                                {\p s -> (GTokRightEdge, p)}
     \<\-                                {\p s -> (GTokLeftEdge, p)}
     \-\-                                {\p s -> (GTokDoubleEdge, p)}
+    \&                                  {\p s -> (GTokAmpersand, p)}
     @type                               {\p s -> (GTokType s, p)}
     true                                {\p s -> (GTokTrue, p)}
     false                               {\p s -> (GTokFalse, p)}

@@ -1,0 +1,43 @@
+#d : [[int]];
+
+#g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
+
+
+sub f(a,b:int) {
+    a : int;
+    a = 2;
+}
+
+b : float;
+c : [int];
+
+f(2,a=2);
+#f(1,b="oi", c);
+
+i : int = 0;
+
+#x : string;
+
+
+while (i != 10) {
+    i = i + 1;
+    print i;
+}
+
+#e = |"b" ? 1|;
+
+#l : [int] = [];
+
+#l = [1,2,3];
+
+#l = [];
+
+# j : int = f.0;
+#k : (int, int) = (0,1);
+
+#j : int = k.1;
+
+# print j;
+
+s : string = (1 + 2)@string;
+print(s);

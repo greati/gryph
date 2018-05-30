@@ -5,12 +5,13 @@ import Syntactic.Values
 import qualified Text.Read as TRead
 
 type Type = String
-    
+
 data GType =    GInteger        |
                 GFloat          |
                 GString         |
                 GChar           |
                 GBool           |
+                GEmpty |
                 GList GType     |
                 GPair GType GType   |
                 GTriple GType GType GType  |
@@ -19,51 +20,39 @@ data GType =    GInteger        |
                 GGraphVertex GType |
                 GGraphVertexEdge GType GType |
                 GUserType Identifier
-                deriving (Show, Eq)
+                deriving (Show, Eq, Ord)
 
-instance Read GType where
-    readPrec = (TRead.prec 10 $
-                    do 
-                        TRead.Ident s <- TRead.lexP
-                        case s of
-                            "int" -> return GInteger
-                            "float" -> return GFloat
-                            "string" -> return GString
-                            "char" -> return GChar
-                            "bool" -> return GBool
-                            )
-                TRead.+++
-                (TRead.prec 5 $
-                    do
-                        TRead.Punc s <- TRead.lexP
-                        case s of 
-                            "[" -> do
-                                        a <- TRead.readPrec
-                                        TRead.Punc "]" <- TRead.lexP
-                                        return (GList a)
-                    )
+data GParamType = GType GType | GRef GType deriving (Show, Eq, Ord)
 
 data ProgramUnit =  Stmt Stmt | 
-                    Subprogram Subprogram |
+                    SubprogramDecl Subprogram |
                     StructDecl StructDecl
                     deriving (Show, Eq)
 
 data StructDecl = Struct GType [Stmt] deriving (Show, Eq)
 
+data StructInit = StructInit [IdentAssign] deriving (Show, Eq)
+
 type GTypeList = [GType]
 
 data VarDeclaration = VarDeclaration [Identifier] GType [ArithExpr] deriving (Show, Eq)
+data ParamDeclaration = ParamDeclaration [Identifier] GParamType [ArithExpr] deriving (Show, Eq)
 
-data Subprogram = Function Identifier [VarDeclaration] GType Block | 
-                Procedure Identifier [VarDeclaration] Block deriving (Show, Eq)
+data Subprogram = Subprogram Identifier [ParamDeclaration] (Maybe GType) Block 
+                deriving (Show, Eq)
 
-data Identifier = Ident String deriving(Show, Eq)
+data Identifier = Ident String deriving(Show, Eq, Ord)
 
 data IdentAssign = IdentAssign [Identifier] ArithExpr deriving (Show, Eq)
 
 data Literal = Lit Value deriving(Show, Eq)
 type DictEntry = (ArithExpr, ArithExpr)
-data ExprLiteral = ListLit [ArithExpr] | ListCompLit ListComp | TupleLit [ArithExpr] | DictLit [DictEntry] | GraphLit (Maybe ArithExpr) (Maybe EdgeComp) deriving (Show, Eq)
+data ExprLiteral =  ListLit [ArithExpr] | 
+                    ListCompLit ListComp | 
+                    TupleLit [ArithExpr] | 
+                    DictLit [DictEntry] | 
+                    GraphLit (Maybe ArithExpr) (Maybe EdgeComp) 
+                    deriving (Show, Eq)
 
 data SubprogArg = ArgIdentAssign IdentAssign | ArgExpr ArithExpr deriving (Show, Eq)
 
@@ -76,9 +65,10 @@ data EdgeType = LeftEdge | RightEdge | DoubleEdge deriving (Show, Eq)
 data Edge = Edge EdgeType ArithExpr ArithExpr deriving (Show, Eq)
 
 data Stmt = ReadStmt Identifier | 
-            PrintStmt Term | 
+            PrintStmt ArithExpr | 
             DeclStmt VarDeclaration | --[Identifier] GType [ArithExpr] | 
             AttrStmt [ArithExpr] [ArithExpr] |
+            SubCallStmt SubprogCall |
             IfStmt ArithExpr IfBody ElseBody |
             ReturnStmt ArithExpr |
             ForStmt [Identifier] [ArithExpr] CondBody |
@@ -165,7 +155,8 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     CastExpr ArithExpr GType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |
                     ArithEqExpr EqOp ArithExpr ArithExpr |
-                    LogicalBinExpr BoolBinOp ArithExpr ArithExpr
+                    LogicalBinExpr BoolBinOp ArithExpr ArithExpr |
+                    StructInitExpr StructInit
                     deriving (Show, Eq)
 
 data IdentList = IdentList [Identifier] deriving (Show, Eq)
