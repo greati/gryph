@@ -114,6 +114,12 @@ elabVar s n c@(t,v) m
     | otherwise     = Right (M.insert ci (t,v) m) 
         where ci = (n,s)
 
+elabVars :: Memory -> [(Name,Cell)] -> Scope -> Either String Memory
+elabVars m [] s = Right m
+elabVars m (v@(n,c):vs) s = case elabVar s n c m of
+                                Left i -> Left i
+                                Right m' -> elabVars m' vs s
+
 updateVar :: Memory -> Name -> Scopes -> Cell -> Either String Memory
 updateVar m n ss c@(t,v) = case fetchVar m n ss of
                             Left i -> Left i

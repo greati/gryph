@@ -116,16 +116,30 @@ execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do
     
 
 type ActualParamTypes = [GType]
---type ProcessedActualParams = [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
 
-execSubprogram :: (SubIdentifier, SubContent) -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
-execSubprogram = undefined
+execSubprogram :: Memory -> ProgramMemory -> Scopes -> (SubIdentifier, SubContent) -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
+execSubprogram m pm ss sub@(ident,content@(_,_,block)) as = do
+                                                                (m'',ss'',v) <- execSubprogramBlock m' pm ss' block
+                                                                return (m'',ss',v)
+                    where   m' = case elabVars m declarations (head ss) of
+                                    Left i -> error i
+                                    Right m'' -> m''
+                            ss' = (show (length ss):ss)
+                            declarations = prepareSubcallElabs m pm ss content as
+                            
+execSubprogramBlock :: Memory -> ProgramMemory -> Scopes -> Block -> IO (Memory, Scopes, Maybe Value)
+execSubprogramBlock = undefined
     
 prepareSubcallElabs :: Memory -> ProgramMemory -> Scopes -> SubContent -> ProcessedActualParams -> [(Name, Cell)]
 prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) ((a,t):as) = case a of
-                                                  Left ((Ident i), Right (Just v)) -> (i, (t, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) as
-                                                  Left ((Ident i), Left ci) -> undefined
-                                                  Right v -> undefined
+                                                  Left ((Ident i), Left ci@(n',s')) -> case pt of 
+                                                                                (GRef _) -> (i, (t, Ref ci)) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                                                                (GType _) -> (i, (t, Value v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                                                                    where v' = case getVarScopeValue m n' s' of
+                                                                                                    Left i -> error i
+                                                                                                    Right v'' -> v''
+                                                  Right v -> (n, (t, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                                  Left ((Ident i), Right (Just v)) -> (i, (t, Value v)) : prepareSubcallElabs m pm ss (f:fs, mt, b) as
 
 -- | Obtain list of actual parameters types.
 typeArgs as m pm ss = map snd (processSubArgs as [] m pm ss)
