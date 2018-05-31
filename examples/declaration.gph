@@ -2,16 +2,38 @@
 
 #g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
 
+sub f(a,b,c:int) {
+    print "This is the three arg method!";
+}
 
 sub f(a,b:int) {
-    a : int;
-    a = 2;
+    c : int = 2;
+    if (c > 2)
+        print a + b + c;
 }
+
+sub fact (a : int) : int {
+    if (a == 0) return 1;
+    else return a * fact(a - 1);
+}
+
+sub add (a, b : int) : int {
+    c : int = 2;
+    return a + b + c;
+}
+
+fatorial : int = fact(5);
+print fatorial;
+
+sum : int = add(100,b=20);
+print sum;
 
 b : float;
 c : [int];
 
-f(2,a=2);
+
+
+f(2,2,c=2);
 #f(1,b="oi", c);
 
 i : int = 0;
@@ -39,5 +61,3 @@ while (i != 10) {
 
 # print j;
 
-s : string = (1 + 2)@string;
-print(s);

@@ -42,33 +42,31 @@ selectSubForCall n ts pm = case v of
             possibilities = fetchSubprograms n ts pm
 
 scoreSubForCall :: ProcessedActualParams -> Int -> [Name] -> (SubIdentifier, SubContent) -> Maybe Int
--- named param, other cases
 scoreSubForCall [] _ _ _ = Just 0
 scoreSubForCall params@((p,t):ps) pos nameds contents@(si,(fs, _, _)) = case p of
-                                                                        Left ((Ident i), Right (Just v)) -> case scoreSubForCall ps pos (i:nameds) contents of
-                                                                                Just score -> if f' /= [] then 
-                                                                                                    if (getParamGType t') == t then 
-                                                                                                        Just (1 + score) 
-                                                                                                    else 
-                                                                                                        if compatType (getParamGType t') t then
-                                                                                                            Just (score) 
-                                                                                                        else Nothing
-                                                                                              else Nothing
-                                                                                    where 
-                                                                                        (_,t',_) = head f' 
-                                                                                        f' = filter (\(i',t', _)-> i == i') fs
-                                                                                Nothing -> Nothing
-                                                                        _ -> if nameds /= [] then Nothing
-                                                                                else case scoreSubForCall ps (pos + 1) nameds contents of
-                                                                                    Just score -> if getParamGType t' == t then
-                                                                                                        Just (1 + score)
-                                                                                                  else
-                                                                                                        if compatType (getParamGType t') t then
-                                                                                                            Just score
-                                                                                                        else Nothing
-                                                                                    Nothing -> Nothing
-                                                                                    where 
-                                                                                        (_,t',_) = fs !! pos
+                                        Left ((Ident i), Right (Just v)) -> case scoreSubForCall ps pos (i:nameds) contents of
+                                                Just score -> if f' /= [] then 
+                                                                if (getParamGType t') == t then Just (1 + score) 
+                                                                    else 
+                                                                        if compatType (getParamGType t') t then
+                                                                            Just (score) 
+                                                                        else Nothing
+                                                              else Nothing
+                                                    where 
+                                                        (_,t',_) = head f' 
+                                                        f' = filter (\(i',t', _)-> i == i') fs
+                                                Nothing -> Nothing
+                                        _ -> if nameds /= [] then Nothing
+                                                else case scoreSubForCall ps (pos + 1) nameds contents of
+                                                    Just score -> if getParamGType t' == t then
+                                                                        Just (1 + score)
+                                                                  else
+                                                                        if compatType (getParamGType t') t then
+                                                                            Just score
+                                                                        else Nothing
+                                                    Nothing -> Nothing
+                                                    where 
+                                                        (_,t',_) = fs !! pos
 compatType :: GType -> GType -> Bool
 compatType t t' = if t == t' then True
                     else case (t,t') of
@@ -81,14 +79,12 @@ getParamGType (GType t) = t
 countNecessaryParams :: [(String, GParamType, Maybe Value)] -> Int
 countNecessaryParams ps = foldr (\(_,_,v) s -> if v == Nothing then s+1 else s) 0 ps
 
-
-
-
 {- Data memory implementation -}
 
 -- Variable attributes
 type Name   = String
-type Scope  = String
+data Scope = GlobalScope | SubScope Integer | IterationScope Integer | BlockScope Integer deriving (Eq, Show, Ord)
+--type Scope  = String
 type Scopes = [Scope]
 type Values = [MemoryValue]
 
@@ -110,7 +106,7 @@ makeMemoryValue v = case v of
 
 elabVar :: Scope -> Name -> Cell -> Memory -> Either String Memory
 elabVar s n c@(t,v) m 
-    | M.member ci m = Left ("Variable " ++ n ++ " in scope " ++ s ++ " already declared.")
+    | M.member ci m = Left $ "Redeclaration of variable " ++ n ++ "in scope " ++ show s
     | otherwise     = Right (M.insert ci (t,v) m) 
         where ci = (n,s)
 
@@ -141,7 +137,7 @@ fetchVarValue m n ss = case fetchVar m n ss of
                                                     
 getVarScopeValue :: Memory -> Name -> Scope -> Either String Value
 getVarScopeValue m n s
-    | M.notMember (n,s) m   = Left ("Variable " ++ n ++ " in scope " ++ s ++ " not declared.")
+    | M.notMember (n,s) m   = Left ("Variable " ++ n ++ " not found for the given scope")
     | otherwise             = v
         where v = case (m M.!(n,s)) of
                     (_,Value v) -> Right v
