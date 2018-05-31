@@ -8,6 +8,7 @@ import qualified Data.Map as M
 
 type Filename = String
 
+-- | Get current system time to produce scope ids
 getCurSeconds :: IO Integer                                                                                   
 getCurSeconds = do                                                                                            
                     t <- getCurrentTime                                                                       
@@ -24,7 +25,6 @@ exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO()
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
-                        print $ show m'
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
@@ -417,8 +417,9 @@ evalBinOp m pm ss (ArithBinExpr _  e1 e2) f =
                                                      k -> case v2 of 
                                                            l2@(List (x:xs) ) -> if (getType k == getType x) then return $ f l2 k 
                                                                          else error "Type mismatch  operation"
-                                                           x -> if (getType k == getType x) then return $ f k  x
-                                                                         else error "Type mismatch  operation"
+                                                           x -> return $ f k  x
+                                                           --x -> if (getType k == getType x) then return $ f k  x
+                                                             --            else error "Type mismatch  operation"
 -- | Convert a string to other type
 fromString::  String  -> GType -> Value
 fromString s (GInteger )        = Integer (read s::Integer)
