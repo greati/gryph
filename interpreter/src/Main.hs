@@ -5,6 +5,7 @@ import Syntactic.Syntax
 import Syntactic.Values
 import Execution.Semantic
 import Execution.Memory
+import Data.Time.Clock
 
 main :: IO ()
 main = undefined
