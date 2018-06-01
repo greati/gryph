@@ -119,6 +119,42 @@ execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = do
                                                                                                         --(m',ss'',v) <- execBlock block m pm ss' BlockScope
                                                                                                         --return (clearScope (head ss') m', tail ss',v)
 
+execStmt (ForStmt ids vs body) m pm ss' = do 
+                                        vss <- (getLists m pm ss' [vs])
+                                        vss' <- over vss
+                                        forStmt ids vss' body m pm ss'
+                                        where
+                                            getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
+                                                                           return xss
+                                            getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
+                                                                           xss'' <- (getLists m pm ss xss)
+                                                                           return (xss' ++ xss'')
+
+                                            forStmt ids vs body m pm ss' = do
+                                                if length vs == 1
+                                                then do
+                                                    let nameCell = getNameCell ids (head vs)
+                                                    case body of
+                                                        (CondStmt st) -> do
+                                                            (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' nameCell
+                                                            return (m', ss'', Nothing)
+                                                        (CondBlock block) -> do
+                                                            (m',ss'',v) <- execBlock block m pm IterationScope ss' nameCell
+                                                            return (m', ss'', Nothing)
+                                                else do
+                                                    if length vs > 0
+                                                    then do
+                                                        let nameCell = getNameCell ids (head vs)                                                        
+                                                        case body of
+                                                            (CondStmt st) -> do
+                                                                (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' nameCell
+                                                                forStmt ids (tail vs) body m' pm ss''
+                                                            (CondBlock block) -> do
+                                                                (m',ss'',v) <- execBlock block m pm IterationScope ss' nameCell
+                                                                forStmt ids (tail vs) body m' pm ss''
+                                                    else do
+                                                        return (m, ss', Nothing)
+
 execStmt (WhileStmt e body) m pm ss' =  --let ss' = (IterationScope (length ss):ss) in 
                                         repeatWhile body m pm ss'
                                     where
@@ -152,7 +188,7 @@ execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                         return $ (m',ss'', Just v)
                                                 where (ss'', m') = case clearScopesUntilSub m ss of
                                                         Nothing -> error "Return called outside subprogram scope"
-                                                        Just v' -> v'
+                                                        Just v' -> v'                                                                                                                                                      
 
 -- | Clear until subprogram scope.
 clearScopesUntilSub :: Memory -> Scopes -> Maybe (Scopes, Memory)
@@ -573,7 +609,9 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                             case v of
                                                                                 Nothing -> error "No return from subprogram call"
                                                                                 Just v -> return v
-eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}  
+
+eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}
+
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 
@@ -692,7 +730,7 @@ evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (ArithExpr, 
 evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
         let new_xs = replicateList ((length is) - (length xs)) xs
         xss <- (getLists m pm ss [new_xs])
-        xss' <- (overListComp xss)
+        xss' <- (over xss)
         if when_exp == []
         then do
             return (expression, is, xss', Nothing)
@@ -707,22 +745,22 @@ evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
           replicateList n xs | n < 0     = error "There aren't enough identifiers." 
                              | otherwise = replicateList (n-1) xs ++ [last xs]
 
-overListComp :: [Value] -> IO [Value]
-overListComp [EmptyList]       = do return [] 
-overListComp [(List xs)]       = do return [(List [x]) | x <- xs]
-overListComp (List [x]: xss)   = do xss' <- (overListComp xss)
-                                    xss'' <- (joinListComp x xss')
-                                    return xss''
-overListComp (List (x:xs):xss) = do xss'  <- (overListComp xss)
-                                    xss'' <- (joinListComp x xss') 
-                                    xss''' <- (overListComp ((List xs): xss))
-                                    return (xss'' ++ xss''')
+over :: [Value] -> IO [Value]
+over [EmptyList]       = do return [] 
+over [(List xs)]       = do return [(List [x]) | x <- xs]
+over (List [x]: xss)   = do xss' <- (over xss)
+                            xss'' <- (join x xss')
+                            return xss''
+over (List (x:xs):xss) = do xss'  <- (over xss)
+                            xss'' <- (join x xss') 
+                            xss''' <- (over ((List xs): xss))
+                            return (xss'' ++ xss''')
 
-joinListComp :: Value -> [Value] -> IO [Value]
-joinListComp v [EmptyList]     = do return []
-joinListComp v [(List xs)]     = do return [ List (v : xs) ]
-joinListComp v ((List xs):xss) = do xss' <- (joinListComp v xss)
-                                    return ((List (v : xs)) : xss')
+join :: Value -> [Value] -> IO [Value]
+join v [EmptyList]     = do return []
+join v [(List xs)]     = do return [ List (v : xs) ]
+join v ((List xs):xss) = do xss' <- (join v xss)
+                            return ((List (v : xs)) : xss')
 
 getNameCell :: [Identifier] -> Value -> [(Name,Cell)]
 getNameCell [(Ident id)] (List [v]) = [ (id, ((getType v), (Value v)) ) ]
