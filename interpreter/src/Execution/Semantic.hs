@@ -125,10 +125,17 @@ execStmt (ForStmt ids vs body) m pm ss' = do
                                         forStmt ids vss' body m pm ss'
                                         where
                                             getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
-                                                                           return xss
+                                                                           case xss of
+                                                                                [(List list)] -> do return [(List list)]
+                                                                                [(Map map)] -> do return [(List ( makeMap (M.toList map) ))]
                                             getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
                                                                            xss'' <- (getLists m pm ss xss)
                                                                            return (xss' ++ xss'')
+
+                                            makeMap :: [(Value, Value)] -> [Value]
+                                            makeMap []     = []
+                                            makeMap [x]    = [Pair x]
+                                            makeMap (x:xs) = (Pair x) : makeMap xs
 
                                             forStmt ids vs body m pm ss' = do
                                                 if length vs == 1
@@ -746,7 +753,7 @@ evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
                              | otherwise = replicateList (n-1) xs ++ [last xs]
 
 over :: [Value] -> IO [Value]
-over [EmptyList]       = do return [] 
+over []       = do return [] 
 over [(List xs)]       = do return [(List [x]) | x <- xs]
 over (List [x]: xss)   = do xss' <- (over xss)
                             xss'' <- (join x xss')
@@ -757,7 +764,7 @@ over (List (x:xs):xss) = do xss'  <- (over xss)
                             return (xss'' ++ xss''')
 
 join :: Value -> [Value] -> IO [Value]
-join v [EmptyList]     = do return []
+join v []     = do return []
 join v [(List xs)]     = do return [ List (v : xs) ]
 join v ((List xs):xss) = do xss' <- (join v xss)
                             return ((List (v : xs)) : xss')
