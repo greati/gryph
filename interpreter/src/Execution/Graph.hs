@@ -1,8 +1,8 @@
 module Execution.Graph where
 
-import qualified Data.Map as M
-import qualified Data.Set as S
-
+import qualified Data.Map.Strict   as M
+import qualified Data.Set          as S
+import qualified Data.Tuple        as T
 
 -- |Vertex indexed by integer values, holding data of type a
 data Vertex a = Vertex Int a
@@ -37,6 +37,21 @@ g = fromVertices [1#2]
 fromVertices :: [Vertex a] -> Graph a b
 fromVertices vs = Graph (S.fromList vs) M.empty
 
+-- |Create a graph from a list of edges, with no vertices
+fromEdges :: [Edge a b] -> Graph a b
+fromEdges es = Graph (S.fromList vertices) (M.fromList edges)
+    where
+        (vertices, edges) = fromEdges' es
+        
+        fromEdges' []                                                      = ([],[])
+        fromEdges' [ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _)]       = (vx : vy : [], (idx, [ed]) : [] )
+        fromEdges' (ed@(Edge vx@(Vertex idx x) vy@(Vertex idy y) _) : eds) = (vx : vy : T.fst (fromEdges' eds), fromEdges'' idx ed (T.snd (fromEdges' eds)))
+        
+        fromEdges'' n ed [] = (n, [ed]) : []
+        fromEdges'' n ed (e'@(id,e):es) 
+            | n == id   = (id, ed : e) : es
+            | otherwise = e' : fromEdges'' n ed es  
+
 -- |Create an edge from a tuple of its components
 edgeFromTuple :: (Vertex a, Vertex a, b) -> Edge a b
 edgeFromTuple (x, y, p) = Edge x y p
@@ -69,7 +84,53 @@ connect g@(Graph vs es) v1@(Vertex x1 p1) v2@(Vertex x2 p2) p
 
 -- |Insert an edge. Error if vertices aren't in the list
 insertEdge :: Graph a b -> Edge a b -> Graph a b
-insertEdge (Graph vs es) (Edge v1 v2 p) = undefined
+insertEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
+    | not (elem v1 vs) || not(elem v2 vs) = error "both vertices must be present"
+    | otherwise = Graph vs (M.insertWith (++) id [ed] es)
 
+-- |Update an edge. Error if vertices aren't in the list
+updateEdge :: Graph a b -> Edge a b -> Graph a b
+updateEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
+    | not (elem v1 vs) || not(elem v2 vs) = error "both vertices must be present"
+    | otherwise = Graph vs (updateEdge' es id ed)
+    where
+        updateEdge' es id ed 
+            | not (M.member id es) = error "the edge must have exist"
+            | otherwise            = updateEdge'' id ed (es M.! id)
+        updateEdge'' id ed  [x]    = (M.insert id [ed] es) 
+        updateEdge'' id ed   xs    = (M.insert id (updateEdge''' ed xs) es)
+        updateEdge''' ed    [x]    = [ed]
+        updateEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
+            | v1 == x1 && v2 == x2 = (ed : xs)
+            | otherwise            = x : updateEdge''' ed xs
 
+-- |Delete an edge. Error if the vertices aren't in the list
+deleteEdge :: Graph a b -> Edge a b -> Graph a b
+deleteEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
+    | not (elem v1 vs) || not(elem v2 vs) = error "both vertices must be present"
+    | otherwise = Graph vs (deleteEdge' es id ed)
+    where
+        deleteEdge' es id ed 
+            | not (M.member id es) = error "the edge must have exist"
+            | otherwise            = deleteEdge'' id ed (es M.! id)
+        deleteEdge'' id ed  [x]    = M.delete id es 
+        deleteEdge'' id ed   xs    = M.insert id (deleteEdge''' ed xs) es
+        deleteEdge''' ed    [x]    = []
+        deleteEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
+            | v1 == x1 && v2 == x2 = xs
+            | otherwise            = x : deleteEdge''' ed xs   
 
+-- |Get edges of a vertex
+getEdges :: Graph a b -> Vertex a -> [Edge a b]
+getEdges (Graph vs es) v@(Vertex n _) 
+    | not (elem v vs) = error "the vertex must be present"
+    | not (M.member n es) = []
+    | otherwise       = es M.! n
+                
+-- |Get the vertices of a graph
+getVertices :: Graph a b -> [Vertex a]
+getVertices (Graph vs _) = S.toList vs
+
+-- |Delete a vertex of a graph
+deleteVertex :: Vertex a -> Graph a b -> Graph a b
+deleteVertex = undefined

@@ -5,6 +5,8 @@ import Syntactic.Syntax
 import Syntactic.Values
 import Execution.Semantic
 import Execution.Memory
+import qualified Execution.Graph as G
+import Execution.GraphSemantic
 import Data.Time.Clock
 
 main :: IO ()

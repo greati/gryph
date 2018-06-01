@@ -573,7 +573,7 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                             case v of
                                                                                 Nothing -> error "No return from subprogram call"
                                                                                 Just v -> return v
-
+eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}  
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 
@@ -644,3 +644,95 @@ minusUn _ = error "Type error Unary (-)  operator "
 not' :: Value -> Value
 not' (Bool b) = Bool (not b)
 not' _ = error "Type error Unary (not) operator "
+
+--------------------------------------------------------------
+-- |List Comprehension
+
+forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO [Value]
+forListComp m pm ss lc = do (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss lc
+                            let (Right m') = elabVars m (getNameCell id v) (head ss)
+                            r <- forListComp' m' pm ss exp id vs' when_exp
+                            return r
+
+forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO [Value]
+forListComp' m pm ss exp id [v] when_exp = do
+                                                (Right m') <- updateListIds m ss id v
+                                                case when_exp of
+                                                    Nothing -> do
+                                                        e <- eval m' pm ss exp 
+                                                        return [e]
+                                                    Just when_exp -> do
+                                                        success <- (eval m' pm ss when_exp)
+                                                        if success == (Bool True)
+                                                        then do
+                                                            e <- eval m' pm ss exp 
+                                                            return [e]
+                                                        else do 
+                                                            return []
+
+forListComp' m pm ss exp id (v:vs) when_exp = do
+                                                (Right m') <- updateListIds m ss id v
+                                                case when_exp of
+                                                    Nothing -> do
+                                                        e <- eval m' pm ss exp
+                                                        r <- forListComp' m pm ss exp id vs when_exp
+                                                        return (e : r)
+                                                    Just when_exp -> do
+                                                        success <- (eval m' pm ss when_exp)
+                                                        if success == (Bool True)
+                                                        then do
+                                                            e <- eval m' pm ss exp
+                                                            r <- forListComp' m pm ss exp id vs (Just when_exp)
+                                                            return (e : r)
+                                                        else do 
+                                                            r <- forListComp' m pm ss exp id vs (Just when_exp)
+                                                            return r
+
+evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (ArithExpr, [Identifier], [Value], Maybe ArithExpr)
+evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
+        let new_xs = replicateList ((length is) - (length xs)) xs
+        xss <- (getLists m pm ss [new_xs])
+        xss' <- (overListComp xss)
+        if when_exp == []
+        then do
+            return (expression, is, xss', Nothing)
+        else do
+            return (expression, is, xss', (Just (head when_exp)))            
+    where getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
+                                         return xss
+          getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
+                                         xss'' <- (getLists m pm ss xss)
+                                         return (xss' ++ xss'')
+          replicateList 0 xs = xs
+          replicateList n xs | n < 0     = error "There aren't enough identifiers." 
+                             | otherwise = replicateList (n-1) xs ++ [last xs]
+
+overListComp :: [Value] -> IO [Value]
+overListComp [EmptyList]       = do return [] 
+overListComp [(List xs)]       = do return [(List [x]) | x <- xs]
+overListComp (List [x]: xss)   = do xss' <- (overListComp xss)
+                                    xss'' <- (joinListComp x xss')
+                                    return xss''
+overListComp (List (x:xs):xss) = do xss'  <- (overListComp xss)
+                                    xss'' <- (joinListComp x xss') 
+                                    xss''' <- (overListComp ((List xs): xss))
+                                    return (xss'' ++ xss''')
+
+joinListComp :: Value -> [Value] -> IO [Value]
+joinListComp v [EmptyList]     = do return []
+joinListComp v [(List xs)]     = do return [ List (v : xs) ]
+joinListComp v ((List xs):xss) = do xss' <- (joinListComp v xss)
+                                    return ((List (v : xs)) : xss')
+
+getNameCell :: [Identifier] -> Value -> [(Name,Cell)]
+getNameCell [(Ident id)] (List [v]) = [ (id, ((getType v), (Value v)) ) ]
+getNameCell ((Ident id):ids) (List (v:vs)) = (id, ((getType v), (Value v)) ) : (getNameCell ids (List vs))                                          
+
+updateListIds :: Memory -> Scopes -> [Identifier] -> Value -> IO (Either String Memory)
+updateListIds m ss [(Ident id)] (List [v])        = do 
+                                                        let r = updateVar m id ss ((getType v), (Value v))
+                                                        return r
+updateListIds m ss ((Ident id):ids) (List (v:vs)) = do
+                                                        let (Right m') = updateVar m id ss ((getType v), (Value v))
+                                                        r <- updateListIds m' ss ids (List vs)
+                                                        return r
