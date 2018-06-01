@@ -615,12 +615,13 @@ timesBin (List l)  i             =   List ( map (timesBin i) l)
 timesBin  i (List l)             =   List ( map (timesBin i) l)
 
 plusBin ::  Value -> Value -> Value
-plusBin (Integer i) (Integer j) = (Integer (i+j)) 
-plusBin (Float f) (Integer i )  = ( Float (f + (fromInteger i)))
-plusBin (Integer i) ( Float f)  = ( Float ((fromInteger i) +f))  
-plusBin (Float f1) (Float f2)   = ( Float (f1 + f2))
-plusBin (List l)  i             =   List ( map (plusBin i) l)
-plusBin  i (List l)             =   List ( map (plusBin i) l)
+plusBin (Integer i) (Integer j)  = Integer (i+j) 
+plusBin (Float f) (Integer i )   =  Float (f + (fromInteger i))
+plusBin (Integer i) ( Float f)   =  Float ((fromInteger i) +f)  
+plusBin (Float f1) (Float f2)    =  Float (f1 + f2)
+plusBin (List l)  i              =  List ( map (plusBin i) l)
+plusBin  i (List l)              =  List ( map (plusBin i) l)
+plusBin  (String s1) (String s2) =  String (s1 ++ s2)
 
 minusBin ::  Value -> Value -> Value
 minusBin (Integer i) (Integer j) = (Integer (i-j)) 
