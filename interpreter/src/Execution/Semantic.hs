@@ -689,7 +689,8 @@ forListComp' m pm ss exp id (v:vs) when_exp = do
 
 evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (ArithExpr, [Identifier], [Value], Maybe ArithExpr)
 evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
-        xss <- (getLists m pm ss [xs])
+        let new_xs = replicateList ((length is) - (length xs)) xs
+        xss <- (getLists m pm ss [new_xs])
         xss' <- (overListComp xss)
         if when_exp == []
         then do
@@ -701,6 +702,9 @@ evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
           getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
                                          xss'' <- (getLists m pm ss xss)
                                          return (xss' ++ xss'')
+          replicateList 0 xs = xs
+          replicateList n xs | n < 0     = error "There aren't enough identifiers." 
+                             | otherwise = replicateList (n-1) xs ++ [last xs]
 
 overListComp :: [Value] -> IO [Value]
 overListComp [EmptyList]       = do return [] 
