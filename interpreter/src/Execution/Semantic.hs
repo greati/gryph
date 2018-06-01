@@ -25,6 +25,7 @@ exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO()
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
+                        print $ show m' 
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
@@ -263,10 +264,22 @@ makeBooleanFromValue :: Value -> Either String Bool
 makeBooleanFromValue (Bool v) = Right v
 makeBooleanFromValue _        = Left "Expected boolean value"
 
+-- | Check types for compatibility
+checkCompatType :: GType -> GType -> Bool
+checkCompatType t t' = if t == t' then True
+                    else case (t,t') of
+                        (GFloat, GInteger)  -> True
+                        (GList _, GEmpty)   -> True
+                        (GEmpty ,GList _)   -> True
+                        (GList l, GList l') -> checkCompatType (GList l) l'
+                        (GList l, GList l') -> checkCompatType (l) $ GList l'
+                        _                   -> False
+
 -- | Given type t and value v, return (t,v) if they are compatible.
 makeCompatibleAssignTypes :: GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes t@(GList _) v@(List []) = (t, Value v)
-makeCompatibleAssignTypes t v = if t' == t 
+--makeCompatibleAssignTypes (GList l) (List l2) = makeCompatibleAssignTypes l (List $ l2) 
+makeCompatibleAssignTypes t v = if checkCompatType t t'--t' == t 
                                     then (t, Value v) 
                                     else error ("Incompatible types " ++ show t' ++ " and " ++ show t)
                                 where
@@ -343,8 +356,8 @@ getType (Float f)                     = GFloat
 getType (String s )                   = GString
 getType (Char c)                      = GChar
 getType (Bool b)                      = GBool
+getType (List [])                     = GEmpty
 getType (List (x:_))                  = GList (getType x)
-getType (List [])                     = GList GEmpty
 getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
@@ -364,7 +377,7 @@ evalList m pm ss [x]      =  do {x' <- eval m pm ss x ; return $ [x']}
 evalList m pm ss (x:y:xs) =  do 
                                 z <- eval m pm ss x
                                 y' <- eval m pm ss y
-                                if getType z /= getType y' then error "Type mismatch in List "
+                                if not ( checkCompatType (getType z) ( getType y')) then error "Type mismatch in List "
                                     else do
                                         l <- evalList m pm ss (y:xs)
                                         return (z:l) 
@@ -550,6 +563,10 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                     v1 <- eval m pm ss e1
                                                     v2 <- eval m pm ss e2
                                                     case v1 of
+                                                        l1@(List []) -> case v2 of 
+                                                                         l2@(List [])     -> return $ plusPlusBin l1 l2
+                                                                         l2@(List (x:xs)) -> return $ plusPlusBin l1 l2  
+                                                                         k                -> return $ plusPlusBin k l1
                                                         l1@(List (x:xs)) -> case v2 of
                                                                                 l2@(List (y:ys)) -> if (getType x == getType y) then return $ plusPlusBinList l1 l2
                                                                                                     else return $ plusPlusBin l1 l2
@@ -578,6 +595,8 @@ plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 
 plusPlusBin :: Value -> Value -> Value
+plusPlusBin k (List []) = (List [k])
+plusPlusBin (List []) k = (List [k])
 plusPlusBin k (List xs'@(x:xs)) = if getType (k) /= tl then error "Type mismatch in operation ++"
                            else List (k:xs')
                                 where tl = getType x 
