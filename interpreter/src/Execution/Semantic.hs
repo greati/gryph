@@ -177,7 +177,6 @@ clearScopesUntilType m t (s@(BlockScope _):ss) = clearScopesUntilType m' t ss
 execSubprogram :: Memory -> ProgramMemory -> Scopes -> (SubIdentifier, SubContent) -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
 execSubprogram m pm ss sub@(ident,content@(_,_,block)) as = do
                                                                 (m'',ss'',v) <- execBlock block m pm SubScope ss declarations
-                                                                print $ show declarations
                                                                 return (m'',ss'',v)
                                                         where declarations = prepareSubcallElabs m pm ss content as
                             
@@ -188,16 +187,18 @@ prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) [] = []
 prepareSubcallElabs m pm ss ([], mt, b) [] = []
 prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) ((a,t):as) = case a of
                                                   Left ((Ident i), Left ci@(n',s')) -> case pt of 
-                                                                                (GRef _) -> (i, (t, Ref ci)) : prepareSubcallElabs m pm ss (fs, mt, b) as
-                                                                                (GType _) -> (i, (t, Value v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                                                                (GRef _) -> (n, v') : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                                                                    where v' = case fetchCellByScope m n' s' of
+                                                                                                    Left i -> error i
+                                                                                                    Right ci'@(t,v'') -> case v'' of 
+                                                                                                                            Value _ -> (t,Ref ci)
+                                                                                                                            Ref ci'' -> (t, Ref ci'')
+                                                                                (GType _) -> (n, (t, Value v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
                                                                                     where v' = case getVarScopeValue m n' s' of
                                                                                                     Left i -> error i
                                                                                                     Right v'' -> v''
                                                   Right v -> (n, (t, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) as
-                                                  Left ((Ident i), Right (Just v)) -> (i, (t, Value v)) : prepareSubcallElabs m pm ss (f:fs, mt, b) as
-
--- | Obtain list of actual parameters types.
---typeArgs as m pm ss = map snd (processSubArgs as [] m pm ss)
+                                                  Left ((Ident i), Right (Just v)) -> (n, (t, Value v)) : prepareSubcallElabs m pm ss (f:fs, mt, b) as
 
 -- | Process list of actual parameters from a subprogram call.
 processSubArgs :: [SubprogArg] -> [Identifier] -> Memory -> ProgramMemory -> Scopes -> IO [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
@@ -301,6 +302,7 @@ varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m pm ss = do
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i pm ss
 
+-- | Interpret subprogram declaration
 interpretSubDeclaration :: Subprogram -> Memory -> ProgramMemory -> Scopes -> IO (SubIdentifier, SubContent)
 interpretSubDeclaration (Subprogram (Ident i) ps t b) m pm ss = do 
                                                                     formals <- formalParams ps
@@ -315,6 +317,7 @@ interpretSubDeclaration (Subprogram (Ident i) ps t b) m pm ss = do
                                      remain <- formalParams ps
                                      return $ interp ++ remain
 
+-- | Interpret formal parameters
 interpretParamDeclaration :: ParamDeclaration -> Memory -> ProgramMemory -> Scopes -> IO [(String, GParamType, Maybe Value)]
 interpretParamDeclaration pd@(ParamDeclaration is _ es) m pm ss 
     | length es > length is = error "Too many default values"
@@ -570,22 +573,6 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                             case v of
                                                                                 Nothing -> error "No return from subprogram call"
                                                                                 Just v -> return v
-
--- | Impure eval: allows calling subprograms
-{--eval' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> IO (Value)
-eval' m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) = 
-                                                do  arguments <- processSubArgs as [] m pm ss
-                                                    selected <- return $ selectSubForCall i arguments pm
-                                                    case selected of
-                                                        Nothing -> error ("No subprogram found for call to " ++ i)
-                                                        Just sub -> do
-                                                                        (m',ss',v) <- execSubprogram m pm scopes sub arguments
-                                                                        do
-                                                                            case v of
-                                                                                Nothing -> error "No return from subprogram call"
-                                                                                Just v -> return v
-eval' m pm ss v = eval m pm ss v
---}
 
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')

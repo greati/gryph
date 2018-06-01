@@ -119,8 +119,14 @@ elabVars m (v@(n,c):vs) s = case elabVar s n c m of
 updateVar :: Memory -> Name -> Scopes -> Cell -> Either String Memory
 updateVar m n ss c@(t,v) = case fetchVar m n ss of
                             Left i -> Left i
-                            Right ((_,s),(t',v')) -> Right (M.update (\k -> Just (t, v)) (n,s) m)
+                            Right ((_,s),(t',v')) -> case v' of
+                                                        Value v'' -> Right (M.update (\k -> Just (t, v)) (n,s) m)
+                                                        Ref (n',s') -> updateVar m n' ss c
 
+fetchVarCell :: Memory -> Name -> Scopes -> Either String Cell
+fetchVarCell m n ss = case fetchVar m n ss of
+                        Left i -> Left i
+                        Right (ci,c) -> Right c
 
 fetchVar :: Memory -> Name -> Scopes -> Either String (CellIdentifier, Cell)
 fetchVar m n [] = Left ("Variable " ++ n ++ " not found in any visible scope.")
@@ -135,6 +141,15 @@ fetchVarValue m n ss = case fetchVar m n ss of
                                                     Value v' -> Right v'
                                                     Ref (n',s') -> getVarScopeValue m n' s'
                                                     
+fetchCellByScope :: Memory -> Name -> Scope -> Either String Cell
+fetchCellByScope m n s
+    | M.notMember (n,s) m   = Left ("Variable " ++ n ++ " not found for the given scope")
+    | otherwise             = Right v
+        where v = (m M.!(n,s))
+                    --case (m M.!(n,s)) of
+                    --(_,Value v) -> Right v
+                    --(_,Ref (n',s')) -> getVarScopeValue m n' s'
+
 getVarScopeValue :: Memory -> Name -> Scope -> Either String Value
 getVarScopeValue m n s
     | M.notMember (n,s) m   = Left ("Variable " ++ n ++ " not found for the given scope")
