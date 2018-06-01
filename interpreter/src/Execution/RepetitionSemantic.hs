@@ -7,6 +7,7 @@ import Execution.Semantic
 import qualified Data.List       as L
 import qualified Data.Map.Strict as M
 
+{-
 over :: [[a]] -> [[a]]
 over [[]]         = [[]] 
 over [xs]         = [[x] | x <- xs]
@@ -74,11 +75,15 @@ updateMemory :: Ord a => [a] -> [b] -> (M.Map a b) -> (M.Map a b)
 updateMemory [x] [y] mem       = M.insert x y mem
 updateMemory (x:xs) (y:ys) mem = updateMemory xs ys (M.insert x y mem)
 
+--}
+
 list_comp  = (ListComp (ArithBinExpr PlusBinOp (ArithTerm (IdTerm (Ident "a"))) (ArithTerm (IdTerm (Ident "b")))) (ForIterator [Ident "a",Ident "b"] [ExprLiteral (ListLit [ArithTerm (LitTerm (Lit (Integer 1))),ArithTerm (LitTerm (Lit (Integer 2))),ArithTerm (LitTerm (Lit (Integer 3)))]),ExprLiteral (ListLit [ArithTerm (LitTerm (Lit (Integer 5))),ArithTerm (LitTerm (Lit (Integer 6))),ArithTerm (LitTerm (Lit (Integer 7)))])] [ArithRelExpr Less (ArithBinExpr TimesBinOp (ArithTerm (IdTerm (Ident "a"))) (ArithTerm (LitTerm (Lit (Integer 5))))) (ArithTerm (LitTerm (Lit (Integer 10))))]))
 list_comp' = (ListComp (ArithBinExpr PlusBinOp (ArithTerm (IdTerm (Ident "a"))) (ArithTerm (IdTerm (Ident "b")))) (ForIterator [Ident "a"] [ExprLiteral (ListLit [ArithTerm (LitTerm (Lit (Integer 1))),ArithTerm (LitTerm (Lit (Integer 2))),ArithTerm (LitTerm (Lit (Integer 3)))])] [ArithRelExpr Less (ArithBinExpr TimesBinOp (ArithTerm (IdTerm (Ident "a"))) (ArithTerm (LitTerm (Lit (Integer 5))))) (ArithTerm (LitTerm (Lit (Integer 10))))]))
+list_comp'' = (ListComp (ArithTerm (IdTerm (Ident "a"))) (ForIterator [Ident "a"] [ExprLiteral (ListLit [ArithTerm (LitTerm (Lit (Integer 1))),ArithTerm (LitTerm (Lit (Integer 2))),ArithTerm (LitTerm (Lit (Integer 3)))])] [ArithTerm (LitTerm (Lit (Bool True)))]))
+--list_comp''' = (ListComp (ArithBinExpr PlusBinOp (ArithTerm (IdTerm (Ident "a"))) (ArithTerm (IdTerm (Ident "b")))) (ForIterator [Ident "a",Ident "b"] [ExprLiteral (ListLit [ArithTerm (LitTerm (Lit (Integer 1))),ArithTerm (LitTerm (Lit (Integer 2))),ArithTerm (LitTerm (Lit (Integer 3)))]),ExprLiteral (ListLit [ArithTerm (LitTerm (Lit (Integer 4))),ArithTerm (LitTerm (Lit (Integer 5))),ArithTerm (LitTerm (Lit (Integer 6))])] [ArithTerm (LitTerm (Lit (Bool True)))])))
 
 overListComp :: [Value] -> IO [Value]
-overListComp [EmptyList]       = do return [EmptyList] 
+overListComp [EmptyList]       = do return [] 
 overListComp [(List xs)]       = do return [(List [x]) | x <- xs]
 overListComp (List [x]: xss)   = do xss' <- (overListComp xss)
                                     xss'' <- (joinListComp x xss')
@@ -89,7 +94,7 @@ overListComp (List (x:xs):xss) = do xss'  <- (overListComp xss)
                                     return (xss'' ++ xss''')
 
 joinListComp :: Value -> [Value] -> IO [Value]
-joinListComp v [EmptyList]     = do return [EmptyList]
+joinListComp v [EmptyList]     = do return []
 joinListComp v [(List xs)]     = do return [ List (v : xs) ]
 joinListComp v ((List xs):xss) = do xss' <- (joinListComp v xss)
                                     return ((List (v : xs)) : xss')
@@ -105,22 +110,38 @@ evalListComp m pm ss (ListComp expression (ForIterator is xs [when_exp] ) ) = do
                                          xss'' <- (getLists m pm ss xss)
                                          return (xss' ++ xss'')
 
+getNameCell :: [Identifier] -> Value -> [(Name,Cell)]
+getNameCell [(Ident id)] (List [v]) = [ (id, ((getType v), (Value v)) ) ]
+getNameCell ((Ident id):ids) (List (v:vs)) = (id, ((getType v), (Value v)) ) : (getNameCell ids (List vs))
+
 forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO [Value]
 forListComp m pm ss lc = do (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss lc
-                            return [EmptyList]
+                            let (Right m') = elabVars m (getNameCell id v) (L.head ss)
+                            r <- forListComp' m' pm ss exp id vs' when_exp
+                            return r
 
-forListComp' :: Memory -> ProgramMemory -> Scope -> ArithExpr -> [Identifier] -> [Value] -> ArithExpr -> IO [Value]
+forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> ArithExpr -> IO [Value]
 forListComp' m pm ss exp id [v] when_exp = do
-                                                (Right m') <- updateListIds m [ss] id v
-                                                success <- (eval m' pm [ss] when_exp)
+                                                (Right m') <- updateListIds m ss id v
+                                                success <- (eval m' pm ss when_exp)
                                                 if success == (Bool True)
                                                 then do
-                                                    e <- eval m' pm [ss] exp 
+                                                    e <- eval m' pm ss exp 
                                                     return [e]
                                                 else do 
-                                                    return [EmptyList]
+                                                    return []
 
-forListComp' m pm ss exp id (v:vs) when_exp = undefined   
+forListComp' m pm ss exp id (v:vs) when_exp = do
+                                                (Right m') <- updateListIds m ss id v
+                                                success <- (eval m' pm ss when_exp)
+                                                if success == (Bool True)
+                                                then do
+                                                    e <- eval m' pm ss exp
+                                                    r <- forListComp' m pm ss exp id vs when_exp
+                                                    return (e : r)
+                                                else do 
+                                                    r <- forListComp' m pm ss exp id vs when_exp
+                                                    return r                                            
 
 updateListIds :: Memory -> Scopes -> [Identifier] -> Value -> IO (Either String Memory)
 updateListIds m ss [(Ident id)] (List [v])        = do 
