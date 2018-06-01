@@ -1,0 +1,6 @@
+x, y : float = 3.0, 4.0;
+c : int = 2;
+
+result : float = x^2 - y + c;
+
+print result@string;

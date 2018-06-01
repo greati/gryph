@@ -8,6 +8,7 @@ import Execution.Memory
 import Execution.RepetitionSemantic as RS
 import qualified Execution.Graph as G
 import Execution.GraphSemantic
+import Data.Time.Clock
 
 main :: IO ()
 main = undefined
