@@ -1,0 +1,2 @@
+x : [int];
+x = [a for a over [1,2,3] when true];
