@@ -551,9 +551,15 @@ subprogCall = do
 subprogCallAux :: Identifier -> GenParser GphTokenPos st SubprogCall
 subprogCallAux i = do
                     (tok GTokLParen)
-                    es <- subprogArgList -- change to anyExprList
-                    (tok GTokRParen)
-                    return (SubprogCall i es)
+                    do
+                        do
+                            (tok GTokRParen)
+                            return (SubprogCall i [])
+                        <|> 
+                            do
+                                es <- subprogArgList 
+                                (tok GTokRParen)
+                                return (SubprogCall i es)
                 
 
 {- Stmt lists.
