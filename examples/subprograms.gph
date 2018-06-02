@@ -10,7 +10,7 @@ sub h (a, b : int) : int {
     i : int = b;
     while (i < a) {
         if (i % 2 == 0) {
-            print i;
+            return i;
         }
         i = i + 1;
     }
@@ -20,4 +20,5 @@ sub k(a,b:int=1,2) {
     print a+b;
 }
 
-k(b=200,22);
+print h(20,15);
+

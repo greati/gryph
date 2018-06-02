@@ -21,14 +21,14 @@ scopes :: Scopes
 scopes = [GlobalScope]
 
 -- |Execute a program represented as a list of program units.
-exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO() 
+exec :: Memory -> ProgramMemory' -> Scopes -> [ProgramUnit] -> IO() 
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
-execUnit :: ProgramUnit -> Memory -> ProgramMemory -> Scopes -> IO (Memory, ProgramMemory, Scopes)
+execUnit :: ProgramUnit -> Memory -> ProgramMemory' -> Scopes -> IO (Memory, ProgramMemory', Scopes)
 execUnit (SubprogramDecl sub) m pm ss = do 
                                             pm' <- execSubDecl sub m pm ss
                                             return (m, pm', ss)
@@ -42,7 +42,7 @@ execUnit (Stmt stmt) m pm ss = do
                                     return (m', pm, ss')
 
 -- |Executes a subprogram declaration.
-execSubDecl :: Subprogram -> Memory -> ProgramMemory -> Scopes -> IO (ProgramMemory)
+execSubDecl :: Subprogram -> Memory -> ProgramMemory' -> Scopes -> IO (ProgramMemory')
 execSubDecl s m pm ss = do  
                             (si,sc) <- interpretSubDeclaration s m pm ss
                             case declareSubprogram si sc pm of
@@ -50,14 +50,14 @@ execSubDecl s m pm ss = do
                                 Right pm' -> return pm'
 
 -- |Executes a struct declaration.
-execStructDecl :: StructDecl -> Memory -> ProgramMemory -> IO ()
+execStructDecl :: StructDecl -> Memory -> ProgramMemory' -> IO ()
 execStructDecl s m = undefined
 
 type Scoper = (Integer -> Scope)
 
 -- |Executes a block of statement, creating a new scope. When finish, clear the scope.
 -- It also allows taking a list of declarations in the form [(Name,Cell)]
-execBlock :: Block -> Memory -> ProgramMemory -> Scoper -> Scopes -> [(Name,Cell)] -> IO (Memory, Scopes, Maybe Value)
+execBlock :: Block -> Memory -> ProgramMemory' -> Scoper -> Scopes -> [(Name,Cell)] -> IO (Memory, Scopes, Maybe Value)
 execBlock (Block []) m pm _ ss _ = return (m, ss, Nothing)
 execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
                                                         let newScope = scoper (time) in
@@ -78,7 +78,7 @@ execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
                                                                                                             return $ (m'',ss'',v'')
 
 -- |Executes any statement.
-execStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO (Memory, Scopes, Maybe Value)
+execStmt :: Stmt -> Memory -> ProgramMemory' -> Scopes -> IO (Memory, Scopes, Maybe Value)
 execStmt d@(DeclStmt _) m pm ss = do
                             m' <- varDeclStmt d m pm ss
                             return (m', ss, Nothing)
@@ -224,7 +224,7 @@ clearScopesUntilType m t (s@(BlockScope _):ss) = clearScopesUntilType m' t ss
     where m' = clearScope t m
 
 -- | Executes a subprogram
-execSubprogram :: Memory -> ProgramMemory -> Scopes -> (SubIdentifier, SubContent) -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
+execSubprogram :: Memory -> ProgramMemory' -> Scopes -> (SubIdentifier, SubContent) -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
 execSubprogram m pm ss sub@(ident,content@(_,_,block)) as = do
                                                                 (m'',ss'',v) <- execBlock block m pm SubScope ss declarations
                                                                 return (m'',ss'',v)
@@ -242,7 +242,7 @@ execSubprogram m pm ss sub@(ident,content@(_,_,block)) as = do
 --      - a named parameter: a=2, b=2,...
 --          - remove parameter from parameters list
 -- When actual arguments finalize, it is important to check optional formal parameters declarations
-prepareSubcallElabs :: Memory -> ProgramMemory -> Scopes -> SubContent -> ProcessedActualParams -> [(Name, Cell)]
+prepareSubcallElabs :: Memory -> ProgramMemory' -> Scopes -> SubContent -> ProcessedActualParams -> [(Name, Cell)]
 prepareSubcallElabs m pm ss ([], mt, b) [] = []
 prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) [] = case mv of
                                                                 Nothing -> prepareSubcallElabs m pm ss (fs, mt, b) []
@@ -278,7 +278,7 @@ existsFormal n = or . map (\(n',_,_) -> n == n')
 
 -- | Process list of actual parameters from a subprogram call.
 --
-processSubArgs :: [SubprogArg] -> [Identifier] -> Memory -> ProgramMemory -> Scopes -> IO [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
+processSubArgs :: [SubprogArg] -> [Identifier] -> Memory -> ProgramMemory' -> Scopes -> IO [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
 processSubArgs [] _ _ _ _ = return []
 processSubArgs (a:as) ids m pm ss = case a of
                                        ArgExpr expr -> do   remaining <- processSubArgs as ids m pm ss
@@ -300,7 +300,7 @@ processSubArgs (a:as) ids m pm ss = case a of
                                                                             else return $ (Left (i, Right (Just ev)), getType ev) : remaining
  
 -- | Auxiliar for execting attribute statements
-execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
+execAttrStmt :: Stmt -> Memory -> ProgramMemory' -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
                                                 (ArithTerm (IdTerm (Ident i))) -> do    k <- eval m pm ss v
                                                                                         case updateVar m i ss (makeCompatibleAssignTypes (getType k) k) of
@@ -361,7 +361,7 @@ setElemList (x:xs) 0 k = k : xs
 setElemList (x:xs) i k = x : setElemList xs (i-1) k
 
 -- |Executes a declaration statement.
-varDeclStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
+varDeclStmt :: Stmt -> Memory -> ProgramMemory' -> Scopes -> IO Memory
 varDeclStmt (DeclStmt (VarDeclaration (x:xs) t [])) m pm ss = do 
                                                                     case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes t (defaultValue t)) m of
                                                                         (Left i) -> error i
@@ -383,7 +383,7 @@ varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m pm ss = do
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i pm ss
 
 -- | Interpret subprogram declaration
-interpretSubDeclaration :: Subprogram -> Memory -> ProgramMemory -> Scopes -> IO (SubIdentifier, SubContent)
+interpretSubDeclaration :: Subprogram -> Memory -> ProgramMemory' -> Scopes -> IO (SubIdentifier, SubContent)
 interpretSubDeclaration (Subprogram (Ident i) ps t b) m pm ss = do 
                                                                     formals <- formalParams ps
                                                                     return $ ((i, paramTypes ps), (formals, t, b)) 
@@ -398,7 +398,7 @@ interpretSubDeclaration (Subprogram (Ident i) ps t b) m pm ss = do
                                      return $ interp ++ remain
 
 -- | Interpret formal parameters
-interpretParamDeclaration :: ParamDeclaration -> Memory -> ProgramMemory -> Scopes -> IO [(String, GParamType, Maybe Value)]
+interpretParamDeclaration :: ParamDeclaration -> Memory -> ProgramMemory' -> Scopes -> IO [(String, GParamType, Maybe Value)]
 interpretParamDeclaration pd@(ParamDeclaration is _ es) m pm ss 
     | length es > length is = error "Too many default values"
     | otherwise = interpretParamDeclaration' pd m pm ss
@@ -439,7 +439,7 @@ getValueType :: Value -> GType
 getValueType (Map m) = getType (head (M.elems m))
 
 -- | Evaluates a list of expressions
-evalList :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
+evalList :: Memory -> ProgramMemory' -> Scopes -> [ArithExpr] -> IO [Value]
 evalList m pm ss [x]      =  do {x' <- eval m pm ss x ; return $ [x']}
 evalList m pm ss (x:y:xs) =  do 
                                 z <- eval m pm ss x
@@ -450,14 +450,14 @@ evalList m pm ss (x:y:xs) =  do
                                         return (z:l) 
 
 -- | Evaluates a tuple
-evalTuple :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
+evalTuple :: Memory -> ProgramMemory' -> Scopes -> [ArithExpr] -> IO [Value]
 evalTuple m pm ss [x] = do {x' <-eval m pm ss x; return $ [x']}
 evalTuple m pm ss (x:xs) = do   z <- eval m pm ss x
                                 t <- evalTuple m pm ss xs
                                 return $ (z:t)
 
 -- | Evaluates a dictionary
-evalDict :: Memory -> ProgramMemory -> Scopes -> [DictEntry] -> M.Map Value Value -> IO (M.Map Value Value)
+evalDict :: Memory -> ProgramMemory' -> Scopes -> [DictEntry] -> M.Map Value Value -> IO (M.Map Value Value)
 evalDict m pm ss [] m1                   = return $ M.empty
 evalDict m pm ss ((k1,v1):(k2,v2):xs) m1 = 
                                          do     ek1 <- eval m pm ss k1
@@ -488,7 +488,7 @@ defaultValue (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue t1, defaultValue
 defaultValue (GDict k v) = Map (M.empty)
 
 -- | Binary operation evaluator
-evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO Value
+evalBinOp ::Memory -> ProgramMemory' -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO Value
 evalBinOp m pm ss (ArithBinExpr _  e1 e2) f = 
                                             do
                                                 v1 <- eval m pm ss e1
@@ -512,7 +512,7 @@ fromString s (GBool )           = Bool (read s::Bool)
 fromString _ _                  = error "No parser from String"
 
 -- | Main expression evaluator
-eval :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> IO Value
+eval :: Memory -> ProgramMemory' -> Scopes -> ArithExpr -> IO Value
 eval m pm ss (ArithTerm (LitTerm (Lit v)))      = return v
 eval m pm ss (ArithUnExpr MinusUnOp e)          = do {v <- eval m pm ss e ; return $ minusUn v}
 eval m pm ss (ArithUnExpr PlusUnOp e)           = do {v <- eval m pm ss e; return $ plusUn v}
@@ -730,13 +730,13 @@ not' _ = error "Type error Unary (not) operator "
 --------------------------------------------------------------
 -- |List Comprehension
 
-forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO [Value]
+forListComp :: Memory -> ProgramMemory' -> Scopes -> ListComp -> IO [Value]
 forListComp m pm ss lc = do (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss lc
                             let (Right m') = elabVars m (getNameCell id v) (head ss)
                             r <- forListComp' m' pm ss exp id vs' when_exp
                             return r
 
-forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO [Value]
+forListComp' :: Memory -> ProgramMemory' -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO [Value]
 forListComp' m pm ss exp id [v] when_exp = do
                                                 (Right m') <- updateListIds m ss id v
                                                 case when_exp of
@@ -770,7 +770,7 @@ forListComp' m pm ss exp id (v:vs) when_exp = do
                                                             r <- forListComp' m pm ss exp id vs (Just when_exp)
                                                             return r
 
-evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (ArithExpr, [Identifier], [Value], Maybe ArithExpr)
+evalListComp :: Memory -> ProgramMemory' -> Scopes -> ListComp -> IO (ArithExpr, [Identifier], [Value], Maybe ArithExpr)
 evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
         let new_xs = replicateList ((length is) - (length xs)) xs
         xss <- (getLists m pm ss [new_xs])
