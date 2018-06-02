@@ -23,20 +23,18 @@ data UnitContent = SubContent SubContent | StructContent StructContent deriving 
 
 -- | The program memory.
 -- Used to store subprogram declarations and structures.
-type ProgramMemory' = M.Map UnitIdentifier UnitContent
-
-type ProgramMemory = M.Map SubIdentifier SubContent
+type ProgramMemory = M.Map UnitIdentifier UnitContent
 
 type ProcessedActualParams = [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
 
 programMemory = M.empty
 
-declareSubprogram :: SubIdentifier -> SubContent -> ProgramMemory' -> Either String ProgramMemory'
+declareSubprogram :: SubIdentifier -> SubContent -> ProgramMemory -> Either String ProgramMemory
 declareSubprogram id@(n,ts) content m
     | M.member (SubIdentifier id) m   = Left $ "Two equal declarations for subprogram " ++ n
     | otherwise                       = Right (M.insert (SubIdentifier id) (SubContent content) m)
 
-fetchSubprograms :: Name -> ProcessedActualParams -> ProgramMemory' -> [(SubIdentifier, SubContent)]
+fetchSubprograms :: Name -> ProcessedActualParams -> ProgramMemory -> [(SubIdentifier, SubContent)]
 fetchSubprograms n ts pm = map obtainSubprogram (M.toAscList (M.filterWithKey test pm))
     where 
         test (SubIdentifier (n',_)) (SubContent (ps,_,_)) = n'==n && length ts >= countNecessaryParams ps && length ts <= length ps
@@ -46,7 +44,7 @@ fetchSubprograms n ts pm = map obtainSubprogram (M.toAscList (M.filterWithKey te
         obtainSubprogram (SubIdentifier si, SubContent sc) = (si, sc)
         obtainSubprogram _ = error "Not a valid subprogram"
 
-selectSubForCall :: Name -> ProcessedActualParams -> ProgramMemory' -> Maybe (SubIdentifier, SubContent)
+selectSubForCall :: Name -> ProcessedActualParams -> ProgramMemory -> Maybe (SubIdentifier, SubContent)
 selectSubForCall n ts pm = case v of 
                                 Just _ -> Just (possibilities !! i)
                                 Nothing -> Nothing
