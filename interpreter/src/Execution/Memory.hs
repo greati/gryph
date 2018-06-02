@@ -8,6 +8,8 @@ import Syntactic.Syntax
 {- Program memory implementation.
  -
  -}
+
+type FormalParameter = (String, GParamType, Maybe Value)
 type SubIdentifier = (String, [GParamType]) 
 type SubContent = ([(String, GParamType, Maybe Value)], Maybe GType, Block)
 type ProgramMemory = M.Map SubIdentifier SubContent

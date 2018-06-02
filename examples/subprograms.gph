@@ -1,10 +1,23 @@
-
-b : int = 2;
-
-sub f (a,b:int&; c,b:int = 2) : int {
-    return a+b;
+sub g(a : int; b : int; c : int) {
+    print a + b - c;
 }
 
-a : int;
+sub f(a : int; b : int; c : int) {
+    print a + b;
+}
 
-c = f(a,b,c=1,2);
+sub h (a, b : int) : int {
+    i : int = b;
+    while (i < a) {
+        if (i % 2 == 0) {
+            print i;
+        }
+        i = i + 1;
+    }
+}
+
+sub k(a,b:int=1,2) {
+    print a+b;
+}
+
+k(b=200,22);
