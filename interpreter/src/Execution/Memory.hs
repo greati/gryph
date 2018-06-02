@@ -7,26 +7,46 @@ import Syntactic.Syntax
 
 {- Program memory implementation.
  -
+ - Memory to store subprograms and structs.
  -}
 
-type FormalParameter = (String, GParamType, Maybe Value)
+type StructIdentifier = String 
+type StructField = (Name, GType, Maybe Value)
+type StructContent = [StructField]
+
 type SubIdentifier = (String, [GParamType]) 
-type SubContent = ([(String, GParamType, Maybe Value)], Maybe GType, Block)
+type FormalParameter = (String, GParamType, Maybe Value)
+type SubContent = ([FormalParameter], Maybe GType, Block)
+
+data UnitIdentifier = SubIdentifier SubIdentifier | StructIdentifier StructIdentifier deriving (Eq, Show, Ord)
+data UnitContent = SubContent SubContent | StructContent StructContent deriving (Eq, Show)
+
+-- | The program memory.
+-- Used to store subprogram declarations and structures.
+type ProgramMemory' = M.Map UnitIdentifier UnitContent
+
 type ProgramMemory = M.Map SubIdentifier SubContent
 
 type ProcessedActualParams = [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
 
 programMemory = M.empty
 
-declareSubprogram :: SubIdentifier -> SubContent -> ProgramMemory -> Either String ProgramMemory 
+declareSubprogram :: SubIdentifier -> SubContent -> ProgramMemory' -> Either String ProgramMemory'
 declareSubprogram id@(n,ts) content m
-    | M.member id m   = Left $ "Two equal declarations for subprogram " ++ n
-    | otherwise       = Right (M.insert id content m)
+    | M.member (SubIdentifier id) m   = Left $ "Two equal declarations for subprogram " ++ n
+    | otherwise                       = Right (M.insert (SubIdentifier id) (SubContent content) m)
 
-fetchSubprograms :: Name -> ProcessedActualParams -> ProgramMemory -> [(SubIdentifier, SubContent)]
-fetchSubprograms n ts pm = M.toAscList $ M.filterWithKey (\(n',_) (ps,_,_) -> n'==n && length ts >= countNecessaryParams ps && length ts <= length ps) pm
+fetchSubprograms :: Name -> ProcessedActualParams -> ProgramMemory' -> [(SubIdentifier, SubContent)]
+fetchSubprograms n ts pm = map obtainSubprogram (M.toAscList (M.filterWithKey test pm))
+    where 
+        test (SubIdentifier (n',_)) (SubContent (ps,_,_)) = n'==n && length ts >= countNecessaryParams ps && length ts <= length ps
+        test _ _ = False
 
-selectSubForCall :: Name -> ProcessedActualParams -> ProgramMemory -> Maybe (SubIdentifier, SubContent)
+        obtainSubprogram :: (UnitIdentifier, UnitContent) -> (SubIdentifier, SubContent)
+        obtainSubprogram (SubIdentifier si, SubContent sc) = (si, sc)
+        obtainSubprogram _ = error "Not a valid subprogram"
+
+selectSubForCall :: Name -> ProcessedActualParams -> ProgramMemory' -> Maybe (SubIdentifier, SubContent)
 selectSubForCall n ts pm = case v of 
                                 Just _ -> Just (possibilities !! i)
                                 Nothing -> Nothing
