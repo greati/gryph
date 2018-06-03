@@ -34,8 +34,8 @@ execUnit (SubprogramDecl sub) m pm ss = do
                                             return (m, pm', ss)
 execUnit (StructDecl struct) m pm ss = 
                                 do
-                                    execStructDecl struct m pm
-                                    return (m,pm,ss)
+                                    pm' <- execStructDecl m pm ss struct
+                                    return (m, pm', ss)
 
 execUnit (Stmt stmt) m pm ss = do 
                                     (m', ss', v) <- execStmt stmt m pm ss
@@ -50,8 +50,12 @@ execSubDecl s m pm ss = do
                                 Right pm' -> return pm'
 
 -- |Executes a struct declaration.
-execStructDecl :: StructDecl -> Memory -> ProgramMemory -> IO ()
-execStructDecl s m = undefined
+execStructDecl :: Memory -> ProgramMemory -> Scopes -> StructDecl -> IO (ProgramMemory)
+execStructDecl m pm ss s = do
+                                (si, sc) <- interpretStructDecl m pm ss s
+                                case declareStruct pm si sc of
+                                    Left i -> error i
+                                    Right pm' -> return pm'
 
 type Scoper = (Integer -> Scope)
 
@@ -200,7 +204,53 @@ execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                         return $ (m',ss'', Just v)
                                                 where (ss'', m') = case clearScopesUntilSub m ss of
                                                         Nothing -> error "Return called outside subprogram scope"
-                                                        Just v' -> v'                                                                                                                                                      
+                                                        Just v' -> v'
+
+-- | Interpret struct declaration
+interpretStructDecl :: Memory -> ProgramMemory -> Scopes -> StructDecl -> IO (StructIdentifier, StructContent)
+interpretStructDecl m pm ss decl@(Struct (GUserType (Ident i)) _) = do 
+                                                            sc <- interpretStructDecl' m pm ss decl
+                                                            return $ (i, sc)
+    where
+        interpretStructDecl' m pm ss (Struct t []) = return $ []
+        interpretStructDecl' m pm ss (Struct t (d:ds)) = do
+                                                            d' <- interpretVarDeclaration m pm ss d
+                                                            remain <- interpretStructDecl' m pm ss (Struct t ds)
+                                                            return $ d' ++ remain
+            --case stmt of
+                
+-- | Interpret var declarations
+interpretVarDeclaration :: Memory -> ProgramMemory -> Scopes -> VarDeclaration -> IO [(Name, GType, Maybe Value)]
+interpretVarDeclaration m pm ss (VarDeclaration ns t es) = interpret m pm ss (VarDeclaration ns t es'')
+    where 
+        es'' = case fillReplicate ns es of
+                    Nothing -> error "More expressions than identifiers in declaration"
+                    Just l -> l
+        interpret m pm ss (VarDeclaration [] t []) = do
+                                                        return $ []
+        interpret m pm ss (VarDeclaration ((Ident n):ns) t []) = do
+                                                                remain <- interpret m pm ss (VarDeclaration ns t [])
+                                                                return $ (n,t, Nothing) : remain
+        interpret m pm ss (VarDeclaration ((Ident n):ns) t (e:es)) = do
+                                                                v <- eval m pm ss e
+                                                                remain <- interpret m pm ss (VarDeclaration ns t es)
+                                                                return $ (n, t, Just v) : remain
+                
+-- | Given two lists, l1 and l2, error if |l1|<|l2|, and fill l2 with its last element if |l2|<|l1|
+fillReplicate :: [a] -> [b] -> Maybe [b]
+fillReplicate [] [] = Just []
+fillReplicate (_:xs) [] = Just []
+fillReplicate [] (_:ys) = Nothing
+fillReplicate (_:xs'@(x:xs)) [y] = 
+                case fillReplicate xs' [y] of
+                    (Just r) -> Just $ y : r
+                    Nothing -> Nothing
+fillReplicate (x:xs) (y:ys) = 
+                case fillReplicate xs ys of
+                    (Just r) -> Just $ y : r
+                    Nothing -> Nothing
+
+
 
 -- | Clear until subprogram scope.
 clearScopesUntilSub :: Memory -> Scopes -> Maybe (Scopes, Memory)

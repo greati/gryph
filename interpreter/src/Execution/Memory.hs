@@ -99,6 +99,20 @@ getParamGType (GType t) = t
 countNecessaryParams :: [(String, GParamType, Maybe Value)] -> Int
 countNecessaryParams ps = foldr (\(_,_,v) s -> if v == Nothing then s+1 else s) 0 ps
 
+-- | Insert a user type in program memory
+declareStruct :: ProgramMemory -> StructIdentifier -> StructContent -> Either String ProgramMemory
+declareStruct m si sc 
+    | M.member (StructIdentifier si) m = Left $ "User type " ++ si ++ " already declared"
+    | otherwise                        = Right (M.insert (StructIdentifier si) (StructContent sc) m)
+
+-- | Fetch a user type declaration from program memory
+fetchStructDecl :: ProgramMemory -> Name -> (StructIdentifier, StructContent)
+fetchStructDecl m n 
+    | M.notMember (StructIdentifier n) m = error $ "User type " ++ n ++ " not declared"
+    | otherwise = (n, v)
+        where (StructContent v) = m M.! (StructIdentifier n)
+
+
 {- Data memory implementation -}
 
 -- Variable attributes
