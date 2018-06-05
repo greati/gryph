@@ -1,24 +1,68 @@
-sub g(a : int; b : int; c : int) {
-    print a + b - c;
-}
+#sub g(a : int; b : int; c : int) {
+#    print a + b - c;
+#}
+#
+#sub f(a : int; b : int; c : int) {
+#    print a + b;
+#}
+#
+#sub h (a, b : int) : int {
+#    i : int = b;
+#    while (i < a) {
+#        if (i % 2 == 0) {
+#            return i;
+#        }
+#        i = i + 1;
+#    }
+#}
+#
+#sub k(a,b:int=1,2) {
+#    print a+b;
+#}
 
-sub f(a : int; b : int; c : int) {
-    print a + b;
-}
+sub fromList(l : [int]) : [(int,int)]{
+    count : int = 0;
+    
+    for i over l
+        count = count + 1;
 
-sub h (a, b : int) : int {
-    i : int = b;
-    while (i < a) {
-        if (i % 2 == 0) {
-            return i;
+    maxIndex : int = count - 1;
+    
+    if (count > 3){
+        count = count - 1;
+        c : int = count / 2;
+        count = count + 1;
+        left : [int] = [];
+        right : [int] = [];
+        
+        count = c - 1;
+        for i over l
+            if (count >= 0){
+                left = left ++ i;
+                count = count - 1;
+            }
+        
+        count = c + 1;
+        for i over l
+            if (count <= maxIndex){
+                right = right ++ i;
+                count = count + 1;
+            }
+        
+        return ( [(l[c], l[c-1]), (l[c], l[c+1])] ++ fromList(left) ++ fromList(right));
+    }else if (count == 3){
+        return [(l[1],l[0], l[1],l[2])];
+    }else if (count == 2){
+        if (l[0] < l[1]){
+            return [(l[1], l[0])];
+        }else{
+            return [(l[0], l[1])];
         }
-        i = i + 1;
     }
+    
+    return [];
 }
 
-sub k(a,b:int=1,2) {
-    print a+b;
-}
-
-print h(20,15);
+print fromList([1,2,3,4,5]);
+#print h(20,15);
 
