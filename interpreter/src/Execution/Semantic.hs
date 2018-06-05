@@ -683,7 +683,7 @@ eval m pm ss (TupleAccess e1 e2)                =
                                                     v1' <- eval m pm ss e1
                                                     v2' <- eval m pm ss e2
                                                     case v1' of
-                                                        (Pair (v1, v2)) -> case v2' of
+                                                        Pair (v1, v2)     -> case v2' of
                                                                             Integer 0 -> return $ v1
                                                                             Integer 1 -> return $ v2
                                                                             _         -> error "Acessing Pair"
@@ -716,6 +716,7 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                                                 k -> if (getType k == getType x) then return $ plusPlusBin l1 k
                                                                                      else error "Type mismatch ++ opeator "
                                                         k -> case v2 of 
+                                                                l2@(List [])     -> return $ plusPlusBin l2 k
                                                                 l2@(List (y:ys)) -> if (getType k == getType y) then return $ plusPlusBin k l2
                                                                                 else error "Type mismatch ++ operator "
 eval m pm ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of

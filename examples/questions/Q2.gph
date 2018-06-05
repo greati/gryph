@@ -7,10 +7,11 @@ while (n >= 0) {
 
     read s;
 
-    n = s@int;
+    n = s@float;
+    
     
     if (n >= 0 and n <= 25)         l[0] = l[0] + 1;
-    else if (n >= 25 and n <= 50)   l[1] = l[1] + 1;
+    else if (n >= 26 and n <= 50)   l[1] = l[1] + 1;
     else if (n >= 51 and n <= 75)   l[2] = l[2] + 1;
     else if (n >= 76 and n <= 100)  l[3] = l[3] + 1;
 
