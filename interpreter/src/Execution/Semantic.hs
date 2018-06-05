@@ -743,9 +743,9 @@ plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 plusPlusBin :: Value -> Value -> Value
 plusPlusBin k (List []) = (List [k])
 plusPlusBin (List []) k = (List [k])
-plusPlusBin k (List xs'@(x:xs)) = if getType (k) /= tl then error "Type mismatch in operation ++"
+plusPlusBin k (List xs'@(x:xs)) = if not (checkCompatType (getType k) tl) || not (checkCompatType tl (getType k)) then error "Type mismatch in operation ++"
                            else List (k:xs')
-                                where tl = getType x 
+                                where tl = getListType xs' 
 plusPlusBin (List xs'@(x:xs)) k = if getType (k) /= tl then error "Type mismatch in operation ++"
                            else List (xs' ++ [k])
                                 where tl = getType x
