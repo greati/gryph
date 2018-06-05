@@ -134,3 +134,8 @@ getVertices (Graph vs _) = S.toList vs
 -- |Delete a vertex of a graph
 deleteVertex :: Vertex a -> Graph a b -> Graph a b
 deleteVertex = undefined
+
+-- | Generate list of vertices
+fromListToVertices :: [(Int,a)] -> [Vertex a]
+fromListToVertices []         = []
+fromListToVertices ((n,x):xs) = (Vertex n x) : fromListToVertices xs

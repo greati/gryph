@@ -16,7 +16,7 @@ data Value =    Integer Integer |
                 Quadruple (Value, Value, Value, Value) | 
                 Map (M.Map Value  Value) |
                 EmptyMap |
-		Graph (G.Graph Value Value) 
+		        Graph (G.Graph Value Value) 
                 deriving (Eq, Ord)
 
 instance Show Value where

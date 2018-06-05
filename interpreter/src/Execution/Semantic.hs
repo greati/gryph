@@ -1,9 +1,10 @@
 module Execution.Semantic where
 
-import Syntactic.Values
+import Syntactic.Values   as V
 import Syntactic.Syntax
 import Execution.Memory
 import Data.Time.Clock
+import Execution.Graph    as G
 import qualified Data.Map as M
 
 type Filename = String
@@ -737,6 +738,8 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
 
 eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}
 
+eval m pm ss (ExprLiteral (GraphLit exp edges )) = evalGraphComp m pm ss exp edges
+
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 
@@ -813,14 +816,19 @@ not' _ = error "Type error Unary (not) operator "
 --------------------------------------------------------------
 -- |Graph Comprehension
 
-graphComp :: Memory -> ProgramMemory -> Scopes -> (Maybe ArithExpr) -> (Maybe EdgeComp) -> IO Value
-graphComp m pm ss list edges = case list of
+evalGraphComp :: Memory -> ProgramMemory -> Scopes -> (Maybe ArithExpr) -> (Maybe EdgeComp) -> IO Value
+evalGraphComp m pm ss list edges = case list of
                                     Nothing -> case edges of
-                                                    Nothing -> return (error "Empty list of vertices!")
+                                                    Nothing -> return $ error "Empty list of vertices!"
                                                     Just e  -> return undefined
                                     Just l  -> case edges of
-                                                    Nothing -> return undefined
+                                                    Nothing -> do (List xs) <- eval m pm ss l                                                                
+                                                                  return $ V.Graph (G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs)
                                                     Just e  -> return undefined
+
+evalEdgeComp :: Memory -> ProgramMemory -> Scopes -> (Maybe ArithExpr) -> (Maybe EdgeComp) -> IO Value
+evalEdgeComp m pm ss list edges = case list of
+                                        Nothing -> return undefined                                       
 
 --------------------------------------------------------------
 -- |List Comprehension
