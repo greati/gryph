@@ -25,7 +25,6 @@ exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO()
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
-                        print $ m'
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
@@ -442,7 +441,6 @@ setElemList (x:xs) i k = x : setElemList xs (i-1) k
 -- |Executes a declaration statement.
 varDeclStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 varDeclStmt (DeclStmt (VarDeclaration (x:xs) t [])) m pm ss = do 
-                                                            print $ (defaultValue pm t)
                                                             case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes pm t (defaultValue pm t)) m of
                                                                 (Left i) -> error i
                                                                 (Right m') -> varDeclStmt (DeclStmt (VarDeclaration xs t [])) m' pm ss 

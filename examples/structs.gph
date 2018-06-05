@@ -1,6 +1,6 @@
 Pessoa {
     n : string;
-    p : Point;
+    p : Pessoa;
 }
 
 Point {
@@ -9,5 +9,5 @@ Point {
 }
 
 #b : Point = {x=1.0, y=3.0, z=2.0};
-p : Pessoa = {n = "vitor", p = {g = [1,2.2,3.2]}};
+p : Pessoa;# = {n = "vitor", p = {g = [1,2.2,3.2]}};
 
