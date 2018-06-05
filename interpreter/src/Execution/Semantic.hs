@@ -811,6 +811,18 @@ not' (Bool b) = Bool (not b)
 not' _ = error "Type error Unary (not) operator "
 
 --------------------------------------------------------------
+-- |Graph Comprehension
+
+graphComp :: Memory -> ProgramMemory -> Scopes -> (Maybe ArithExpr) -> (Maybe EdgeComp) -> IO Value
+graphComp m pm ss list edges = case list of
+                                    Nothing -> case edges of
+                                                    Nothing -> return (error "Empty list of vertices!")
+                                                    Just e  -> return undefined
+                                    Just l  -> case edges of
+                                                    Nothing -> return undefined
+                                                    Just e  -> return undefined
+
+--------------------------------------------------------------
 -- |List Comprehension
 
 forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO [Value]
