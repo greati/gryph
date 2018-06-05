@@ -112,7 +112,6 @@ fetchStructDecl m n
     | otherwise = (n, v)
         where (StructContent v) = m M.! (StructIdentifier n)
 
-
 {- Data memory implementation -}
 
 -- Variable attributes
@@ -122,7 +121,7 @@ data Scope = GlobalScope | SubScope Integer | IterationScope Integer | BlockScop
 type Scopes = [Scope]
 type Values = [MemoryValue]
 
-data MemoryValue = Value Value | Ref CellIdentifier deriving (Show, Eq)
+data MemoryValue = Value Value | Ref CellIdentifier | Register (M.Map Name Cell) deriving (Show, Eq)
 
 
 -- Memory structure
@@ -141,7 +140,9 @@ makeMemoryValue v = case v of
 elabVar :: Scope -> Name -> Cell -> Memory -> Either String Memory
 elabVar s n c@(t,v) m 
     | M.member ci m = Left $ "Redeclaration of variable " ++ n ++ "in scope " ++ show s
-    | otherwise     = Right (M.insert ci (t,v) m) 
+    | otherwise     = case t of 
+                        GUserType t' -> undefined 
+                        _ -> Right (M.insert ci (t,v) m) 
         where ci = (n,s)
 
 elabVars :: Memory -> [(Name,Cell)] -> Scope -> Either String Memory

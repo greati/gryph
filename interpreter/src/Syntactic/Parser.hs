@@ -666,7 +666,7 @@ primitiveType = do
                         "string" -> return GString
                         "char" -> return GChar
                         "bool" -> return GBool
-                        _ -> return (GUserType (Ident t))
+                        _ -> return (GUserType t)
 
 graphType :: GenParser GphTokenPos st GType
 graphType = do
@@ -689,7 +689,7 @@ graphType = do
 userType :: GenParser GphTokenPos st GType
 userType = do
                 t <- anyType
-                return (GUserType (Ident t))
+                return (GUserType t)
 
 
 {- New expression parser.

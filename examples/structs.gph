@@ -1,9 +1,9 @@
-Point {
-    z : float = 1.0;
-}
+#Point {
+#    z : float = 1.0;
+#}
 
-sub f (x,y,z:int&; k:int&) : int {
-    print x;
-}
+#sub f (x,x:int) : int {
+#    print x;
+#}
 
-#a : Point = {x = 2, y=2};
+a : Point = {x=1, x=3, z=2};
