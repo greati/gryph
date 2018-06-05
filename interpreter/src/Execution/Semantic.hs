@@ -35,8 +35,8 @@ execUnit (SubprogramDecl sub) m pm ss = do
                                             return (m, pm', ss)
 execUnit (StructDecl struct) m pm ss = 
                                 do
-                                    execStructDecl struct m pm
-                                    return (m,pm,ss)
+                                    pm' <- execStructDecl m pm ss struct
+                                    return (m, pm', ss)
 
 execUnit (Stmt stmt) m pm ss = do 
                                     (m', ss', v) <- execStmt stmt m pm ss
@@ -51,8 +51,12 @@ execSubDecl s m pm ss = do
                                 Right pm' -> return pm'
 
 -- |Executes a struct declaration.
-execStructDecl :: StructDecl -> Memory -> ProgramMemory -> IO ()
-execStructDecl s m = undefined
+execStructDecl :: Memory -> ProgramMemory -> Scopes -> StructDecl -> IO (ProgramMemory)
+execStructDecl m pm ss s = do
+                                (si, sc) <- interpretStructDecl m pm ss s
+                                case declareStruct pm si sc of
+                                    Left i -> error i
+                                    Right pm' -> return pm'
 
 type Scoper = (Integer -> Scope)
 
@@ -66,7 +70,8 @@ execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
                                                                 let m' = case elabVars m decls newScope of
                                                                         Left i -> error i
                                                                         Right m'' -> m'' in
-                                                                            do execBlock' b m' pm ss' newScope
+                                                                            do 
+                                                                                execBlock' b m' pm ss' newScope
                                                                             where
                                                                                     execBlock' (Block []) m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
                                                                                     execBlock' (Block (st:sts)) m pm ss' newScope = do 
@@ -120,6 +125,49 @@ execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = do
                                                                                                         --(m',ss'',v) <- execBlock block m pm ss' BlockScope
                                                                                                         --return (clearScope (head ss') m', tail ss',v)
 
+execStmt (ForStmt ids vs body) m pm ss' = do 
+                                        vss <- (getLists m pm ss' [vs])
+                                        vss' <- over vss
+                                        forStmt ids vss' body m pm ss'
+                                        where
+                                            getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
+                                                                           case xss of
+                                                                                [(List list)] -> do return [(List list)]
+                                                                                [(Map map)] -> do return [(List ( makeMap (M.toList map) ))]
+                                            getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
+                                                                           xss'' <- (getLists m pm ss xss)
+                                                                           return (xss' ++ xss'')
+
+                                            makeMap :: [(Value, Value)] -> [Value]
+                                            makeMap []     = []
+                                            makeMap [x]    = [Pair x]
+                                            makeMap (x:xs) = (Pair x) : makeMap xs
+
+                                            forStmt ids vs body m pm ss' = do
+                                                if length vs == 1
+                                                then do
+                                                    let nameCell = getNameCell ids (head vs)
+                                                    case body of
+                                                        (CondStmt st) -> do
+                                                            (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' nameCell
+                                                            return (m', ss'', Nothing)
+                                                        (CondBlock block) -> do
+                                                            (m',ss'',v) <- execBlock block m pm IterationScope ss' nameCell
+                                                            return (m', ss'', Nothing)
+                                                else do
+                                                    if length vs > 0
+                                                    then do
+                                                        let nameCell = getNameCell ids (head vs)                                                        
+                                                        case body of
+                                                            (CondStmt st) -> do
+                                                                (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' nameCell
+                                                                forStmt ids (tail vs) body m' pm ss''
+                                                            (CondBlock block) -> do
+                                                                (m',ss'',v) <- execBlock block m pm IterationScope ss' nameCell
+                                                                forStmt ids (tail vs) body m' pm ss''
+                                                    else do
+                                                        return (m, ss', Nothing)
+
 execStmt (WhileStmt e body) m pm ss' =  --let ss' = (IterationScope (length ss):ss) in 
                                         repeatWhile body m pm ss'
                                     where
@@ -133,10 +181,14 @@ execStmt (WhileStmt e body) m pm ss' =  --let ss' = (IterationScope (length ss):
                                                                                 case body of
                                                                                     (CondStmt st) -> do 
                                                                                             (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' []
-                                                                                            repeatWhile body m' pm ss''
+                                                                                            case v of 
+                                                                                                Nothing -> repeatWhile body m' pm ss''
+                                                                                                _ -> return $ (m',ss'',v)
                                                                                     (CondBlock block) -> do 
                                                                                             (m',ss'',v) <- execBlock block m pm IterationScope ss' []
-                                                                                            repeatWhile body m' pm ss'' 
+                                                                                            case v of 
+                                                                                                Nothing -> repeatWhile body m' pm ss''
+                                                                                                _ -> return $ (m',ss'',v)
                                                                          else
                                                                             return (m, ss', Nothing) 
 
@@ -155,19 +207,67 @@ execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                                         Nothing -> error "Return called outside subprogram scope"
                                                         Just v' -> v'
 
+-- | Interpret struct declaration
+interpretStructDecl :: Memory -> ProgramMemory -> Scopes -> StructDecl -> IO (StructIdentifier, StructContent)
+interpretStructDecl m pm ss decl@(Struct (GUserType (Ident i)) _) = do 
+                                                            sc <- interpretStructDecl' m pm ss decl
+                                                            return $ (i, sc)
+    where
+        interpretStructDecl' m pm ss (Struct t []) = return $ []
+        interpretStructDecl' m pm ss (Struct t (d:ds)) = do
+                                                            d' <- interpretVarDeclaration m pm ss d
+                                                            remain <- interpretStructDecl' m pm ss (Struct t ds)
+                                                            return $ d' ++ remain
+            --case stmt of
+                
+-- | Interpret var declarations
+interpretVarDeclaration :: Memory -> ProgramMemory -> Scopes -> VarDeclaration -> IO [(Name, GType, Maybe Value)]
+interpretVarDeclaration m pm ss (VarDeclaration ns t es) = interpret m pm ss (VarDeclaration ns t es'')
+    where 
+        es'' = case fillReplicate ns es of
+                    Nothing -> error "More expressions than identifiers in declaration"
+                    Just l -> l
+        interpret m pm ss (VarDeclaration [] t []) = do
+                                                        return $ []
+        interpret m pm ss (VarDeclaration ((Ident n):ns) t []) = do
+                                                                remain <- interpret m pm ss (VarDeclaration ns t [])
+                                                                return $ (n,t, Nothing) : remain
+        interpret m pm ss (VarDeclaration ((Ident n):ns) t (e:es)) = do
+                                                                v <- eval m pm ss e
+                                                                remain <- interpret m pm ss (VarDeclaration ns t es)
+                                                                return $ (n, t, Just v) : remain
+                
+-- | Given two lists, l1 and l2, error if |l1|<|l2|, and fill l2 with its last element if |l2|<|l1|
+fillReplicate :: [a] -> [b] -> Maybe [b]
+fillReplicate [] [] = Just []
+fillReplicate (_:xs) [] = Just []
+fillReplicate [] (_:ys) = Nothing
+fillReplicate (_:xs'@(x:xs)) [y] = 
+                case fillReplicate xs' [y] of
+                    (Just r) -> Just $ y : r
+                    Nothing -> Nothing
+fillReplicate (x:xs) (y:ys) = 
+                case fillReplicate xs ys of
+                    (Just r) -> Just $ y : r
+                    Nothing -> Nothing
+
+
+
 -- | Clear until subprogram scope.
 clearScopesUntilSub :: Memory -> Scopes -> Maybe (Scopes, Memory)
-clearScopesUntilSub m ss = clearScopesUntilType m (SubScope undefined) ss
+clearScopesUntilSub m ss = clearScopesUntilType m (SubScope (-1)) ss
 
 -- | Clear until an iteration scope.
 clearScopesUntilIter :: Memory -> Scopes -> Maybe (Scopes, Memory)
-clearScopesUntilIter m ss = clearScopesUntilType m (IterationScope undefined) ss
+clearScopesUntilIter m ss = clearScopesUntilType m (IterationScope (-1)) ss
 
 -- | Clear scopes until the type of scope s is reached.
 clearScopesUntilType :: Memory -> Scope -> Scopes -> Maybe (Scopes, Memory)
 clearScopesUntilType m _ [] = Nothing
 clearScopesUntilType m _ [GlobalScope] = Nothing
 clearScopesUntilType m t@(SubScope _) (s@(SubScope _):ss) = Just (ss, m')
+    where m' = clearScope t m
+clearScopesUntilType m t@(SubScope _) (_:ss) = clearScopesUntilType m' t ss
     where m' = clearScope t m
 clearScopesUntilType m t@(IterationScope _) (s@(IterationScope _):ss) = Just (ss, m')
     where m' = clearScope t m
@@ -182,45 +282,75 @@ execSubprogram m pm ss sub@(ident,content@(_,_,block)) as = do
                                                         where declarations = prepareSubcallElabs m pm ss content as
                             
 -- | Prepare elaboration for subprogram call.
--- First, take care of things like a=2 (named), then ordered parameters.
+-- Calls must be in the form: 
+--      f(x1,x2,x3,...,xn,n1,n2,n3,...,nm)
+-- where xi is an ordered parameter, and nj is a named parameter.
+-- Cases follow this semantic:
+--      - non single identifier parameter passing (expressions but identifiers alone): 1, [1,2], a+2...
+--          - just take the value
+--      - single identifier parameter passing: a,b,c...
+--          - check if formal asks for a reference or a value and answers accordingly
+--      - a named parameter: a=2, b=2,...
+--          - remove parameter from parameters list
+-- When actual arguments finalize, it is important to check optional formal parameters declarations
 prepareSubcallElabs :: Memory -> ProgramMemory -> Scopes -> SubContent -> ProcessedActualParams -> [(Name, Cell)]
-prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) [] = []
 prepareSubcallElabs m pm ss ([], mt, b) [] = []
-prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) ((a,t):as) = case a of
+prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) [] = case mv of
+                                                                Nothing -> prepareSubcallElabs m pm ss (fs, mt, b) []
+                                                                Just v -> (n, (getType v, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) []
+prepareSubcallElabs m pm ss (fs'@((f@(n,pt,mv)):fs), mt, b) ((a,t):as) = case a of
+                                                  Right v -> (n, (t, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) as
                                                   Left ((Ident i), Left ci@(n',s')) -> case pt of 
                                                                                 (GRef _) -> (n, v') : prepareSubcallElabs m pm ss (fs, mt, b) as
                                                                                     where v' = case fetchCellByScope m n' s' of
                                                                                                     Left i -> error i
                                                                                                     Right ci'@(t,v'') -> case v'' of 
-                                                                                                                            Value _ -> (t,Ref ci)
-                                                                                                                            Ref ci'' -> (t, Ref ci'')
+                                                                                                                Value _ -> (t,Ref ci)
+                                                                                                                Ref ci'' -> (t, Ref ci'')
                                                                                 (GType _) -> (n, (t, Value v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
                                                                                     where v' = case getVarScopeValue m n' s' of
                                                                                                     Left i -> error i
                                                                                                     Right v'' -> v''
-                                                  Right v -> (n, (t, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) as
-                                                  Left ((Ident i), Right (Just v)) -> (n, (t, Value v)) : prepareSubcallElabs m pm ss (f:fs, mt, b) as
+                                                  Left ((Ident i), Right (Just v)) ->   
+                                                                    if existsFormal i fs' then 
+                                                                        (i, (t, Value v)) : prepareSubcallElabs m pm ss (removeFormal i fs', mt, b) as
+                                                                    else 
+                                                                        error $ "Named parameter " ++ i ++ " doesnt match any unbound formal parameter in the call"
+
+-- | Remove a formal parameter from a list of formal parameters
+removeFormal :: Name -> [FormalParameter] -> [FormalParameter]
+removeFormal _ [] = []
+removeFormal n ((f@(n',_,_)):fs) = if n /= n' then f:removeFormal n fs else fs
+
+-- | Tests if there exists a formal parameter with the given name
+existsFormal :: Name -> [FormalParameter] -> Bool
+existsFormal n = or . map (\(n',_,_) -> n == n')
+
 
 -- | Process list of actual parameters from a subprogram call.
+--
 processSubArgs :: [SubprogArg] -> [Identifier] -> Memory -> ProgramMemory -> Scopes -> IO [(Either (Identifier, Either CellIdentifier (Maybe Value)) Value, GType)]
 processSubArgs [] _ _ _ _ = return []
 processSubArgs (a:as) ids m pm ss = case a of
-                                        ArgIdentAssign (IdentAssign [i] expr) -> do
-                                                                                    ev <- eval m pm ss expr
-                                                                                    remaining <- processSubArgs as (i:ids) m pm ss
-                                                                                    if elem i ids then error "Multiple assignment to same parameter"
-                                                                                        else return $ (Left (i, Right (Just ev)), getType ev) : remaining
-                                        ArgExpr expr -> do  remaining <- processSubArgs as ids m pm ss
-                                                            case expr of 
-                                                                ArithTerm (IdTerm id@(Ident i)) -> return $ (Left (id, Left ci), t): remaining
-                                                                    where 
-                                                                          (ci, (t,tc)) = case fetchVar m i ss of
-                                                                                            Left err -> error err
-                                                                                            Right cell -> cell
-                                                                _ -> do 
+                                       ArgExpr expr -> do   remaining <- processSubArgs as ids m pm ss
+                                                            if ids == [] then
+                                                                case expr of 
+                                                                    ArithTerm (IdTerm id@(Ident i)) -> return $ (Left (id, Left ci), t): remaining
+                                                                        where 
+                                                                              (ci, (t,tc)) = case fetchVar m i ss of
+                                                                                                Left err -> error err
+                                                                                                Right cell -> cell
+                                                                    _ -> do 
+                                                                            ev <- eval m pm ss expr
+                                                                            return $ (Right ev, getType ev) : remaining
+                                                            else error "Optional parameter before ordered parameter"
+                                       ArgIdentAssign (IdentAssign [i] expr) -> do
                                                                         ev <- eval m pm ss expr
-                                                                        return $ (Right ev, getType ev) : remaining
-
+                                                                        remaining <- processSubArgs as (i:ids) m pm ss
+                                                                        if elem i ids then error "Multiple assignment to same parameter"
+                                                                            else return $ (Left (i, Right (Just ev)), getType ev) : remaining
+ 
+-- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
                                                 (ArithTerm (IdTerm (Ident i))) -> do    k <- eval m pm ss v
@@ -590,7 +720,9 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                             case v of
                                                                                 Nothing -> error "No return from subprogram call"
                                                                                 Just v -> return v
-eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}  
+
+eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}
+
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 
@@ -711,7 +843,7 @@ evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (ArithExpr, 
 evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
         let new_xs = replicateList ((length is) - (length xs)) xs
         xss <- (getLists m pm ss [new_xs])
-        xss' <- (overListComp xss)
+        xss' <- (over xss)
         if when_exp == []
         then do
             return (expression, is, xss', Nothing)
@@ -726,22 +858,22 @@ evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
           replicateList n xs | n < 0     = error "There aren't enough identifiers." 
                              | otherwise = replicateList (n-1) xs ++ [last xs]
 
-overListComp :: [Value] -> IO [Value]
-overListComp [EmptyList]       = do return [] 
-overListComp [(List xs)]       = do return [(List [x]) | x <- xs]
-overListComp (List [x]: xss)   = do xss' <- (overListComp xss)
-                                    xss'' <- (joinListComp x xss')
-                                    return xss''
-overListComp (List (x:xs):xss) = do xss'  <- (overListComp xss)
-                                    xss'' <- (joinListComp x xss') 
-                                    xss''' <- (overListComp ((List xs): xss))
-                                    return (xss'' ++ xss''')
+over :: [Value] -> IO [Value]
+over []       = do return [] 
+over [(List xs)]       = do return [(List [x]) | x <- xs]
+over (List [x]: xss)   = do xss' <- (over xss)
+                            xss'' <- (join x xss')
+                            return xss''
+over (List (x:xs):xss) = do xss'  <- (over xss)
+                            xss'' <- (join x xss') 
+                            xss''' <- (over ((List xs): xss))
+                            return (xss'' ++ xss''')
 
-joinListComp :: Value -> [Value] -> IO [Value]
-joinListComp v [EmptyList]     = do return []
-joinListComp v [(List xs)]     = do return [ List (v : xs) ]
-joinListComp v ((List xs):xss) = do xss' <- (joinListComp v xss)
-                                    return ((List (v : xs)) : xss')
+join :: Value -> [Value] -> IO [Value]
+join v []     = do return []
+join v [(List xs)]     = do return [ List (v : xs) ]
+join v ((List xs):xss) = do xss' <- (join v xss)
+                            return ((List (v : xs)) : xss')
 
 getNameCell :: [Identifier] -> Value -> [(Name,Cell)]
 getNameCell [(Ident id)] (List [v]) = [ (id, ((getType v), (Value v)) ) ]

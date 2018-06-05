@@ -35,7 +35,8 @@ structDecl :: GenParser GphTokenPos st StructDecl
 structDecl = do
                 t <- userType
                 (tok GTokLCurly)
-                d <- declStmtList
+--                d <- declStmtList
+                d <- varDeclList GTokSemicolon
                 (tok GTokRCurly)
                 return (Struct t d)
 
@@ -189,12 +190,13 @@ varDecl = do
 varDeclList :: GphToken -> GenParser GphTokenPos st [VarDeclaration]
 varDeclList sep = do
                         a <- varDecl
+                        (tok sep)
                         do
                             do
-                                (tok sep)
                                 next <- varDeclList sep
                                 return (a:next)
                             <|>
+                            do
                                 return [a]
 
 paramDecl :: GenParser GphTokenPos st ParamDeclaration
@@ -551,9 +553,15 @@ subprogCall = do
 subprogCallAux :: Identifier -> GenParser GphTokenPos st SubprogCall
 subprogCallAux i = do
                     (tok GTokLParen)
-                    es <- subprogArgList -- change to anyExprList
-                    (tok GTokRParen)
-                    return (SubprogCall i es)
+                    do
+                        do
+                            (tok GTokRParen)
+                            return (SubprogCall i [])
+                        <|> 
+                            do
+                                es <- subprogArgList 
+                                (tok GTokRParen)
+                                return (SubprogCall i es)
                 
 
 {- Stmt lists.

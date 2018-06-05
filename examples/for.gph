@@ -1,5 +1,7 @@
-for a,b over [1,2,3],f(c) {
-    b = a;
+g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
+
+for a over g{
+    print (a);
 }
 
-a = [i+2 for i over [1,2,3] when i == 1];
+#a = [i+2 for i over [1,2,3] when i == 1];
