@@ -1,20 +1,9 @@
 Point {
-    x, y : float = 0.0, 0.0;
+    z : float = 1.0;
 }
 
-x, y : int = 2,5;
-
-a : Point = {x = 2, y=2};
-
-sub f(x,y:int = 2; k:float=1.0) {
-    a=2;
+sub f (x,y,z:int&; k:int&) : int {
+    print x;
 }
 
-sub g(x:int;y:int) : int {
-    return x + y;
-}
-
-f (x=2, x=2);
-b=2;
-f ({x = 1.0, y = 2.0});
-f(2,x=1,y=2);
+#a : Point = {x = 2, y=2};
