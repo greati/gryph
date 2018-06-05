@@ -368,17 +368,25 @@ dfsStmt = do
 graphLit :: GenParser GphTokenPos st ArithExpr
 graphLit = do
                 (tok GTokLess)
-                v <- primaryExpr
                 do
                     do
-                        (tok GTokComma)
                         ec <- edgeComp
                         (tok GTokGreater)
-                        return (ExprLiteral (GraphLit (Just v) (Just ec)))
-                    <|>
-                    do 
-                        (tok GTokGreater)
-                        return (ExprLiteral (GraphLit (Just v) Nothing))
+                        return (ExprLiteral (GraphLit Nothing (Just ec)))
+                    <|> 
+                    do
+                        v <- expression
+                        --v <- primaryExpr
+                        do
+                            do
+                                (tok GTokComma)
+                                ec <- edgeComp
+                                (tok GTokGreater)
+                                return (ExprLiteral (GraphLit (Just v) (Just ec)))
+                            <|>
+                            do 
+                                (tok GTokGreater)
+                                return (ExprLiteral (GraphLit (Just v) Nothing))
 
 edgeComp :: GenParser GphTokenPos st EdgeComp
 edgeComp = do
@@ -399,10 +407,11 @@ edgeComp = do
                     
 edge :: GenParser GphTokenPos st Edge
 edge = do
-            e1 <- expression
-            t <- edgeType
-            e2 <- expression
-            return (Edge t e1 e2)
+            try $ do
+                e1 <- expression
+                t <- edgeType
+                e2 <- expression
+                return (Edge t e1 e2)
 
 edgeType :: GenParser GphTokenPos st EdgeType
 edgeType = do (tok GTokRightEdge) >> return (RightEdge)
