@@ -25,6 +25,7 @@ exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO()
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
+                        print $ m'
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
@@ -95,7 +96,7 @@ execStmt (PrintStmt e) m pm ss = do
                                 return (m, ss, Nothing)
 execStmt (ReadStmt i) m pm ss = do
                                 value <- getLine
-                                case updateVar m ((\(Ident i) -> i) i) ss (makeCompatibleAssignTypes GString (String value)) of
+                                case updateVar m ((\(Ident i) -> i) i) ss (makeCompatibleAssignTypes pm GString (String value)) of
                                     Left e -> error e
                                     Right m' -> return (m', ss, Nothing)
                                 
@@ -198,15 +199,22 @@ execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                                         Nothing -> error "Return called outside subprogram scope"
                                                         Just v' -> v'
 
--- | Produce a register value from a struct declaration
-makeRegister :: ProgramMemory -> Memory -> Value -> StructIdentifier -> MemoryValue
-makeRegister pm m v si = Register $ M.fromList (makeList pm m sc)
+-- | Produce a register value to store in memory from a struct declaration
+makeRegister :: ProgramMemory -> StructIdentifier -> MemoryValue
+makeRegister pm si = Register $ M.fromList (makeSetList pm sc)
     where
-        makeList pm m [] = []
-        makeList pm m ((n, t, mv):ds) = 
+        makeSetList pm [] = []
+        makeSetList pm ((n, t, mv):ds) = 
                                         case mv of
-                                            Nothing -> (n, (t, Value $ defaultValue t)) : makeList pm m ds
-                                            Just v -> (n, (t, Value v)) : makeList pm m ds
+                                            Nothing -> (n, (t, def)) : makeSetList pm ds
+                                                where def = case t of
+                                                            GUserType t' -> makeRegister pm t'
+                                                            _ -> Value $ defaultValue pm t
+                                            Just v -> (n, (t, Value v)) : makeSetList pm ds
+                                                where memval = case v of
+                                                                Setter _ -> makeRegisterFromSetter pm (makeRegister pm t') v t'
+                                                                    where (GUserType t') = t
+                                                                _ -> Value v
         (_,sc) = fetchStructDecl pm si
 
 -- | Interpret struct declaration
@@ -356,7 +364,7 @@ processSubArgs (a:as) ids m pm ss = case a of
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
             (ArithTerm (IdTerm (Ident i))) -> do    k <- eval m pm ss v
-                                                    case updateVar m i ss (makeCompatibleAssignTypes (getType k) k) of
+                                                    case updateVar m i ss (makeCompatibleAssignTypes pm (getType k) k) of
                                                         Right m' -> return m'
                                                         Left i -> error i
             (ListAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do  v1 <- eval m pm ss id
@@ -369,7 +377,7 @@ execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
                                                                                     (List xs) -> List (setElemList xs index' v3)
                                                                                     _ -> error "You must access a list." 
                                                                             t' = getType k in
-                                                                                case updateVar m i ss (makeCompatibleAssignTypes t' k) of
+                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
                                                                                     Right m' -> return m'
                                                                                     Left i -> error i 
             (DictAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do  
@@ -386,7 +394,7 @@ execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
                                                                                             (Map m') -> Map (M.insert index' v2 m')
                                                                                             _ -> error "You must access a dictionary." 
                                                                                     t' = getType k in
-                                                                                        case updateVar m i ss (makeCompatibleAssignTypes t' k) of
+                                                                                        case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
                                                                                                     Right m' -> return m'
                                                                                                     Left i -> error i
 
@@ -397,13 +405,31 @@ makeBooleanFromValue (Bool v) = Right v
 makeBooleanFromValue _        = Left "Expected boolean value"
 
 -- | Given type t and value v, return (t,v) if they are compatible.
-makeCompatibleAssignTypes :: GType -> Value -> (GType, MemoryValue)
-makeCompatibleAssignTypes t@(GList _) v@(List []) = (t, Value v)
-makeCompatibleAssignTypes t v = if t' == t 
+makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
+makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
+makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter m) = (t, makeRegisterFromSetter pm (makeRegister pm u) v u)
+makeCompatibleAssignTypes pm t v = if t' == t 
                                     then (t, Value v) 
                                     else error ("Incompatible types " ++ show t' ++ " and " ++ show t)
                                 where
                                     t' = getType v
+
+-- | Given a setter, a user type name and a register (memory value), produce a new register
+-- The value is the setter.
+makeRegisterFromSetter :: ProgramMemory -> MemoryValue -> Value -> StructIdentifier -> MemoryValue
+makeRegisterFromSetter pm (Register r) (Setter msetter) si = Register $ updateRegister (M.toList msetter) r
+        where
+                updateRegister :: [(String, Value)] -> M.Map Name Cell -> M.Map Name Cell
+                updateRegister [] m = m
+                updateRegister ((s,v):ss) m 
+                            | M.member s m = case v of
+                                                (Setter setter') -> updateRegister ss m''
+                                                    where m'' = M.update (\k -> Just (t',makeRegisterFromSetter pm r' (Setter setter') si)) s m
+                                                          (t',r') = m M.! s
+                                                _ -> updateRegister ss m''  
+                                                    where (t',_) = m M.! s
+                                                          m'' = M.update (\k -> Just (makeCompatibleAssignTypes pm t' v)) s m  
+                            | otherwise = error $ "Type " ++ si ++ " doesn't have field " ++ s     
 
 -- | Set the i-element of a list.
 setElemList :: Integral i => [a] -> i -> a -> [a]
@@ -416,7 +442,8 @@ setElemList (x:xs) i k = x : setElemList xs (i-1) k
 -- |Executes a declaration statement.
 varDeclStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 varDeclStmt (DeclStmt (VarDeclaration (x:xs) t [])) m pm ss = do 
-                                                            case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes t (defaultValue t)) m of
+                                                            print $ (defaultValue pm t)
+                                                            case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes pm t (defaultValue pm t)) m of
                                                                 (Left i) -> error i
                                                                 (Right m') -> varDeclStmt (DeclStmt (VarDeclaration xs t [])) m' pm ss 
 varDeclStmt (DeclStmt (VarDeclaration [] t [])) m pm ss = do 
@@ -426,12 +453,12 @@ varDeclStmt (DeclStmt (VarDeclaration [] t (_:es))) m pm ss =     do
 varDeclStmt (DeclStmt (VarDeclaration (x:xs'@(y:xs)) t (e:[]))) m pm ss = do 
                                                                 do
                                                                     v <- eval m pm ss e
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes t v) m of
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes pm t v) m of
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs' t (e:[]))) i pm ss
 varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m pm ss = do 
                                                                     v <- eval m pm ss e
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes t v) m of
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes pm t v) m of
                                                                         (Left i) -> error i
                                                                         (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i pm ss
 
@@ -533,16 +560,30 @@ evalDict m pm ss ((k,v):xs) m1           =
                                                 return $ M.insert k' v' d
 
 -- | Default values for each type
-defaultValue :: GType -> Value
-defaultValue GInteger = Integer 0
-defaultValue GFloat = Float 0.0
-defaultValue GString = String []
-defaultValue GBool = Bool False
-defaultValue (GList _) = List []
-defaultValue (GPair t1 t2) = Pair (defaultValue t1, defaultValue t2)
-defaultValue (GTriple t1 t2 t3) = Triple (defaultValue t1, defaultValue t2, defaultValue t3)
-defaultValue (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue t1, defaultValue t2, defaultValue t3, defaultValue t4)
-defaultValue (GDict k v) = Map (M.empty)
+defaultValue :: ProgramMemory -> GType -> Value
+defaultValue pm GInteger = Integer 0
+defaultValue pm GFloat = Float 0.0
+defaultValue pm GString = String []
+defaultValue pm GBool = Bool False
+defaultValue pm (GList _) = List []
+defaultValue pm (GPair t1 t2) = Pair (defaultValue pm t1, defaultValue pm t2)
+defaultValue pm (GTriple t1 t2 t3) = Triple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3)
+defaultValue pm (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3, defaultValue pm t4)
+defaultValue pm (GDict k v) = Map (M.empty)
+defaultValue pm (GUserType u) = makeSetterFromDeclaration pm sc
+    where (si, sc) = fetchStructDecl pm u
+
+-- | Register to Setter
+makeSetterFromDeclaration :: ProgramMemory -> StructContent -> Value
+makeSetterFromDeclaration pm scs'@((n,t,mv):scs) = Setter (makeMap scs')
+        where 
+                makeMap :: StructContent -> M.Map String Value
+                makeMap [] = M.empty
+                makeMap scs'@((n,t,mv):scs) = M.insert n v' m'
+                    where   m' = makeMap scs
+                            v' = case mv of
+                                    Nothing -> defaultValue pm t
+                                    Just v'' -> v'' 
 
 -- | Binary operation evaluator
 evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO Value

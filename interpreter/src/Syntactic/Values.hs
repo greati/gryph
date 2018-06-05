@@ -32,4 +32,5 @@ instance Show Value where
     show (Quadruple x) = show x
     show (Map x)       = show x
     show (Graph x)     = show x
+    show (Setter x)    = show x
     show EmptyList     = "[]"

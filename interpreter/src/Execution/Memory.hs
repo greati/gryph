@@ -141,7 +141,7 @@ elabVar :: Scope -> Name -> Cell -> Memory -> Either String Memory
 elabVar s n c@(t,v) m 
     | M.member ci m = Left $ "Redeclaration of variable " ++ n ++ "in scope " ++ show s
     | otherwise     = case t of 
-                        GUserType t' -> undefined 
+                        --GUserType t' -> undefined 
                         _ -> Right (M.insert ci (t,v) m) 
         where ci = (n,s)
 
