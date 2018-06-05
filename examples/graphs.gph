@@ -4,3 +4,5 @@
 #g3 : <int> = <a--a for a over [0, 1, 2] when a > c>;
 
 a = <[1,2,3], a->b for a,b over [1,2,3],[1,2,3]>;
+
+a = <a<-b for a,b over [1,2,3]>;
