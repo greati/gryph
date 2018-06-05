@@ -61,3 +61,8 @@ while (i != 10) {
 
 # print j;
 
+#s : string = "Hello" + " World";
+
+l : [float] = [1,2,3,4.0];
+
+

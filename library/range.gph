@@ -1,14 +1,2 @@
-l: [float] = [1, 2.0, 3];
-
-sub range(begin : int = 0; end : int = 1; step : int = 1 ){
-	l : [int] = [];
-	
-	while(begin < end){
-		l = l ++ begin;
-		begin = begin + step;
-		 
-	}
-	return l;
-}
-
-print(range(0, 10, 1));
+print 3.0 ++ [];
+print [] ++ 4;
