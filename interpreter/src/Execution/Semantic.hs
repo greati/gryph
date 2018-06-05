@@ -587,6 +587,46 @@ fromString s (GChar )           = Char (read s::Char)
 fromString s (GBool )           = Bool (read s::Bool)
 fromString _ _                  = error "No parser from String"
 
+
+cast:: Value -> GType -> Value
+cast v1 g@GString     =  String (show v1)
+cast v1 g@GInteger    = case v1 of
+                         Float f   -> Integer ( floor f)
+                         Bool  b   -> if b then Integer 1 else Integer 0
+                         String s  -> fromString s g
+                         _         -> error "No cast avaliable"
+cast v1 g@GFloat      = case v1 of
+                         Integer i -> Float (fromInteger i)
+                         String s  -> fromString s g
+                         _         -> error "No cast avaliable"
+cast v1 g@GBool       = case v1 of
+                         Integer i -> if i /= 0 then Bool True else Bool False
+                         Float   f -> if f /= 0 then Bool True else Bool False
+                         String  s -> fromString s g
+                         _         -> error "No cast avaliable"
+
+cast v1 g@(GList GFloat)  = case v1 of 
+                             List [] -> List []
+                             l@(List (x:xs)) -> List ((cast x GFloat):r )
+                              where List r = (cast (List xs) (GList GFloat) )
+                             _               -> error "No cast avaliable"
+cast v1 g@(GList GInteger)  = case v1 of 
+                               List [] -> List []
+                               l@(List (x:xs)) -> List ((cast x GInteger):r )
+                                where List r = (cast (List xs) (GList GInteger) )
+                               _               -> error "No cast avaliable"
+cast v1 g@(GList GBool)  = case v1 of 
+                               List [] -> List []
+                               l@(List (x:xs)) -> List ((cast x GBool):r )
+                                where List r = (cast (List xs) (GList GBool) )
+                               _               -> error "No cast avaliable"
+cast v1 g@(GList GString)  = case v1 of 
+                               List [] -> List []
+                               l@(List (x:xs)) -> List ((cast x GString):r )
+                                where List r = (cast (List xs) (GList GString) )
+                               _               -> error "No cast avaliable"
+cast _   _          =  error "Unknown type"
+
 -- | Main expression evaluator
 eval :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> IO Value
 eval m pm ss (ArithTerm (LitTerm (Lit v)))      = return v
@@ -634,23 +674,8 @@ eval m pm ss (LogicalBinExpr Xor e1 e2)         =
                                                             _ -> error "And operator lhs type error "
 eval m pm ss (CastExpr e1 g)                    =
                                                 do      v1 <- eval m pm ss e1 
-                                                        case g of
-                                                            GString     -> return $ String (show v1)
-                                                            GInteger    -> case v1 of
-                                                                             Float f   -> return $ Integer ( floor f)
-                                                                             Bool  b   -> return $ if b then Integer 1 else Integer 0
-                                                                             String s  -> return $ fromString s g
-                                                                             _         -> error "No cast avaliable"
-                                                            GFloat      -> case v1 of
-                                                                             Integer i -> return $ Float (fromInteger i)
-                                                                             String s  -> return $ fromString s g
-                                                                             _         -> error "No cast avaliable"
-                                                            GBool       -> case v1 of
-                                                                             Integer i -> return $ if i /= 0 then Bool True else Bool False
-                                                                             Float   f -> return $ if f /= 0 then Bool True else Bool False
-                                                                             String  s -> return $ fromString s g
-                                                                             _         -> error "No cast avaliable"
-                                                            _           ->  error "Unknown type"
+                                                        return $ cast v1 g 
+
 
 eval m pm ss (ExprLiteral (TupleLit te))        = 
                                                 do
@@ -736,6 +761,7 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                                 Just v -> return v
 
 eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}
+
 
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
