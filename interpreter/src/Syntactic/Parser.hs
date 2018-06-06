@@ -284,9 +284,11 @@ listLit = do
 
 tupleLit :: GenParser GphTokenPos st ArithExpr
 tupleLit = do
-                (tok GTokLParen)
-                e1 <- expression
-                (tok GTokComma)
+                e1 <- try $ do  
+                                (tok GTokLParen)
+                                e1 <- expression
+                                (tok GTokComma)
+                                return e1
                 e2 <- expression
                 do
                     do
@@ -675,7 +677,7 @@ primitiveType = do
                         "string" -> return GString
                         "char" -> return GChar
                         "bool" -> return GBool
-                        _ -> return (GUserType (Ident t))
+                        _ -> return (GUserType t)
 
 graphType :: GenParser GphTokenPos st GType
 graphType = do
@@ -698,7 +700,7 @@ graphType = do
 userType :: GenParser GphTokenPos st GType
 userType = do
                 t <- anyType
-                return (GUserType (Ident t))
+                return (GUserType t)
 
 
 {- New expression parser.
@@ -924,14 +926,27 @@ postfixExpr = do
 primaryExpr :: GenParser GphTokenPos st ArithExpr
 primaryExpr = do
                     do
-                        try $ do
-                            tupleLit
-                    <|>
-                    do
                         (tok GTokLParen)
-                        e <- expression
-                        (tok GTokRParen)
-                        return e
+                        e1 <- expression
+                        do
+                            do
+                                (tok GTokComma)
+                                return e1
+                                e2 <- expression
+                                do
+                                    do
+                                        (tok GTokRParen)
+                                        return (ExprLiteral (TupleLit (e1:[e2])))
+                                    <|>
+                                    do
+                                        (tok GTokComma)
+                                        l <- expressionList
+                                        (tok GTokRParen)
+                                        return (ExprLiteral (TupleLit (e1:(e2:l))))
+                            <|>
+                            do
+                                (tok GTokRParen)
+                                return e1
                     <|>
                     do
                         e <- structInit

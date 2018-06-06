@@ -16,7 +16,8 @@ data Value =    Integer Integer |
                 Quadruple (Value, Value, Value, Value) | 
                 Map (M.Map Value  Value) |
                 EmptyMap |
-		Graph (G.Graph Value Value) 
+                Graph (G.Graph Value Value) |
+                Setter (M.Map String Value)
                 deriving (Eq, Ord)
 
 instance Show Value where
@@ -31,4 +32,5 @@ instance Show Value where
     show (Quadruple x) = show x
     show (Map x)       = show x
     show (Graph x)     = show x
+    show (Setter x)    = show x
     show EmptyList     = "[]"

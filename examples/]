@@ -1,0 +1,9 @@
+Point {
+    z : float = 1.0;
+}
+
+sub f (x,x:int) : int {
+    print x;
+}
+
+a : Point = {x=2, x=2,z=2};

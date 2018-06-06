@@ -1,9 +1,13 @@
+Pessoa {
+    n : string;
+    p : Pessoa;
+}
+
 Point {
-    z : float = 1.0;
+    x, y, z : float;
+    g : [int];
 }
 
-sub f (x,y,z:int&; k:int&) : int {
-    print x;
-}
+#b : Point = {x=1.0, y=3.0, z=2.0};
+p : Pessoa;# = {n = "vitor", p = {g = [1,2.2,3.2]}};
 
-#a : Point = {x = 2, y=2};
