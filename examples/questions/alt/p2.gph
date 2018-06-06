@@ -1,0 +1,37 @@
+sub range(l1, l2 : int) : [int] {
+	r : [int] = [l1];
+	i : int = l1+1;
+	while (i < l2) {
+		r = r ++ i;
+		i = i + 1;
+	}
+	return r;
+}
+
+sub read_float() : float {
+	str : string;
+	read str;
+	return(str@float);
+}
+
+num : float = read_float();
+limits : [float] = [-1.0, 25.0, 50.0, 75.0, 100.0];
+n_intervals : int = 5;
+
+in_interval : [int] = [0, 0, 0, 0];
+#for i over range(0, n_intervals-1)
+# 	in_interval = in_interval ++ 0;
+
+while (num >= 0.0) {
+ 	i : int = num@int;
+ 	d : float = num - i;
+	for l over range(1, n_intervals) {
+	 	if (num >= (limits[l-1]+1) and num <= limits[l])
+	 		in_interval[l-1] = in_interval[l-1] + 1;
+	}
+	print(in_interval);
+
+ 	num = read_float();
+}
+
+print(in_interval@string);
