@@ -835,35 +835,32 @@ evalEdgeComp m pm ss list (EdgeComp weight edge forIt) = case list of
 
 evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value Value) -> IO Value
 evalEdgeComp' m pm ss weight edge id vs when_exp g = case weight of
-    Nothing -> case vs of
-                [v] -> do (Right m') <- updateListIds m ss id v
-                          case when_exp of
-                                Nothing -> do
-                                    let e = (Integer 1)
-                                    generateGraph m' pm ss edge e g
-                                Just when_exp -> do
-                                    success <- (eval m' pm ss when_exp)
-                                    if success == (Bool True)
-                                    then do
-                                        let e = (Integer 1) 
+    Nothing -> do let e = (Integer 1)
+                  case vs of
+                        [v] -> do (Right m') <- updateListIds m ss id v
+                                  case when_exp of
+                                    Nothing -> do
                                         generateGraph m' pm ss edge e g
-                                    else do 
-                                        return $ V.Graph (G.Graph Se.empty M.empty)
-                (v:vs) -> do (Right m') <- updateListIds m ss id v
-                             case when_exp of
-                                Nothing -> do
-                                    let e = (Integer 1)
-                                    V.Graph g' <- generateGraph m' pm ss edge e g
-                                    evalEdgeComp' m' pm ss weight edge id vs Nothing g' 
-                                Just when_exp -> do
-                                    success <- (eval m' pm ss when_exp)
-                                    if success == (Bool True)
-                                    then do
-                                        let e = (Integer 1) 
-                                        V.Graph g' <- generateGraph m' pm ss edge e g
-                                        evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g'
-                                    else do 
-                                        evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g   
+                                    Just when_exp -> do
+                                        success <- (eval m' pm ss when_exp)
+                                        if success == (Bool True)
+                                        then do
+                                            generateGraph m' pm ss edge e g
+                                        else do 
+                                            return $ V.Graph (G.Graph Se.empty M.empty)
+                        (v:vs) -> do (Right m') <- updateListIds m ss id v
+                                     case when_exp of
+                                        Nothing -> do
+                                            V.Graph g' <- generateGraph m' pm ss edge e g
+                                            evalEdgeComp' m' pm ss weight edge id vs Nothing g' 
+                                        Just when_exp -> do
+                                            success <- (eval m' pm ss when_exp)
+                                            if success == (Bool True)
+                                            then do
+                                                V.Graph g' <- generateGraph m' pm ss edge e g
+                                                evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g'
+                                            else do 
+                                                evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g   
 
 generateGraph :: Memory -> ProgramMemory -> Scopes -> S.Edge -> Value -> (G.Graph Value Value) -> IO Value
 generateGraph m pm ss (S.Edge tp exp1 exp2) weight g = do
