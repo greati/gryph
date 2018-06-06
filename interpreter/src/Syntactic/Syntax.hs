@@ -19,7 +19,7 @@ data GType =    GInteger        |
                 GDict GType GType |
                 GGraphVertex GType |
                 GGraphVertexEdge GType GType |
-                GUserType Identifier
+                GUserType String
                 deriving (Show, Eq, Ord)
 
 data GParamType = GType GType | GRef GType deriving (Show, Eq, Ord)
