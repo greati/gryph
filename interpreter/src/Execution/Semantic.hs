@@ -1,11 +1,12 @@
 module Execution.Semantic where
 
 import Syntactic.Values   as V
-import Syntactic.Syntax
+import Syntactic.Syntax   as S
 import Execution.Memory
 import Data.Time.Clock
 import Execution.Graph    as G
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
+import qualified Data.Set        as Se
 
 type Filename = String
 
@@ -816,19 +817,68 @@ not' _ = error "Type error Unary (not) operator "
 --------------------------------------------------------------
 -- |Graph Comprehension
 
-evalGraphComp :: Memory -> ProgramMemory -> Scopes -> (Maybe ArithExpr) -> (Maybe EdgeComp) -> IO Value
+evalGraphComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> Maybe EdgeComp -> IO Value
 evalGraphComp m pm ss list edges = case list of
                                     Nothing -> case edges of
                                                     Nothing -> return $ error "Empty list of vertices!"
-                                                    Just e  -> return undefined
+                                                    Just e  -> evalEdgeComp m pm ss Nothing e
                                     Just l  -> case edges of
                                                     Nothing -> do (List xs) <- eval m pm ss l                                                                
                                                                   return $ V.Graph (G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs)
                                                     Just e  -> return undefined
 
-evalEdgeComp :: Memory -> ProgramMemory -> Scopes -> (Maybe ArithExpr) -> (Maybe EdgeComp) -> IO Value
-evalEdgeComp m pm ss list edges = case list of
-                                        Nothing -> return undefined                                       
+evalEdgeComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> EdgeComp -> IO Value
+evalEdgeComp m pm ss list (EdgeComp weight edge forIt) = case list of
+    Nothing -> do (id, vs'@(v:vs), when_exp) <- evalForIterator m pm ss forIt
+                  let (Right m') = elabVars m (getNameCell id v) (head ss)
+                  evalEdgeComp' m' pm ss weight edge id vs' when_exp (G.Graph Se.empty M.empty)                                     
+
+evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value Value) -> IO Value
+evalEdgeComp' m pm ss weight edge id vs when_exp g = case weight of
+    Nothing -> case vs of
+                [v] -> do (Right m') <- updateListIds m ss id v
+                          case when_exp of
+                                Nothing -> do
+                                    let e = (Integer 1)
+                                    generateGraph m' pm ss edge e g
+                                Just when_exp -> do
+                                    success <- (eval m' pm ss when_exp)
+                                    if success == (Bool True)
+                                    then do
+                                        let e = (Integer 1) 
+                                        generateGraph m' pm ss edge e g
+                                    else do 
+                                        return $ V.Graph (G.Graph Se.empty M.empty)
+                (v:vs) -> do (Right m') <- updateListIds m ss id v
+                             case when_exp of
+                                Nothing -> do
+                                    let e = (Integer 1)
+                                    V.Graph g' <- generateGraph m' pm ss edge e g
+                                    evalEdgeComp' m' pm ss weight edge id vs Nothing g' 
+                                Just when_exp -> do
+                                    success <- (eval m' pm ss when_exp)
+                                    if success == (Bool True)
+                                    then do
+                                        let e = (Integer 1) 
+                                        V.Graph g' <- generateGraph m' pm ss edge e g
+                                        evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g'
+                                    else do 
+                                        evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g   
+
+generateGraph :: Memory -> ProgramMemory -> Scopes -> S.Edge -> Value -> (G.Graph Value Value) -> IO Value
+generateGraph m pm ss (S.Edge tp exp1 exp2) weight g = do
+    e1 <- eval m pm ss exp1
+    e2 <- eval m pm ss exp2
+    let v1 = G.getVertexFromValue g e1
+    let g' = G.insertVertex g v1
+    let v2 = G.getVertexFromValue g' e2
+    let g'' = G.insertVertex g' v2
+    case tp of
+        LeftEdge -> do return (V.Graph (insertEdge g'' (G.Edge v2 v1 weight)))
+        RightEdge -> do return (V.Graph (insertEdge g'' (G.Edge v1 v2 weight))) 
+        DoubleEdge -> do 
+            let g''' = insertEdge g'' (G.Edge v1 v2 weight)
+            return (V.Graph (insertEdge g''' (G.Edge v2 v1 weight)))
 
 --------------------------------------------------------------
 -- |List Comprehension
@@ -836,8 +886,7 @@ evalEdgeComp m pm ss list edges = case list of
 forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO [Value]
 forListComp m pm ss lc = do (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss lc
                             let (Right m') = elabVars m (getNameCell id v) (head ss)
-                            r <- forListComp' m' pm ss exp id vs' when_exp
-                            return r
+                            forListComp' m' pm ss exp id vs' when_exp
 
 forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO [Value]
 forListComp' m pm ss exp id [v] when_exp = do
@@ -874,15 +923,20 @@ forListComp' m pm ss exp id (v:vs) when_exp = do
                                                             return r
 
 evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (ArithExpr, [Identifier], [Value], Maybe ArithExpr)
-evalListComp m pm ss (ListComp expression (ForIterator is xs when_exp ) ) = do
+evalListComp m pm ss (ListComp expression forIt ) = do
+        (is, xss, when_exp) <- evalForIterator m pm ss forIt
+        return (expression, is, xss, when_exp)
+
+evalForIterator :: Memory -> ProgramMemory -> Scopes -> ForIterator -> IO ([Identifier], [Value], Maybe ArithExpr)
+evalForIterator m pm ss (ForIterator is xs when_exp) = do
         let new_xs = replicateList ((length is) - (length xs)) xs
         xss <- (getLists m pm ss [new_xs])
         xss' <- (over xss)
         if when_exp == []
         then do
-            return (expression, is, xss', Nothing)
+            return (is, xss', Nothing)
         else do
-            return (expression, is, xss', (Just (head when_exp)))            
+            return (is, xss', (Just (head when_exp)))            
     where getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
                                          return xss
           getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
@@ -921,3 +975,4 @@ updateListIds m ss ((Ident id):ids) (List (v:vs)) = do
                                                         let (Right m') = updateVar m id ss ((getType v), (Value v))
                                                         r <- updateListIds m' ss ids (List vs)
                                                         return r
+

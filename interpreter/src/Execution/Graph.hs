@@ -3,10 +3,11 @@ module Execution.Graph where
 import qualified Data.Map.Strict   as M
 import qualified Data.Set          as S
 import qualified Data.Tuple        as T
+import Data.List                   as L
 
 -- |Vertex indexed by integer values, holding data of type a
 data Vertex a = Vertex Int a
-               
+
 instance (Show a) => Show (Vertex a) where
     show (Vertex x p) = show x ++ "(" ++ show p ++ ")"
 
@@ -84,9 +85,19 @@ connect g@(Graph vs es) v1@(Vertex x1 p1) v2@(Vertex x2 p2) p
 
 -- |Insert an edge. Error if vertices aren't in the list
 insertEdge :: Graph a b -> Edge a b -> Graph a b
-insertEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
-    | not (elem v1 vs) || not(elem v2 vs) = error "both vertices must be present"
-    | otherwise = Graph vs (M.insertWith (++) id [ed] es)
+insertEdge g@(Graph vs es) ed@(Edge v1@(Vertex id _) v2 p) = 
+    if not (elem v1 vs) || not(elem v2 vs) 
+    then error "both vertices must be present"
+    else 
+        case (list es id) of
+            Nothing -> Graph vs (M.insertWith (++) id [ed] es)
+            Just l -> if isIn ed l
+                      then g
+                      else Graph vs (M.insertWith (++) id [ed] es)
+    where
+        list es id = (es M.!? id)
+        isIn ed []     = False
+        isIn ed@(Edge v1@(Vertex id1 _) v2@(Vertex id2 _) _) ( (Edge (Vertex idx _) (Vertex idy _) _) : xs) = if id1 == idx && id2 == idy then True else isIn ed xs
 
 -- |Update an edge. Error if vertices aren't in the list
 updateEdge :: Graph a b -> Edge a b -> Graph a b
@@ -139,3 +150,12 @@ deleteVertex = undefined
 fromListToVertices :: [(Int,a)] -> [Vertex a]
 fromListToVertices []         = []
 fromListToVertices ((n,x):xs) = (Vertex n x) : fromListToVertices xs
+
+-- | Get the index of vertex
+getVertexFromValue :: Eq a => (Graph a b) -> a -> (Vertex a)
+getVertexFromValue (Graph vs _) v = getVertexFromValue' (S.toList vs) v (0)
+    where
+        getVertexFromValue' [] v n = Vertex (n + 1) v
+        getVertexFromValue' ( v'@(Vertex i value) : xs ) v n 
+            | v == value = v'
+            | otherwise  = getVertexFromValue' xs v $ max i n
