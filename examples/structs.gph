@@ -1,6 +1,5 @@
 Pessoa {
     n : string;
-    p : Pessoa;
 }
 
 Point {
@@ -8,6 +7,13 @@ Point {
     g : [int];
 }
 
-#b : Point = {x=1.0, y=3.0, z=2.0};
-p : Pessoa;# = {n = "vitor", p = {g = [1,2.2,3.2]}};
+sub f (p : Pessoa) {
+    print p;
+}
+
+p : Pessoa;
+
+p = {n = "vitor"};
+
+
 

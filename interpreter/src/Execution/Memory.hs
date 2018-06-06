@@ -155,8 +155,8 @@ updateVar :: Memory -> Name -> Scopes -> Cell -> Either String Memory
 updateVar m n ss c@(t,v) = case fetchVar m n ss of
                             Left i -> Left i
                             Right ((_,s),(t',v')) -> case v' of
-                                                        Value v'' -> Right (M.update (\k -> Just (t, v)) (n,s) m)
                                                         Ref (n',s') -> updateVar m n' ss c
+                                                        _ -> Right (M.update (\k -> Just (t, v)) (n,s) m)
 
 fetchVarCell :: Memory -> Name -> Scopes -> Either String Cell
 fetchVarCell m n ss = case fetchVar m n ss of

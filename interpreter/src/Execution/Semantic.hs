@@ -363,10 +363,21 @@ processSubArgs (a:as) ids m pm ss = case a of
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
-            (ArithTerm (IdTerm (Ident i))) -> do    k <- eval m pm ss v
-                                                    case updateVar m i ss (makeCompatibleAssignTypes pm (getType k) k) of
-                                                        Right m' -> return m'
+            (ArithTerm (IdTerm (Ident i))) ->   do
+                                                    k <- eval m pm ss v
+                                                    fetched <- return $ fetchVar m i ss
+                                                    case fetched of
                                                         Left i -> error i
+                                                        Right (_,(t',_)) -> 
+                                                                do case k of
+                                                                        setter@(Setter _) -> 
+                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' setter) of
+                                                                                    Right m' -> return m'
+                                                                                    Left i -> error i
+                                                                        _ -> do    
+                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
+                                                                                    Right m' -> return m'
+                                                                                    Left i -> error i
             (ListAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do  v1 <- eval m pm ss id
                                                                         v2 <- eval m pm ss index
                                                                         v3 <- eval m pm ss v
@@ -420,11 +431,14 @@ checkCompatType t t' = if t == t' then True
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
 makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter m) = (t, makeRegisterFromSetter pm (makeRegister pm u) v u)
-makeCompatibleAssignTypes pm t v = if t' == t 
-                                    then (t, Value v) 
-                                    else error ("Incompatible types " ++ show t' ++ " and " ++ show t)
-                                where
-                                    t' = getType v
+makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType t v)
+
+coerceAssignByType :: GType -> Value -> Value
+coerceAssignByType GFloat i'@(Integer i) = coerce i'
+coerceAssignByType t v = if checkCompatType t t' then v
+                   else error ("Incompatible types " ++ show t ++ " and " ++ show t')
+                    where
+                        t' = getType v
 
 -- | Given a setter, a user type name and a register (memory value), produce a new register
 -- The value is the setter.
@@ -543,7 +557,7 @@ getValueType (Map m) = getType (head (M.elems m))
 
 coerce:: Value -> Value
 coerce (Integer x) = (Float (fromInteger x))
-coerce (Float  f)  =  (Float f)
+coerce v = v
 
 -- | Evaluates a list of expressions
 evalList :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
@@ -588,6 +602,7 @@ defaultValue pm GInteger = Integer 0
 defaultValue pm GFloat = Float 0.0
 defaultValue pm GString = String []
 defaultValue pm GBool = Bool False
+defaultValue pm GChar = Char '\0'
 defaultValue pm (GList _) = List []
 defaultValue pm (GPair t1 t2) = Pair (defaultValue pm t1, defaultValue pm t2)
 defaultValue pm (GTriple t1 t2 t3) = Triple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3)
