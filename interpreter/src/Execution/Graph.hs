@@ -151,11 +151,12 @@ fromListToVertices :: [(Int,a)] -> [Vertex a]
 fromListToVertices []         = []
 fromListToVertices ((n,x):xs) = (Vertex n x) : fromListToVertices xs
 
--- | Get the index of vertex
-getVertexFromValue :: Eq a => (Graph a b) -> a -> (Vertex a)
-getVertexFromValue (Graph vs _) v = getVertexFromValue' (S.toList vs) v (0)
+-- | Get the index of vertex or next
+getVertexFromValue :: Eq a => (Graph a b) -> a -> Bool -> (Vertex a)
+getVertexFromValue (Graph vs _) v next = getVertexFromValue' (S.toList vs) v 0 next
     where
-        getVertexFromValue' [] v n = Vertex (n + 1) v
-        getVertexFromValue' ( v'@(Vertex i value) : xs ) v n 
+        getVertexFromValue' [] v n False = Vertex (-1) v
+        getVertexFromValue' [] v n True = Vertex (n + 1) v
+        getVertexFromValue' ( v'@(Vertex i value) : xs ) v n next
             | v == value = v'
-            | otherwise  = getVertexFromValue' xs v $ max i n
+            | otherwise  = getVertexFromValue' xs v (max i n) next 

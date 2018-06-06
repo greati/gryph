@@ -1,11 +1,11 @@
-#a = <[1,2,3], a<-b for a,b over [1,2,3] when a==2, b==3>;
-#g1 : <int> = <[1,2,3], a->b for a,b over [1,2,3],[1,2,3]>;
-#g2 : <int, float> = <a/2 where a--b+1 for a,b over [0,1],[1,2,3]>;
-#g3 : <int> = <a--a for a over [0, 1, 2] when a > c>;
-
-#a = <[1,2,3], a->b for a,b over [1,2,3],[1,2,3]>;
-
-print <a<-b for a,b over [1,2,3],[4,5]>;
-
+#print <[1,2,3], a<-b for a,b over [1,2,3] when a==2>;
+#print <[1,2,3], a->b for a,b over [1,2,3],[1,2,3]>;
+print <b/2 where a->b+1 for a,b over [0,1],[1,2,3]>;
+#print <a--a for a over [0, 1, 2] when a > 10>;
+#
+#print <[1,2,3], a->b for a,b over [1,2],[1,5]>;
+#
+#print <a<-b for a,b over [1,2,3],[4,5]>;
+#
 #print <[1,2,3]>;
 #print <a--(2*a) for a over [1]>;
