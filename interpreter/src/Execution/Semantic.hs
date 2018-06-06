@@ -25,6 +25,7 @@ exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO()
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
+                        print $ show m' 
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
@@ -403,6 +404,18 @@ makeBooleanFromValue :: Value -> Either String Bool
 makeBooleanFromValue (Bool v) = Right v
 makeBooleanFromValue _        = Left "Expected boolean value"
 
+-- | Check types for compatibility
+checkCompatType :: GType -> GType -> Bool
+checkCompatType t t' = if t == t' then True
+                    else case (t,t') of
+                        (GFloat, GInteger)  -> True
+                        (GList _, GEmpty)   -> True
+                        (GEmpty ,GList _)   -> True
+                        (GList l, GList l') -> checkCompatType (GList l) l'
+                        (GList l, GList l') -> checkCompatType (l) $ GList l'
+                        _                   -> False
+
+
 -- | Given type t and value v, return (t,v) if they are compatible.
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
@@ -496,8 +509,16 @@ interpretParamDeclaration pd@(ParamDeclaration is _ es) m pm ss
                                                         do  v <- eval m pm ss e 
                                                             remain <- interpretParamDeclaration (ParamDeclaration is gt es) m pm ss
                                                             return $ (i, gt, Just v) : remain
-                
-
+ --Get type of a List and make coercion if needed                
+getListType :: [Value] -> GType
+getListType [x]      = getType x
+getListType (x:y:xs) = case getType x of
+                        GInteger -> case getType y of
+                                     GInteger -> getListType (y:xs)
+                                     GFloat -> GFloat
+                        GFloat   -> GFloat
+                        any      -> any 
+               
 -- | Return the type of a given Gryph value.
 getType :: Value -> GType
 getType (Integer i)                   = GInteger
@@ -505,8 +526,8 @@ getType (Float f)                     = GFloat
 getType (String s )                   = GString
 getType (Char c)                      = GChar
 getType (Bool b)                      = GBool
-getType (List (x:_))                  = GList (getType x)
-getType (List [])                     = GList GEmpty
+getType (List [])                     = GEmpty
+getType (List (x:xs))                 = GList (getListType (x:xs))
 getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
@@ -520,15 +541,19 @@ getKeyType (Map m) = getType (head (M.keys m))
 getValueType :: Value -> GType 
 getValueType (Map m) = getType (head (M.elems m))
 
+coerce:: Value -> Value
+coerce (Integer x) = (Float (fromInteger x))
+coerce (Float  f)  =  (Float f)
+
 -- | Evaluates a list of expressions
 evalList :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
 evalList m pm ss [x]      =  do {x' <- eval m pm ss x ; return $ [x']}
 evalList m pm ss (x:y:xs) =  do 
-                                z <- eval m pm ss x
-                                y' <- eval m pm ss y
-                                if getType z /= getType y' then error "Type mismatch in List "
+                                  z  <- eval m pm ss x
+                                  y' <- eval m pm ss y
+                                  if not( checkCompatType (getType y') ( getType z) || checkCompatType (getType z) (getType y') ) then error "Type mismatch in List "
                                     else do
-                                        l <- evalList m pm ss (y:xs)
+                                        l <- evalList m pm ss  (y:xs)
                                         return (z:l) 
 
 -- | Evaluates a tuple
@@ -607,6 +632,46 @@ fromString s (GChar )           = Char (read s::Char)
 fromString s (GBool )           = Bool (read s::Bool)
 fromString _ _                  = error "No parser from String"
 
+
+cast:: Value -> GType -> Value
+cast v1 g@GString     =  String (show v1)
+cast v1 g@GInteger    = case v1 of
+                         Float f   -> Integer ( floor f)
+                         Bool  b   -> if b then Integer 1 else Integer 0
+                         String s  -> fromString s g
+                         _         -> error "No cast avaliable"
+cast v1 g@GFloat      = case v1 of
+                         Integer i -> Float (fromInteger i)
+                         String s  -> fromString s g
+                         _         -> error "No cast avaliable"
+cast v1 g@GBool       = case v1 of
+                         Integer i -> if i /= 0 then Bool True else Bool False
+                         Float   f -> if f /= 0 then Bool True else Bool False
+                         String  s -> fromString s g
+                         _         -> error "No cast avaliable"
+
+cast v1 g@(GList GFloat)  = case v1 of 
+                             List [] -> List []
+                             l@(List (x:xs)) -> List ((cast x GFloat):r )
+                              where List r = (cast (List xs) (GList GFloat) )
+                             _               -> error "No cast avaliable"
+cast v1 g@(GList GInteger)  = case v1 of 
+                               List [] -> List []
+                               l@(List (x:xs)) -> List ((cast x GInteger):r )
+                                where List r = (cast (List xs) (GList GInteger) )
+                               _               -> error "No cast avaliable"
+cast v1 g@(GList GBool)  = case v1 of 
+                               List [] -> List []
+                               l@(List (x:xs)) -> List ((cast x GBool):r )
+                                where List r = (cast (List xs) (GList GBool) )
+                               _               -> error "No cast avaliable"
+cast v1 g@(GList GString)  = case v1 of 
+                               List [] -> List []
+                               l@(List (x:xs)) -> List ((cast x GString):r )
+                                where List r = (cast (List xs) (GList GString) )
+                               _               -> error "No cast avaliable"
+cast _   _          =  error "Unknown type"
+
 -- | Main expression evaluator
 eval :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> IO Value
 eval m pm ss (ArithTerm (LitTerm (Lit v)))      = return v
@@ -620,7 +685,7 @@ eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExp
 eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ExpBinOp e1 e2) expBin
 eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ModBinOp e1 e2) modBin
 eval m pm ss (ExprLiteral (ListLit [] ))        = return $ List []
-eval m pm ss (ExprLiteral (ListLit es ))        = do {v <- evalList m pm ss es; return $ List v}
+eval m pm ss (ExprLiteral (ListLit es ))        = do {v <- evalList m pm ss es; if getListType v == GFloat then return $List (map coerce v)  else  return $ List v}
 eval m pm ss (ExprLiteral (DictLit de))         = do {v <- evalDict m pm ss de M.empty ; return $ Map v}
 eval m pm ss (ArithEqExpr Equals e1 e2)         = do {v1 <- eval m pm ss e1; v2 <- eval m pm ss e2; return $ Bool (v1 == v2)}
 eval m pm ss (ArithEqExpr NotEquals e1 e2)      = do {v1 <- eval m pm ss e1; v2 <- eval m pm ss e2; return $ Bool (v1 /= v2)} 
@@ -654,23 +719,8 @@ eval m pm ss (LogicalBinExpr Xor e1 e2)         =
                                                             _ -> error "And operator lhs type error "
 eval m pm ss (CastExpr e1 g)                    =
                                                 do      v1 <- eval m pm ss e1 
-                                                        case g of
-                                                            GString     -> return $ String (show v1)
-                                                            GInteger    -> case v1 of
-                                                                             Float f   -> return $ Integer ( floor f)
-                                                                             Bool  b   -> return $ if b then Integer 1 else Integer 0
-                                                                             String s  -> return $ fromString s g
-                                                                             _         -> error "No cast avaliable"
-                                                            GFloat      -> case v1 of
-                                                                             Integer i -> return $ Float (fromInteger i)
-                                                                             String s  -> return $ fromString s g
-                                                                             _         -> error "No cast avaliable"
-                                                            GBool       -> case v1 of
-                                                                             Integer i -> return $ if i /= 0 then Bool True else Bool False
-                                                                             Float   f -> return $ if f /= 0 then Bool True else Bool False
-                                                                             String  s -> return $ fromString s g
-                                                                             _         -> error "No cast avaliable"
-                                                            _           ->  error "Unknown type"
+                                                        return $ cast v1 g 
+
 
 eval m pm ss (ExprLiteral (TupleLit te))        = 
                                                 do
@@ -703,7 +753,7 @@ eval m pm ss (TupleAccess e1 e2)                =
                                                     v1' <- eval m pm ss e1
                                                     v2' <- eval m pm ss e2
                                                     case v1' of
-                                                        (Pair (v1, v2)) -> case v2' of
+                                                        Pair (v1, v2)     -> case v2' of
                                                                             Integer 0 -> return $ v1
                                                                             Integer 1 -> return $ v2
                                                                             _         -> error "Acessing Pair"
@@ -722,18 +772,24 @@ eval m pm ss (TupleAccess e1 e2)                =
                                                         _ -> error "Tuple error " 
 
 eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) = 
-                                do
-                                    v1 <- eval m pm ss e1
-                                    v2 <- eval m pm ss e2
-                                    case v1 of
-                                        l1@(List (x:xs)) -> case v2 of
-                                                                l2@(List (y:ys)) -> if (getType x == getType y) then return $ plusPlusBinList l1 l2
-                                                                                    else return $ plusPlusBin l1 l2
-                                                                k -> if (getType k == getType x) then return $ plusPlusBin l1 k
-                                                                     else error "Type mismatch ++ opeator "
-                                        k -> case v2 of 
-                                                l2@(List (y:ys)) -> if (getType k == getType y) then return $ plusPlusBin k l2
-                                                                else error "Type mismatch ++ operator "
+                                                do
+                                                    v1 <- eval m pm ss e1
+                                                    v2 <- eval m pm ss e2
+                                                    case v1 of
+                                                        l1@(List []) -> case v2 of 
+                                                                         l2@(List [])     -> return $ plusPlusBin l1 l2
+                                                                         l2@(List (x:xs)) -> return $ plusPlusBin l1 l2  
+                                                                         k                -> return $ plusPlusBin k l1
+                                                        l1@(List (x:xs)) -> case v2 of
+                                                                                l2@(List (y:ys)) -> if (getType x == getType y) then return $ plusPlusBinList l1 l2
+                                                                                                    else return $ plusPlusBin l1 l2
+                                                                                k -> if (getType k == getType x) then return $ plusPlusBin l1 k
+                                                                                     else error "Type mismatch ++ opeator "
+                                                        k -> case v2 of 
+                                                                l2@(List [])     -> return $ plusPlusBin l2 k
+                                                                l2@(List (y:ys)) -> if (getType k == getType y) then return $ plusPlusBin k l2
+                                                                                else error "Type mismatch ++ operator "
+
 eval m pm ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
                                                 Left i -> error i
                                                 Right i -> return $ i
@@ -766,9 +822,11 @@ plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 
 plusPlusBin :: Value -> Value -> Value
-plusPlusBin k (List xs'@(x:xs)) = if getType (k) /= tl then error "Type mismatch in operation ++"
+plusPlusBin k (List []) = (List [k])
+plusPlusBin (List []) k = (List [k])
+plusPlusBin k (List xs'@(x:xs)) = if not (checkCompatType (getType k) tl) || not (checkCompatType tl (getType k)) then error "Type mismatch in operation ++"
                            else List (k:xs')
-                                where tl = getType x 
+                                where tl = getListType xs' 
 plusPlusBin (List xs'@(x:xs)) k = if getType (k) /= tl then error "Type mismatch in operation ++"
                            else List (xs' ++ [k])
                                 where tl = getType x
