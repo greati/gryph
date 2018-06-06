@@ -969,6 +969,10 @@ constant = do
                 do
                     b <- boolLit
                     return (ArithTerm (LitTerm b))
+                <|>
+                do
+                    b <- charLit
+                    return (ArithTerm (LitTerm b))
 
 
 boolLit :: GenParser GphTokenPos st Literal

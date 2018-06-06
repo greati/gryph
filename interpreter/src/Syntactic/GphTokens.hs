@@ -22,7 +22,7 @@ data GphToken =
     GTokBFS                         |
     GTokIntLit String               |
     GTokFloatLit String             |
-    GTokCharLit  String             |
+    GTokCharLit String              |
     GTokStringLit String            |
     GTokBoolLit String              |
     GTokRightEdge                   |

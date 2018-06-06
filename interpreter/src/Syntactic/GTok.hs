@@ -65,3 +65,12 @@ stringLit = satisfy' p <?> "string"
                     GTokStringLit i -> Just (Lit (String i))
                     _ -> Nothing
 
+charLit :: Monad m => ParsecT [GphTokenPos] u m Literal
+charLit = satisfy' p <?> "char"
+    where 
+        p (t,_) = case t of
+                    GTokCharLit i -> Just (Lit (Char (read i)))
+                    _ -> Nothing
+
+
+
