@@ -940,7 +940,7 @@ evalEdgeComp m pm ss list (EdgeComp weight edge forIt) = do
                       let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
                       evalEdgeComp' m' pm ss weight edge id vs' when_exp g False                                        
 
-evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO Value
+evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value (Maybe Value)) -> Bool -> IO Value
 evalEdgeComp' m pm ss weight edge id vs when_exp g new_vertices = case vs of
     [v] -> do (Right m') <- updateListIds m ss id v
               case when_exp of
@@ -967,7 +967,7 @@ evalEdgeComp' m pm ss weight edge id vs when_exp g new_vertices = case vs of
                         else do 
                             evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g new_vertices 
 
-generateGraph :: Memory -> ProgramMemory -> Scopes -> S.Edge -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO Value
+generateGraph :: Memory -> ProgramMemory -> Scopes -> S.Edge -> Maybe ArithExpr -> (G.Graph Value (Maybe Value)) -> Bool -> IO Value
 generateGraph m pm ss (S.Edge tp exp1 exp2) weight g new_vertices = do
     e1 <- eval m pm ss exp1
     e2 <- eval m pm ss exp2
@@ -982,18 +982,35 @@ generateGraph m pm ss (S.Edge tp exp1 exp2) weight g new_vertices = do
         else do
             let g'' = G.insertVertex g' v2
             case weight of
-                Nothing -> do let w = (Integer 1)                   
-                              addEdge g'' tp v1 v2 w
+                Nothing -> do addEdge g'' tp v1 v2 Nothing
                 Just weight -> do w <- eval m pm ss weight
-                                  addEdge g'' tp v1 v2 w
+                                  addEdge g'' tp v1 v2 (Just w)
 
-addEdge :: G.Graph Value Value -> EdgeType -> G.Vertex Value -> G.Vertex Value -> Value -> IO Value
-addEdge g tp v1 v2 weight = case tp of
-    LeftEdge -> do return (V.Graph (G.insertEdge g (G.Edge v2 v1 weight)))
-    RightEdge -> do return (V.Graph (G.insertEdge g (G.Edge v1 v2 weight))) 
-    DoubleEdge -> do 
-        let g' = G.insertEdge g (G.Edge v1 v2 weight)
-        return (V.Graph (G.insertEdge g' (G.Edge v2 v1 weight)))
+addEdge :: G.Graph Value (Maybe Value) -> EdgeType -> G.Vertex Value -> G.Vertex Value -> Maybe Value -> IO Value
+addEdge g@(G.Graph _ es) tp v1@(Vertex id1 _) v2@(Vertex id2 _) weight = do
+    if checkEdgeType weight (M.toList es)
+    then case tp of
+            LeftEdge -> do return (V.Graph (G.insertEdge g (G.Edge v2 v1 weight)))
+            RightEdge -> do return (V.Graph (G.insertEdge g (G.Edge v1 v2 weight))) 
+            DoubleEdge -> do 
+                let g' = G.insertEdge g (G.Edge v1 v2 weight)
+                return (V.Graph (G.insertEdge g' (G.Edge v2 v1 weight)))
+    else error "Weight type is different"
+
+-- |Check the type of the graph edges and new edge
+checkEdgeType :: Maybe Value -> [(Int, [G.Edge Value (Maybe Value)])] -> Bool
+checkEdgeType weight        []                         = True
+checkEdgeType Nothing       [(_, (G.Edge _ _ Nothing : _ ))]  = True
+checkEdgeType Nothing       [x]                        = False
+checkEdgeType _             [(_, (G.Edge _ _ Nothing : _ ))]  = False
+checkEdgeType (Just weight) [(_, (G.Edge _ _ (Just w) : _ ))] = (getType weight) == (getType w)
+checkEdgeType weight ( (_, ( G.Edge _ _ weightx : _ )) : xs ) = case weight of
+    Nothing   -> case weightx of
+                    Nothing -> checkEdgeType Nothing xs
+                    _       -> False
+    (Just w) -> case weightx of
+                    Nothing    -> False
+                    (Just wx) -> (getType w) == (getType wx) && (checkEdgeType (Just w) xs)
 
 --------------------------------------------------------------
 -- |List Comprehension

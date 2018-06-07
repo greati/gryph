@@ -92,7 +92,7 @@ insertEdge g@(Graph vs es) ed@(Edge v1@(Vertex id _) v2 p) =
         case (list es id) of
             Nothing -> Graph vs (M.insertWith (++) id [ed] es)
             Just l -> if isIn ed l
-                      then g
+                      then updateEdge g ed
                       else Graph vs (M.insertWith (++) id [ed] es)
     where
         list es id = (es M.!? id)
