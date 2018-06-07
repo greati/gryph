@@ -14,18 +14,11 @@ sub abc (i : int&) {
     }
 }
 
-sub f (p : Pessoa) {
-    print p;
+sub f (p : Pessoa; s:string) : Pessoa {
+    return p;
 }
 
-p : Pessoa;
+p : Pessoa = {n="aisj"};
+po : Point;
 
-p = {n = "vitor"};
-
-print p;
-
-
-print p;
-
-
-
+print f (p,s="vitor");

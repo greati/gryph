@@ -92,6 +92,8 @@ compatType :: GType -> GType -> Bool
 compatType t t' = if t == t' then True
                     else case (t,t') of
                         (GFloat, GInteger) -> True
+                        (GUserType _, GAnonymousStruct) -> True
+                        _ -> False
 
 getParamGType :: GParamType -> GType  
 getParamGType (GRef t) = t

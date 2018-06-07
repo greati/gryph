@@ -310,11 +310,11 @@ prepareSubcallElabs m pm ss ([], mt, b) [] = []
 prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) [] = 
                     case mv of
                         Nothing -> prepareSubcallElabs m pm ss (fs, mt, b) []
-                        Just v -> case v of
-                                    --setter@(Setter _) -> (n, (pt,makeCompatibleAssignTypes pm pt setter)) : prepareSubcallElabs m pm ss (fs, mt, b) []
-                                    _ -> (n, (getType v, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) []
+                        Just v -> (n, (getType v, v')) : prepareSubcallElabs m pm ss (fs, mt, b) []
+                            where (_,v') = makeCompatibleAssignTypes pm (getParamGType pt) v
 prepareSubcallElabs m pm ss (fs'@((f@(n,pt,mv)):fs), mt, b) ((a,t):as) = case a of
-                                  Right v -> (n, (t, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                  Right v -> (n, (getParamGType pt, v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                            where (_,v') = makeCompatibleAssignTypes pm (getParamGType pt) v
                                   Left ((Ident i), Left ci@(n',s')) -> case pt of 
                                                                 (GRef _) -> (n, v') : prepareSubcallElabs m pm ss (fs, mt, b) as
                                                                     where v' = case fetchCellByScope m n' s' of
@@ -323,15 +323,17 @@ prepareSubcallElabs m pm ss (fs'@((f@(n,pt,mv)):fs), mt, b) ((a,t):as) = case a 
                                                                                                 Register _ -> (t,Ref ci)
                                                                                                 Value _ -> (t,Ref ci)
                                                                                                 Ref ci'' -> (t, Ref ci'')
-                                                                (GType _) -> (n, (t, Value v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
-                                                                    where v' = case getVarScopeValue m n' s' of
+                                                                (GType _) -> (n, (getParamGType pt, v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                                                    where   (_,v') = makeCompatibleAssignTypes pm (getParamGType pt) v''
+                                                                            v'' = case getVarScopeValue m n' s' of
                                                                                     Left i -> error i
                                                                                     Right v'' -> v''
                                   Left ((Ident i), Right (Just v)) ->   
                                                     if existsFormal i fs' then 
-                                                        (i, (t, Value v)) : prepareSubcallElabs m pm ss (removeFormal i fs', mt, b) as
+                                                        (i, (t, v')) : prepareSubcallElabs m pm ss (removeFormal i fs', mt, b) as
                                                     else 
                                                         error $ "Named parameter " ++ i ++ " doesnt match any unbound formal parameter in the call"
+                                                        where (_,v') = makeCompatibleAssignTypes pm (getParamGType pt) v
 
 -- | Remove a formal parameter from a list of formal parameters
 removeFormal :: Name -> [FormalParameter] -> [FormalParameter]
@@ -359,7 +361,7 @@ processSubArgs (a:as) ids m pm ss = case a of
                                                                     _ -> do 
                                                                             ev <- eval m pm ss expr
                                                                             case ev of 
-                                                                                setter@(Setter _) -> undefined
+                                                                                --setter@(Setter _) -> return $ (Right setter, GAnonymousStruct) : remaining
                                                                                 _ -> return $ (Right ev, getType ev) : remaining
                                                             else error "Optional parameter before ordered parameter"
                                        ArgIdentAssign (IdentAssign [i] expr) -> do
@@ -367,7 +369,7 @@ processSubArgs (a:as) ids m pm ss = case a of
                                                                         remaining <- processSubArgs as (i:ids) m pm ss
                                                                         if elem i ids then error "Multiple assignment to same parameter"
                                                                             else case ev of
-                                                                                setter@(Setter _) -> undefined
+                                                                                --setter@(Setter _) -> () : remaining
                                                                                 _ -> return $ (Left (i, Right (Just ev)), getType ev) : remaining
  
 -- | Auxiliar for execting attribute statements
@@ -556,6 +558,7 @@ getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( get
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
 getType (Quadruple (v1,v2, v3, v4))   = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
+getType (Setter _ )                   = GAnonymousStruct
 
 -- | Return the type dictionary keys
 getKeyType :: Value -> GType

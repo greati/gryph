@@ -13,7 +13,8 @@ data GType =    GInteger        |
                 GDict GType GType |
                 GGraphVertex GType |
                 GGraphVertexEdge GType GType |
-                GUserType String
+                GUserType String |
+                GAnonymousStruct
                 deriving (Show, Eq, Ord)
 
 
