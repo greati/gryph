@@ -18,7 +18,7 @@ instance Ord (Vertex a) where
     compare (Vertex x1 _) (Vertex x2 _) = compare x1 x2        
 
 -- |Edge with vertices storing values of type a, holding data of type b
-data Edge a b = Edge (Vertex a) (Vertex a) b
+data Edge a b = Edge (Vertex a) (Vertex a) (Maybe b)
                 deriving (Ord)                
 instance Eq (Edge a b) where
     (==) (Edge x1 y1 _) (Edge x2 y2 _) = (x1 == y1) && (x2 == y2)
@@ -54,10 +54,10 @@ fromEdges es = Graph (S.fromList vertices) (M.fromList edges)
             | otherwise = e' : fromEdges'' n ed es  
 
 -- |Create an edge from a tuple of its components
-edgeFromTuple :: (Vertex a, Vertex a, b) -> Edge a b
+edgeFromTuple :: (Vertex a, Vertex a, Maybe b) -> Edge a b
 edgeFromTuple (x, y, p) = Edge x y p
 
-edgeFromVertexes :: (Vertex a) -> (Vertex a) -> b -> Edge a b
+edgeFromVertexes :: (Vertex a) -> (Vertex a) -> Maybe b -> Edge a b
 edgeFromVertexes v1 v2 p = Edge v1 v2 p
 
 -- |Create a vertex from its Id and Payload
@@ -77,7 +77,7 @@ insertVertex (Graph vs p) v = Graph (S.insert v vs) p
 isVertexPresent :: Graph a b -> Vertex a -> Bool
 isVertexPresent (Graph vs es) v'@(Vertex v _) = S.member v' vs
 
-connect :: Graph a b -> Vertex a -> Vertex a -> b -> Graph a b 
+connect :: Graph a b -> Vertex a -> Vertex a -> Maybe b -> Graph a b 
 connect g@(Graph vs es) v1@(Vertex x1 p1) v2@(Vertex x2 p2) p
     | isVertexPresent g v1 && isVertexPresent g v2 = Graph vs (M.adjust (\xs-> (edgeFromVertexes v1 v2 p):xs) x1 es)
     | otherwise = error "both vertices must be present"
@@ -92,7 +92,7 @@ insertEdge g@(Graph vs es) ed@(Edge v1@(Vertex id _) v2 p) =
         case (list es id) of
             Nothing -> Graph vs (M.insertWith (++) id [ed] es)
             Just l -> if isIn ed l
-                      then g
+                      then updateEdge g ed
                       else Graph vs (M.insertWith (++) id [ed] es)
     where
         list es id = (es M.!? id)
