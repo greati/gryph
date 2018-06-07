@@ -7,6 +7,13 @@ Point {
     g : [int];
 }
 
+sub abc (i : int&) {
+    while (i > 0) {
+        print i;
+        i = i - 1;
+    }
+}
+
 sub f (p : Pessoa) {
     print p;
 }
@@ -14,6 +21,11 @@ sub f (p : Pessoa) {
 p : Pessoa;
 
 p = {n = "vitor"};
+
+print p;
+
+
+print p;
 
 
 

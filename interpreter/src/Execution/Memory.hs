@@ -4,6 +4,7 @@ import qualified Data.Map.Strict as M
 
 import Syntactic.Values
 import Syntactic.Syntax
+import Syntactic.Types
 
 {- Program memory implementation.
  -
@@ -151,11 +152,16 @@ elabVars m (v@(n,c):vs) s = case elabVar s n c m of
                                 Left i -> Left i
                                 Right m' -> elabVars m' vs s
 
+updateVarScope :: Memory -> Name -> Scope -> Cell -> Either String Memory
+updateVarScope m n s c 
+    | M.notMember (n,s) m = Left ("Variable " ++ n ++ " not found for the given scope")
+    | otherwise = Right $ (M.update (\k -> Just c) (n,s) m)
+
 updateVar :: Memory -> Name -> Scopes -> Cell -> Either String Memory
 updateVar m n ss c@(t,v) = case fetchVar m n ss of
                             Left i -> Left i
                             Right ((_,s),(t',v')) -> case v' of
-                                                        Ref (n',s') -> updateVar m n' ss c
+                                                        Ref (n',s') -> updateVarScope m n' s' c
                                                         _ -> Right (M.update (\k -> Just (t, v)) (n,s) m)
 
 fetchVarCell :: Memory -> Name -> Scopes -> Either String Cell
@@ -174,6 +180,7 @@ fetchVarValue m n ss = case fetchVar m n ss of
                             Left i -> Left i
                             Right (_,(t,v)) -> case v of 
                                                     Value v' -> Right v'
+                                                    r@(Register _) -> Right $ makeSetterFromRegister r
                                                     Ref (n',s') -> getVarScopeValue m n' s'
                                                     
 fetchCellByScope :: Memory -> Name -> Scope -> Either String Cell
@@ -190,8 +197,43 @@ getVarScopeValue m n s
     | M.notMember (n,s) m   = Left ("Variable " ++ n ++ " not found for the given scope")
     | otherwise             = v
         where v = case (m M.!(n,s)) of
-                    (_,Value v) -> Right v
                     (_,Ref (n',s')) -> getVarScopeValue m n' s'
+                    (_,Value v) -> Right v
+                    (_,r@(Register v)) -> Right $ makeSetterFromRegister r
+
+-- | Default values for each type
+defaultValue :: ProgramMemory -> GType -> Value
+defaultValue pm GInteger = Integer 0
+defaultValue pm GFloat = Float 0.0
+defaultValue pm GString = String []
+defaultValue pm GBool = Bool False
+defaultValue pm GChar = Char '\0'
+defaultValue pm (GList _) = List []
+defaultValue pm (GPair t1 t2) = Pair (defaultValue pm t1, defaultValue pm t2)
+defaultValue pm (GTriple t1 t2 t3) = Triple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3)
+defaultValue pm (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3, defaultValue pm t4)
+defaultValue pm (GDict k v) = Map (M.empty)
+defaultValue pm (GUserType u) = makeSetterFromDeclaration pm sc
+    where (si, sc) = fetchStructDecl pm u
+
+-- | Register to setter
+makeSetterFromRegister :: MemoryValue -> Value
+makeSetterFromRegister (Register mr) = Setter $ M.fromList (map (\(n,(t,Value v))->(n,v)) (M.toList mr))
+
+--Register (M.Map Name Cell)
+--M.Map String Value
+
+-- | Declaration to Setter
+makeSetterFromDeclaration :: ProgramMemory -> StructContent -> Value
+makeSetterFromDeclaration pm scs'@((n,t,mv):scs) = Setter (makeMap scs')
+        where 
+                makeMap :: StructContent -> M.Map String Value
+                makeMap [] = M.empty
+                makeMap scs'@((n,t,mv):scs) = M.insert n v' m'
+                    where   m' = makeMap scs
+                            v' = case mv of
+                                    Nothing -> defaultValue pm t
+                                    Just v'' -> v'' 
 
 clearScope :: Scope -> Memory -> Memory
 clearScope s m = M.filterWithKey (\(_,s') _ -> s' /= s) m 

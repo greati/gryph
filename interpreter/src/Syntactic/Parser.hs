@@ -8,6 +8,7 @@ import Execution.Memory
 import Execution.Semantic
 import Syntactic.Values
 import Syntactic.Syntax
+import Syntactic.Types
 
 gryphParser :: GenParser GphTokenPos st [ProgramUnit]
 gryphParser = 
