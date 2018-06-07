@@ -18,9 +18,36 @@ sub f (p : Pessoa; s:string) : Pessoa {
     return p;
 }
 
+a : string;
+
+print a;
+
+a = "a";
+
+print a;
+
+l : [[int]] = [[1,2],[3,4]];
+d : |int,[int]| = |1 ? [1,2,3], 2 ? [3,4]|;
+
 p : Pessoa = {n="aisj"};
 
-l : [int] = [1,2,3];
+l1 : [Pessoa] = [p];
 
-s : string  = p{n};
-print s;
+#print (l[1])[1];
+
+#(l[1])[1] = 2;
+
+#print (l[1])[1];
+
+print (d|1|)[1];
+
+(d|1|)[1] = 4;
+
+print (d|1|)[1];
+
+
+#print p;
+
+#p{s} = "changed";
+
+#print s;

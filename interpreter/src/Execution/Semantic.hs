@@ -374,9 +374,62 @@ processSubArgs (a:as) ids m pm ss = case a of
                                                                                 --setter@(Setter _) -> () : remaining
                                                                                 _ -> return $ (Left (i, Right (Just ev)), getType ev) : remaining
  
+data AccessType = ListIndex Value | DictIndex Value | StructField Name deriving (Show, Eq)
+
+execAttrStmt' :: Memory -> ProgramMemory -> Scopes -> [AccessType] -> ArithExpr -> ArithExpr -> IO Memory
+execAttrStmt' m pm ss as lhs rhs = 
+    do 
+        case lhs of
+            (ArithTerm (IdTerm (Ident i))) -> do
+                                                let var = fetchVarValueType m i ss in
+                                                    case var of
+                                                        Left e -> error e
+                                                        Right (t,val) -> do 
+                                                                v <- eval m pm ss rhs 
+                                                                let v' = backwardAccessUpdate m pm ss as i val v
+                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t v') of
+                                                                    Right m' -> return m'
+                                                                    Left i -> error i
+            (ListAccess remaining index) -> do
+                                                index' <- eval m pm ss index
+                                                execAttrStmt' m pm ss ((ListIndex index'):as) remaining rhs
+            (DictAccess remaining index) -> do
+                                                index' <- eval m pm ss index
+                                                execAttrStmt' m pm ss ((DictIndex index'):as) remaining rhs
+            (StructAccess remaining (Ident field)) -> 
+                                            do
+                                                execAttrStmt' m pm ss ((StructField field):as) remaining rhs
+            _ -> error $ "Not a valid rhs"
+
+       where
+            backwardAccessUpdate m pm ss [] ident memval v = v
+            backwardAccessUpdate m pm ss (a:as) ident memval v = 
+                case a of
+                    ListIndex index -> case index of
+                                            (Integer int) -> 
+                                                    case memval of
+                                                        (List xs) -> List (setElemList xs int v'')
+                                                           where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) v
+                                                        _ -> error "You must access a list." 
+                                            _ -> error "List index must be an integer." 
+                    DictIndex index -> case memval of
+                                            (Map m') -> if M.notMember index m' then error $ "Key " ++ show index ++ " not in dictionary" 
+                                                        else Map (M.insert index v'' m')
+                                                   where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) v
+                                            _ -> error "You must access a dictionary"
+                    StructField field -> case memval of
+                                            (Setter m') -> if M.notMember field m' then error $ field ++ " not in the struct"
+                                                            else Setter $ M.insert field v'' m'
+                                                    where v'' = backwardAccessUpdate m pm ss as ident (m' M.! field) v
+                                            _ -> error "You must access a struct field"
+
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
-execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
+execAttrStmt (AttrStmt [] []) m pm ss = return m
+execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  m' <- execAttrStmt' m pm ss [] t v
+                                                    execAttrStmt (AttrStmt ts vs) m' pm ss
+{--                                                 
+case t of
             (ArithTerm (IdTerm (Ident i))) ->   do
                                                     k <- eval m pm ss v
                                                     fetched <- return $ fetchVar m i ss
@@ -422,7 +475,8 @@ execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
                                                                                         case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
                                                                                                     Right m' -> return m'
                                                                                                     Left i -> error i
-
+            (StructAccess id@(ArithTerm (IdTerm (Ident i))) index) -> undefined
+--}
                                                                                                         
 -- |From value, guaarantee boolean value
 makeBooleanFromValue :: Value -> Either String Bool

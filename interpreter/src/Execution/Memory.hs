@@ -177,6 +177,17 @@ fetchVar m n (s:ss)
     | M.notMember (n,s) m   = fetchVar m n ss 
     | otherwise             = Right ((n,s), m M.! (n,s))
 
+fetchVarValueType :: Memory -> Name -> Scopes -> Either String (GType,Value)
+fetchVarValueType m n ss = case fetchVar m n ss of
+                            Left i -> Left i
+                            Right (_,(t,v)) -> case v of 
+                                                    Value v' -> Right (t,v')
+                                                    r@(Register _) -> Right $ (t, makeSetterFromRegister r)
+                                                    Ref (n',s') -> Right $ (t,v'')
+                                                        where v'' = case getVarScopeValue m n' s' of
+                                                                        Left i -> error i
+                                                                        Right i -> i
+
 fetchVarValue :: Memory -> Name -> Scopes -> Either String Value
 fetchVarValue m n ss = case fetchVar m n ss of
                             Left i -> Left i
