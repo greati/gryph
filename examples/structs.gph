@@ -7,13 +7,20 @@ Point {
     g : [int];
 }
 
-sub f (p : Pessoa) {
-    print p;
+sub abc (i : int&) {
+    while (i > 0) {
+        print i;
+        i = i - 1;
+    }
 }
 
-p : Pessoa;
+sub f (p : Pessoa; s:string) : Pessoa {
+    return p;
+}
 
-p = {n = "vitor"};
+p : Pessoa = {n="aisj"};
 
+l : [int] = [1,2,3];
 
-
+s : string  = p{n};
+print s;

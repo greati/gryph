@@ -2,6 +2,7 @@ module Syntactic.Values where
 
 import qualified Data.Map as M
 import qualified Execution.Graph as G
+import Syntactic.Types
 
 {- Values for all data types -}
 data Value =    Integer Integer | 
@@ -120,3 +121,5 @@ instance Show Value where
     show (Graph x)     = show x
     show (Setter x)    = show x
     show EmptyList     = "[]"
+
+

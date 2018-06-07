@@ -3,24 +3,9 @@ module Syntactic.Syntax where
 import Syntactic.Values
 
 import qualified Text.Read as TRead
+import Syntactic.Types
 
 type Type = String
-
-data GType =    GInteger        |
-                GFloat          |
-                GString         |
-                GChar           |
-                GBool           |
-                GEmpty |
-                GList GType     |
-                GPair GType GType   |
-                GTriple GType GType GType  |
-                GQuadruple GType GType GType GType |
-                GDict GType GType |
-                GGraphVertex GType |
-                GGraphVertexEdge GType GType |
-                GUserType String
-                deriving (Show, Eq, Ord)
 
 data GParamType = GType GType | GRef GType deriving (Show, Eq, Ord)
 
@@ -150,7 +135,7 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     GraphAccess ArithExpr ArithExpr |
                     DictAccess ArithExpr ArithExpr |
                     ListAccess ArithExpr ArithExpr |
-                    StructAccess ArithExpr ArithExpr |
+                    StructAccess ArithExpr Identifier |
                     TupleAccess ArithExpr ArithExpr |
                     CastExpr ArithExpr GType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |

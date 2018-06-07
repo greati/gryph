@@ -5,6 +5,7 @@ import Syntactic.Syntax   as S
 import Execution.Memory
 import Data.Time.Clock
 import Execution.Graph    as G
+import Syntactic.Types
 import qualified Data.Map.Strict as M
 import qualified Data.Set        as Se
 
@@ -27,7 +28,6 @@ exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO()
 exec m pm ss [] = return ()
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
-                        print $ show m' 
                         exec m' pm' ss' us 
 
 -- |Executes a program unit.
@@ -78,6 +78,8 @@ execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
                                                                                     execBlock' (Block []) m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
                                                                                     execBlock' (Block (st:sts)) m pm ss' newScope = do 
                                                                                                     (m'',ss'', v'') <- execStmt st m pm ss'
+                                                                                                    print $ show ss''
+                                                                                                    print $ show m
                                                                                                     do
                                                                                                         if newScope == head ss'' then
                                                                                                             execBlock' (Block sts) m'' pm ss'' newScope
@@ -307,27 +309,33 @@ execSubprogram m pm ss sub@(ident,content@(_,_,block)) as = do
 -- When actual arguments finalize, it is important to check optional formal parameters declarations
 prepareSubcallElabs :: Memory -> ProgramMemory -> Scopes -> SubContent -> ProcessedActualParams -> [(Name, Cell)]
 prepareSubcallElabs m pm ss ([], mt, b) [] = []
-prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) [] = case mv of
-                                                                Nothing -> prepareSubcallElabs m pm ss (fs, mt, b) []
-                                                                Just v -> (n, (getType v, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) []
+prepareSubcallElabs m pm ss ((f@(n,pt,mv)):fs, mt, b) [] = 
+                    case mv of
+                        Nothing -> prepareSubcallElabs m pm ss (fs, mt, b) []
+                        Just v -> (n, (getType v, v')) : prepareSubcallElabs m pm ss (fs, mt, b) []
+                            where (_,v') = makeCompatibleAssignTypes pm (getParamGType pt) v
 prepareSubcallElabs m pm ss (fs'@((f@(n,pt,mv)):fs), mt, b) ((a,t):as) = case a of
-                                  Right v -> (n, (t, Value v)) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                  Right v -> (n, (getParamGType pt, v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                            where (_,v') = makeCompatibleAssignTypes pm (getParamGType pt) v
                                   Left ((Ident i), Left ci@(n',s')) -> case pt of 
                                                                 (GRef _) -> (n, v') : prepareSubcallElabs m pm ss (fs, mt, b) as
                                                                     where v' = case fetchCellByScope m n' s' of
                                                                                     Left i -> error i
                                                                                     Right ci'@(t,v'') -> case v'' of 
+                                                                                                Register _ -> (t,Ref ci)
                                                                                                 Value _ -> (t,Ref ci)
                                                                                                 Ref ci'' -> (t, Ref ci'')
-                                                                (GType _) -> (n, (t, Value v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
-                                                                    where v' = case getVarScopeValue m n' s' of
+                                                                (GType _) -> (n, (getParamGType pt, v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
+                                                                    where   (_,v') = makeCompatibleAssignTypes pm (getParamGType pt) v''
+                                                                            v'' = case getVarScopeValue m n' s' of
                                                                                     Left i -> error i
                                                                                     Right v'' -> v''
                                   Left ((Ident i), Right (Just v)) ->   
                                                     if existsFormal i fs' then 
-                                                        (i, (t, Value v)) : prepareSubcallElabs m pm ss (removeFormal i fs', mt, b) as
+                                                        (i, (t, v')) : prepareSubcallElabs m pm ss (removeFormal i fs', mt, b) as
                                                     else 
                                                         error $ "Named parameter " ++ i ++ " doesnt match any unbound formal parameter in the call"
+                                                        where (_,v') = makeCompatibleAssignTypes pm (getParamGType pt) v
 
 -- | Remove a formal parameter from a list of formal parameters
 removeFormal :: Name -> [FormalParameter] -> [FormalParameter]
@@ -354,13 +362,17 @@ processSubArgs (a:as) ids m pm ss = case a of
                                                                                                 Right cell -> cell
                                                                     _ -> do 
                                                                             ev <- eval m pm ss expr
-                                                                            return $ (Right ev, getType ev) : remaining
+                                                                            case ev of 
+                                                                                --setter@(Setter _) -> return $ (Right setter, GAnonymousStruct) : remaining
+                                                                                _ -> return $ (Right ev, getType ev) : remaining
                                                             else error "Optional parameter before ordered parameter"
                                        ArgIdentAssign (IdentAssign [i] expr) -> do
                                                                         ev <- eval m pm ss expr
                                                                         remaining <- processSubArgs as (i:ids) m pm ss
                                                                         if elem i ids then error "Multiple assignment to same parameter"
-                                                                            else return $ (Left (i, Right (Just ev)), getType ev) : remaining
+                                                                            else case ev of
+                                                                                --setter@(Setter _) -> () : remaining
+                                                                                _ -> return $ (Left (i, Right (Just ev)), getType ev) : remaining
  
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
@@ -548,6 +560,7 @@ getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( get
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
 getType (Quadruple (v1,v2, v3, v4))   = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
+getType (Setter _ )                   = GAnonymousStruct
 
 -- | Return the type dictionary keys
 getKeyType :: Value -> GType
@@ -598,21 +611,8 @@ evalDict m pm ss ((k,v):xs) m1           =
                                                 d <- evalDict m pm ss xs m1
                                                 return $ M.insert k' v' d
 
--- | Default values for each type
-defaultValue :: ProgramMemory -> GType -> Value
-defaultValue pm GInteger = Integer 0
-defaultValue pm GFloat = Float 0.0
-defaultValue pm GString = String []
-defaultValue pm GBool = Bool False
-defaultValue pm GChar = Char '\0'
-defaultValue pm (GList _) = List []
-defaultValue pm (GPair t1 t2) = Pair (defaultValue pm t1, defaultValue pm t2)
-defaultValue pm (GTriple t1 t2 t3) = Triple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3)
-defaultValue pm (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3, defaultValue pm t4)
-defaultValue pm (GDict k v) = Map (M.empty)
-defaultValue pm (GUserType u) = makeSetterFromDeclaration pm sc
-    where (si, sc) = fetchStructDecl pm u
 
+{-
 -- | Register to Setter
 makeSetterFromDeclaration :: ProgramMemory -> StructContent -> Value
 makeSetterFromDeclaration pm scs'@((n,t,mv):scs) = Setter (makeMap scs')
@@ -624,6 +624,7 @@ makeSetterFromDeclaration pm scs'@((n,t,mv):scs) = Setter (makeMap scs')
                             v' = case mv of
                                     Nothing -> defaultValue pm t
                                     Just v'' -> v'' 
+-}
 
 -- | Binary operation evaluator
 evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO Value
@@ -787,6 +788,14 @@ eval m pm ss (TupleAccess e1 e2)                =
                                                                             _         -> error "Acessing Pair"
                                                          
                                                         _ -> error "Tuple error " 
+eval m pm ss (StructAccess e1 (Ident i))        = 
+                                                do
+                                                    v1 <- eval m pm ss e1
+                                                    case v1 of
+                                                        setter@(Setter msetter) -> 
+                                                                    if M.notMember i msetter then error $ i ++ " not a field of this user type"
+                                                                    else return $ msetter M.! i
+                                                        _ -> error "Trying to access a non-struct type with {}"
 
 eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) = 
                                                 do
