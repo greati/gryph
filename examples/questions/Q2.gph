@@ -1,4 +1,4 @@
-n : int;
+n : float;
 s : string;
 
 l : [int] = [0,0,0,0];

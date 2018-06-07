@@ -19,6 +19,8 @@ sub f (p : Pessoa; s:string) : Pessoa {
 }
 
 p : Pessoa = {n="aisj"};
-po : Point;
 
-print f (p,s="vitor");
+l : [int] = [1,2,3];
+
+s : string  = p{n};
+print s;

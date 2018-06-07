@@ -786,6 +786,14 @@ eval m pm ss (TupleAccess e1 e2)                =
                                                                             _         -> error "Acessing Pair"
                                                          
                                                         _ -> error "Tuple error " 
+eval m pm ss (StructAccess e1 (Ident i))        = 
+                                                do
+                                                    v1 <- eval m pm ss e1
+                                                    case v1 of
+                                                        setter@(Setter msetter) -> 
+                                                                    if M.notMember i msetter then error $ i ++ " not a field of this user type"
+                                                                    else return $ msetter M.! i
+                                                        _ -> error "Trying to access a non-struct type with {}"
 
 eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) = 
                                                 do

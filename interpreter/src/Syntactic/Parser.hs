@@ -912,7 +912,7 @@ postfixExpr = do
                                 <|>
                                 do
                                     (tok GTokLCurly) 
-                                    e <- expression
+                                    e <- anyIdent
                                     (tok GTokRCurly)
                                     return (StructAccess i e)
                                 <|>

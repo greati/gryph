@@ -135,7 +135,7 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     GraphAccess ArithExpr ArithExpr |
                     DictAccess ArithExpr ArithExpr |
                     ListAccess ArithExpr ArithExpr |
-                    StructAccess ArithExpr ArithExpr |
+                    StructAccess ArithExpr Identifier |
                     TupleAccess ArithExpr ArithExpr |
                     CastExpr ArithExpr GType |
                     ArithRelExpr RelOp ArithExpr ArithExpr |
