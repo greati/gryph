@@ -978,13 +978,44 @@ generateGraph m pm ss (S.Edge tp exp1 exp2) weight g new_vertices = do
                                   addEdge g'' tp v1 v2 (Just w)
 
 addEdge :: G.Graph Value (Maybe Value) -> EdgeType -> G.Vertex Value -> G.Vertex Value -> Maybe Value -> IO Value
-addEdge g tp v1 v2 weight = do
-    case tp of
-        LeftEdge -> do return (V.Graph (G.insertEdge g (G.Edge v2 v1 Nothing)))
-        RightEdge -> do return (V.Graph (G.insertEdge g (G.Edge v1 v2 Nothing))) 
-        DoubleEdge -> do 
-            let g' = G.insertEdge g (G.Edge v1 v2 Nothing)
-            return (V.Graph (G.insertEdge g' (G.Edge v2 v1 Nothing)))
+addEdge g@(G.Graph _ es) tp v1@(Vertex id1 _) v2@(Vertex id2 _) weight = do
+    if checkEdgeType' weight (M.toList es)
+    then case tp of
+            LeftEdge -> do return (V.Graph (G.insertEdge g (G.Edge v2 v1 weight)))
+            RightEdge -> do return (V.Graph (G.insertEdge g (G.Edge v1 v2 weight))) 
+            DoubleEdge -> do 
+                let g' = G.insertEdge g (G.Edge v1 v2 weight)
+                return (V.Graph (G.insertEdge g' (G.Edge v2 v1 weight)))
+    else error "Weight type is different"
+
+-- |Check the type of the graph edges and new edge
+checkEdgeType :: G.Edge Value (Maybe Value) -> Maybe [G.Edge Value (Maybe Value)] -> Bool
+checkEdgeType ed@(G.Edge _ _ p1) edges =
+    case p1 of
+        Nothing -> case edges of
+                        Nothing                            -> True
+                        Just []                            -> True
+                        Just ( (G.Edge _ _ Nothing ) : _ ) -> True
+                        _                                  -> False
+        Just p  -> case edges of
+                        Nothing                             -> True
+                        Just []                             -> True
+                        Just ( (G.Edge _ _ Nothing )  : _ ) -> False
+                        Just ( (G.Edge _ _ (Just px)) : _ ) -> (getType p) == (getType px)
+
+checkEdgeType' :: Maybe Value -> [(Int, [G.Edge Value (Maybe Value)])] -> Bool
+checkEdgeType' weight        []                         = True
+checkEdgeType' Nothing       [(_, (G.Edge _ _ Nothing : _ ))]  = True
+checkEdgeType' Nothing       [x]                        = False
+checkEdgeType' _             [(_, (G.Edge _ _ Nothing : _ ))]  = False
+checkEdgeType' (Just weight) [(_, (G.Edge _ _ (Just w) : _ ))] = (getType weight) == (getType w)
+checkEdgeType' weight ( (_, ( G.Edge _ _ weightx : _ )) : xs ) = case weight of
+    Nothing   -> case weightx of
+                    Nothing -> checkEdgeType' Nothing xs
+                    _       -> False
+    (Just w) -> case weightx of
+                    Nothing    -> False
+                    (Just wx) -> (getType w) == (getType wx) && (checkEdgeType' (Just w) xs)
 
 --------------------------------------------------------------
 -- |List Comprehension
