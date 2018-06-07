@@ -20,7 +20,6 @@ data Value =    Integer Integer |
                 Graph (G.Graph Value Value) |
                 Setter (M.Map String Value)
 
-
 instance Eq Value where
     (==) (Integer i) (Integer i2)       = i == i2 
     (==) (Float f) (Float f2)           = f == f2 
