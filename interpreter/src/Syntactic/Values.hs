@@ -1,6 +1,6 @@
 module Syntactic.Values where
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Execution.Graph as G
 import Syntactic.Types
 
