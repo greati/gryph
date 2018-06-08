@@ -695,7 +695,8 @@ graphType = do
                     <|>
                     do  
                         (tok GTokGreater)
-                        return (GGraphVertex t)
+                        return (GGraphVertexEdge t GInteger)
+                        --return (GGraphVertex t)
 
 
 userType :: GenParser GphTokenPos st GType
