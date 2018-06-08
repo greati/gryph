@@ -940,7 +940,7 @@ evalEdgeComp m pm ss list (EdgeComp weight edge forIt) = do
                       let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
                       evalEdgeComp' m' pm ss weight edge id vs' when_exp g False                                        
 
-evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value (Maybe Value)) -> Bool -> IO Value
+evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO Value
 evalEdgeComp' m pm ss weight edge id vs when_exp g new_vertices = case vs of
     [v] -> do (Right m') <- updateListIds m ss id v
               case when_exp of
