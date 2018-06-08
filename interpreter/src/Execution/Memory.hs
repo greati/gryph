@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Execution.Memory where
 
 import qualified Data.Map.Strict as M

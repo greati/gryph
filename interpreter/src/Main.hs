@@ -8,9 +8,12 @@ import Execution.Memory
 import qualified Execution.Graph as G
 import Execution.GraphSemantic
 import Data.Time.Clock
+import Control.DeepSeq
 
 main :: IO ()
-main = undefined
+main = do
+            igryph "../examples/structs.gph"
+            return ()
 
 igryph :: Filename -> IO()
 igryph s = do
