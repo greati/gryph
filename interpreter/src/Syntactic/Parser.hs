@@ -43,10 +43,11 @@ structDecl = do
 
 structInit :: GenParser GphTokenPos st StructInit
 structInit = do
+                (GUserType t) <- userType
                 (tok GTokLCurly)
                 is <- identAssignmentList
                 (tok GTokRCurly)
-                return (StructInit is)
+                return (StructInit (Ident t) is)
 
 {- Stmts.
  -

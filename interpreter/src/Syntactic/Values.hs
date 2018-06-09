@@ -18,7 +18,7 @@ data Value =    Integer Integer |
                 Map (M.Map Value  Value) |
                 EmptyMap |
                 Graph (G.Graph Value (Maybe Value)) |
-                Setter (M.Map String Value)
+                Setter String (M.Map String (GType, Value))
 
 instance Eq Value where
     (==) (Integer i) (Integer i2)       = i == i2 
@@ -36,7 +36,7 @@ instance Eq Value where
     (==) (Map m1) (Map m2)              = m1 == m2
     (==) (EmptyMap) (EmptyMap)          = True 
     (==) (Graph g1) (Graph g2)          = g1 == g2
-    (==) (Setter s1) (Setter s2)        = s1 == s2
+    (==) (Setter t1 s1) (Setter t2 s2)  = t1 == t2 && s1 == s2
 
     (/=) (Integer i) (Integer i2)       = i /= i2 
     (/=) (Float f) (Float f2)           = f /= f2 
@@ -53,7 +53,7 @@ instance Eq Value where
     (/=) (Map m1) (Map m2)              = m1 /= m2
     (/=) (EmptyMap) (EmptyMap)          = False 
     (/=) (Graph g1) (Graph g2)          = g1 /= g2
-    (/=) (Setter s1) (Setter s2)        = s1 /= s2
+    (/=) (Setter t1 s1) (Setter t2 s2)  = t1 /= t2 && s1 /= s2
 
 instance Ord Value where
     (<=) (Integer i) (Integer i2)       = i <= i2 
@@ -71,7 +71,7 @@ instance Ord Value where
     (<=) (Map m1) (Map m2)              = m1 <= m2
     (<=) (EmptyMap) (EmptyMap)          = EmptyMap <= EmptyMap
     (<=) (Graph g1) (Graph g2)          = g1 <= g2
-    (<=) (Setter s1) (Setter s2)        = s1 <= s2
+    (<=) (Setter t1 s1) (Setter t2 s2)  = t1 <= t2 && s1 <= s2
 
     (<) (Integer i) (Integer i2)       = i < i2 
     (<) (Float f) (Float f2)           = f < f2 
@@ -88,7 +88,7 @@ instance Ord Value where
     (<) (Map m1) (Map m2)              = m1 < m2
     (<) (EmptyMap) (EmptyMap)          = EmptyMap < EmptyMap
     (<) (Graph g1) (Graph g2)          = g1 < g2
-    (<) (Setter s1) (Setter s2)        = s1 < s2
+    (<) (Setter t1 s1) (Setter t2 s2)  = t1 < t2 && s1 < s2
 
     (>) (Integer i) (Integer i2)       = i > i2 
     (>) (Float f) (Float f2)           = f > f2 
@@ -105,7 +105,7 @@ instance Ord Value where
     (>) (Map m1) (Map m2)              = m1 > m2
     (>) (EmptyMap) (EmptyMap)          = EmptyMap > EmptyMap
     (>) (Graph g1) (Graph g2)          = g1 > g2
-    (>) (Setter s1) (Setter s2)        = s1 > s2
+    (>) (Setter t1 s1) (Setter t2 s2)  = t1 > t2 && s1 > s2
 
 instance Show Value where
    show (Integer x)   = show x
@@ -119,7 +119,7 @@ instance Show Value where
    show (Quadruple x) = show x
    show (Map x)       = show x
    show (Graph x)     = show x
-   show (Setter x)    = show x
+   show (Setter t x)  = t ++ " " ++ show x
    show EmptyList     = "[]"
 
 

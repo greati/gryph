@@ -16,7 +16,7 @@ data ProgramUnit =  Stmt Stmt |
 
 data StructDecl = Struct GType [VarDeclaration] deriving (Show, Eq)
 
-data StructInit = StructInit [IdentAssign] deriving (Show, Eq)
+data StructInit = StructInit Identifier [IdentAssign] deriving (Show, Eq)
 
 type GTypeList = [GType]
 

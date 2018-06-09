@@ -78,6 +78,7 @@ execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
                                                                         Left i -> error i
                                                                         Right m'' -> m'' in
                                                                             do 
+                                                                                print m'
                                                                                 execBlock' b m' pm ss' newScope
                                                                             where
                                                                                     execBlock' (Block []) m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
@@ -207,21 +208,21 @@ execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                                         Just v' -> v'
 
 -- | Produce a register value to store in memory from a struct declaration
-makeRegister :: ProgramMemory -> StructIdentifier -> MemoryValue
-makeRegister pm si = Register $ M.fromList (makeSetList pm sc)
+makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
+makeDefaultSetter pm si = Setter si (M.fromList (makeSetList pm sc))
     where
         makeSetList pm [] = []
         makeSetList pm ((n, t, mv):ds) = 
                                         case mv of
                                             Nothing -> (n, (t, def)) : makeSetList pm ds
                                                 where def = case t of
-                                                            GUserType t' -> makeRegister pm t'
-                                                            _ -> Value $ defaultValue pm t
-                                            Just v -> (n, (t, Value v)) : makeSetList pm ds
+                                                            GUserType t' -> makeDefaultSetter pm t'
+                                                            _ -> defaultValue pm t
+                                            Just v -> (n, (t, memval)) : makeSetList pm ds
                                                 where memval = case v of
-                                                                Setter _ -> makeRegisterFromSetter pm (makeRegister pm t') v t'
+                                                                Setter i _ -> applySetter pm (makeDefaultSetter pm t') v t'
                                                                     where (GUserType t') = t
-                                                                _ -> Value v
+                                                                _ -> v
         (_,sc) = fetchStructDecl pm si
 
 -- | Interpret struct declaration
@@ -325,7 +326,7 @@ prepareSubcallElabs m pm ss (fs'@((f@(n,pt,mv)):fs), mt, b) ((a,t):as) = case a 
                                                                     where v' = case fetchCellByScope m n' s' of
                                                                                     Left i -> error i
                                                                                     Right ci'@(t,v'') -> case v'' of 
-                                                                                                Register _ -> (t,Ref ci)
+                                                                                                --Register _ -> (t,Ref ci)
                                                                                                 Value _ -> (t,Ref ci)
                                                                                                 Ref ci'' -> (t, Ref ci'')
                                                                 (GType _) -> (n, (getParamGType pt, v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
@@ -423,9 +424,10 @@ execAttrStmt' m pm ss as lhs rhs =
                                                where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) v
                                         _ -> error "You must access a dictionary"
                 StructField field -> case memval of
-                                        (Setter m') -> if M.notMember field m' then error $ field ++ " not in the struct"
-                                                        else Setter $ M.insert field v'' m'
-                                                where v'' = backwardAccessUpdate m pm ss as ident (m' M.! field) v
+                                        (Setter si m') -> if M.notMember field m' then error $ field ++ " not in the struct"
+                                                        else Setter si (M.insert field (t,v'') m')
+                                                where v'' = backwardAccessUpdate m pm ss as ident v''' v
+                                                      (t,v''') = m' M.! field
                                         _ -> error "You must access a struct field"
 
 -- | Auxiliar for execting attribute statements
@@ -505,12 +507,13 @@ checkCompatType t t' = if t == t' then True
 -- | Given type t and value v, return (t,v) if they are compatible.
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
-makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter m) = (t, makeRegisterFromSetter pm (makeRegister pm u) v u)
---makeCompatibleAssignTypes pm t@(GList (GUserType u)) (List (m:ms)) = foldr (\x xs ->  makeRegisterFromSetter pm (makeRegister pm u) (Setter x)  u 
+makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter is m) = (t, Value $ applySetter pm (makeDefaultSetter pm u) v u)
+--makeCompatibleAssignTypes pm t@(GList (GUserType u)) (List (m:ms)) = (t, List l')
 makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType pm t v)
 
 coerceAssignByType :: ProgramMemory -> GType -> Value -> Value
 coerceAssignByType pm GFloat i'@(Integer i) = coerce i'
+coerceAssignByType pm (GUserType ut) s'@(Setter "" m) = applySetter pm (makeDefaultSetter pm ut) s' ut
 coerceAssignByType pm t v = if checkCompatType t t' then v
                    else error ("Incompatible types " ++ show t ++ " and " ++ show t')
                     where
@@ -518,19 +521,20 @@ coerceAssignByType pm t v = if checkCompatType t t' then v
 
 -- | Given a setter, a user type name and a register (memory value), produce a new register
 -- The value is the setter.
-makeRegisterFromSetter :: ProgramMemory -> MemoryValue -> Value -> StructIdentifier -> MemoryValue
-makeRegisterFromSetter pm (Register r) (Setter msetter) si = Register $ updateRegister (M.toList msetter) r
+applySetter :: ProgramMemory -> Value -> Value -> StructIdentifier -> Value
+applySetter pm (Setter ir r) (Setter is msetter) si = Setter ir (updateRegister (M.toList msetter) r)
         where
-                updateRegister :: [(String, Value)] -> M.Map Name Cell -> M.Map Name Cell
+                updateRegister :: [(String, (GType, Value))] -> M.Map Name (GType, Value) -> M.Map Name (GType, Value)
                 updateRegister [] m = m
-                updateRegister ((s,v):ss) m 
+                updateRegister ((s,(t,v)):ss) m 
                             | M.member s m = case v of
-                                                (Setter setter') -> updateRegister ss m''
-                                                    where m'' = M.update (\k -> Just (t',makeRegisterFromSetter pm r' (Setter setter') si)) s m
+                                                (Setter is' setter') -> updateRegister ss m''
+                                                    where m'' = M.update (\k -> Just (t',applySetter pm r' (Setter is' setter') is')) s m
                                                           (t',r') = m M.! s
                                                 _ -> updateRegister ss m''  
                                                     where (t',_) = m M.! s
-                                                          m'' = M.update (\k -> Just (makeCompatibleAssignTypes pm t' v)) s m  
+                                                          m'' = M.update (\k -> Just (t'',v')) s m  
+                                                          (t'', Value v') = makeCompatibleAssignTypes pm t' v
                             | otherwise = error $ "Type " ++ si ++ " doesn't have field " ++ s     
 
 -- | Set the i-element of a list.
@@ -622,7 +626,8 @@ getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( get
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
 getType (Quadruple (v1,v2, v3, v4))   = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
-getType (Setter _ )                   = GAnonymousStruct
+getType (Setter "" _ )                = GAnonymousStruct
+getType (Setter s _ )                 = GUserType s
 
 -- | Return the type dictionary keys
 getKeyType :: Value -> GType
@@ -854,9 +859,10 @@ eval m pm ss (StructAccess e1 (Ident i))        =
                                                 do
                                                     v1 <- eval m pm ss e1
                                                     case v1 of
-                                                        setter@(Setter msetter) -> 
+                                                        setter@(Setter is msetter) -> 
                                                                     if M.notMember i msetter then error $ i ++ " not a field of this user type"
-                                                                    else return $ msetter M.! i
+                                                                    else return $ v'
+                                                                    where (t,v') = msetter M.! i
                                                         _ -> error "Trying to access a non-struct type with {}"
 
 eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) = 
@@ -896,13 +902,17 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
 
 eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}
 
-eval m pm ss (StructInitExpr (StructInit ias)) = 
-    do case ias of
-            [] -> return $ Setter M.empty
-            ((IdentAssign [(Ident i)] e):ias') -> do
-                                            Setter remain <- eval m pm ss (StructInitExpr (StructInit ias'))
-                                            v <- eval m pm ss e
-                                            return $ Setter (M.insert i v remain)
+eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do 
+    setter <- evalSetter m pm ss e
+    return $ applySetter pm (makeDefaultSetter pm t) setter t
+    where
+        evalSetter m pm ss (StructInitExpr (StructInit (Ident t) ias)) = 
+            do case ias of
+                    [] -> return $ Setter t M.empty
+                    ((IdentAssign [(Ident i)] e):ias') -> do
+                                                    Setter is remain <- evalSetter m pm ss (StructInitExpr (StructInit (Ident t) ias'))
+                                                    v <- eval m pm ss e
+                                                    return $ Setter t (M.insert i (getType v, v) remain)
 
 eval m pm ss (ExprLiteral (GraphLit exp edges )) = evalGraphComp m pm ss exp edges
 

@@ -125,7 +125,7 @@ data Scope = GlobalScope | SubScope Integer | IterationScope Integer | BlockScop
 type Scopes = [Scope]
 type Values = [MemoryValue]
 
-data MemoryValue = Value Value | Ref CellIdentifier | Register (M.Map Name Cell) deriving (Show, Eq)
+data MemoryValue = Value Value | Ref CellIdentifier deriving (Show, Eq)
 
 
 -- Memory structure
@@ -183,7 +183,7 @@ fetchVarValueType m n ss = case fetchVar m n ss of
                             Left i -> Left i
                             Right (_,(t,v)) -> case v of 
                                                     Value v' -> Right (t,v')
-                                                    r@(Register _) -> Right $ (t, makeSetterFromRegister r)
+                                                    --r@(Register _) -> Right $ (t, makeSetterFromRegister r)
                                                     Ref (n',s') -> Right $ (t,v'')
                                                         where v'' = case getVarScopeValue m n' s' of
                                                                         Left i -> error i
@@ -194,7 +194,7 @@ fetchVarValue m n ss = case fetchVar m n ss of
                             Left i -> Left i
                             Right (_,(t,v)) -> case v of 
                                                     Value v' -> Right v'
-                                                    r@(Register _) -> Right $ makeSetterFromRegister r
+                                                    --r@(Register _) -> Right $ makeSetterFromRegister r
                                                     Ref (n',s') -> getVarScopeValue m n' s'
                                                     
 fetchCellByScope :: Memory -> Name -> Scope -> Either String Cell
@@ -213,7 +213,7 @@ getVarScopeValue m n s
         where v = case (m M.!(n,s)) of
                     (_,Ref (n',s')) -> getVarScopeValue m n' s'
                     (_,Value v) -> Right v
-                    (_,r@(Register v)) -> Right $ makeSetterFromRegister r
+                    --(_,r@(Register v)) -> Right $ makeSetterFromRegister r
 
 -- | Default values for each type
 defaultValue :: ProgramMemory -> GType -> Value
@@ -227,23 +227,23 @@ defaultValue pm (GPair t1 t2) = Pair (defaultValue pm t1, defaultValue pm t2)
 defaultValue pm (GTriple t1 t2 t3) = Triple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3)
 defaultValue pm (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue pm t1, defaultValue pm t2, defaultValue pm t3, defaultValue pm t4)
 defaultValue pm (GDict k v) = Map (M.empty)
-defaultValue pm (GUserType u) = makeSetterFromDeclaration pm sc
+defaultValue pm (GUserType u) = makeSetterFromDeclaration pm (u,sc)
     where (si, sc) = fetchStructDecl pm u
 
 -- | Register to setter
-makeSetterFromRegister :: MemoryValue -> Value
-makeSetterFromRegister (Register mr) = Setter $ M.fromList (map (\(n,(t,Value v))->(n,v)) (M.toList mr))
+--makeSetterFromRegister :: MemoryValue -> Value
+--makeSetterFromRegister (Register mr) = Setter $ M.fromList (map (\(n,(t,Value v))->(n,v)) (M.toList mr))
 
 --Register (M.Map Name Cell)
 --M.Map String Value
 
 -- | Declaration to Setter
-makeSetterFromDeclaration :: ProgramMemory -> StructContent -> Value
-makeSetterFromDeclaration pm scs'@((n,t,mv):scs) = Setter (makeMap scs')
+makeSetterFromDeclaration :: ProgramMemory -> (StructIdentifier, StructContent) -> Value
+makeSetterFromDeclaration pm (si,scs'@((n,t,mv):scs)) = Setter si (makeMap scs')
         where 
-                makeMap :: StructContent -> M.Map String Value
+                makeMap :: StructContent -> M.Map String (GType,Value)
                 makeMap [] = M.empty
-                makeMap scs'@((n,t,mv):scs) = M.insert n v' m'
+                makeMap scs'@((n,t,mv):scs) = M.insert n (t,v') m'
                     where   m' = makeMap scs
                             v' = case mv of
                                     Nothing -> defaultValue pm t
