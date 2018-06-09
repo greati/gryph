@@ -108,18 +108,18 @@ instance Ord Value where
     (>) (Setter s1) (Setter s2)        = s1 > s2
 
 instance Show Value where
-    show (Integer x)   = show x
-    show (Float x)     = show x
-    show (Char x)      = show x
-    show (String x)    = show x
-    show (Bool x)      = show x
-    show (List x)      = show x
-    show (Pair x)      = show x
-    show (Triple x)    = show x
-    show (Quadruple x) = show x
-    show (Map x)       = show x
-    show (Graph x)     = show x
-    show (Setter x)    = show x
-    show EmptyList     = "[]"
+   show (Integer x)   = show x
+   show (Float x)     = show x
+   show (Char x)      = show x
+   show (String x)    = show x
+   show (Bool x)      = show x
+   show (List x)      = show x
+   show (Pair x)      = show x
+   show (Triple x)    = show x
+   show (Quadruple x) = show x
+   show (Map x)       = show x
+   show (Graph x)     = show x
+   show (Setter x)    = show x
+   show EmptyList     = "[]"
 
 

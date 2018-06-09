@@ -1,4 +1,6 @@
+{-# LANGUAGE BangPatterns #-}
 module Execution.Semantic where
+
 
 import Syntactic.Values   as V
 import Syntactic.Syntax   as S
@@ -8,6 +10,7 @@ import Execution.Graph    as G
 import Syntactic.Types
 import qualified Data.Map.Strict as M
 import qualified Data.Set        as Se
+import Control.DeepSeq
 
 type Filename = String
 
@@ -25,7 +28,9 @@ scopes = [GlobalScope]
 
 -- |Execute a program represented as a list of program units.
 exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO() 
-exec m pm ss [] = return ()
+exec m pm ss [] = do
+                    if m == m then return () else return ()
+                    
 exec m pm ss (u:us) = do
                         (m', pm', ss') <- execUnit u m pm ss
                         exec m' pm' ss' us 
@@ -34,15 +39,15 @@ exec m pm ss (u:us) = do
 execUnit :: ProgramUnit -> Memory -> ProgramMemory -> Scopes -> IO (Memory, ProgramMemory, Scopes)
 execUnit (SubprogramDecl sub) m pm ss = do 
                                             pm' <- execSubDecl sub m pm ss
-                                            return (m, pm', ss)
+                                            return $ (m, pm', ss)
 execUnit (StructDecl struct) m pm ss = 
                                 do
                                     pm' <- execStructDecl m pm ss struct
-                                    return (m, pm', ss)
+                                    return $ (m, pm', ss)
 
 execUnit (Stmt stmt) m pm ss = do 
                                     (m', ss', v) <- execStmt stmt m pm ss
-                                    return (m', pm, ss')
+                                    return $ (m', pm, ss')
 
 -- |Executes a subprogram declaration.
 execSubDecl :: Subprogram -> Memory -> ProgramMemory -> Scopes -> IO (ProgramMemory)
@@ -50,7 +55,7 @@ execSubDecl s m pm ss = do
                             (si,sc) <- interpretSubDeclaration s m pm ss
                             case declareSubprogram si sc pm of
                                 Left i -> error i
-                                Right pm' -> return pm'
+                                Right pm' -> return $ pm'
 
 -- |Executes a struct declaration.
 execStructDecl :: Memory -> ProgramMemory -> Scopes -> StructDecl -> IO (ProgramMemory)
@@ -58,7 +63,7 @@ execStructDecl m pm ss s = do
                                 (si, sc) <- interpretStructDecl m pm ss s
                                 case declareStruct pm si sc of
                                     Left i -> error i
-                                    Right pm' -> return pm'
+                                    Right pm' -> return $ pm'
 
 type Scoper = (Integer -> Scope)
 
@@ -78,8 +83,6 @@ execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
                                                                                     execBlock' (Block []) m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
                                                                                     execBlock' (Block (st:sts)) m pm ss' newScope = do 
                                                                                                     (m'',ss'', v'') <- execStmt st m pm ss'
-                                                                                                    print $ show ss''
-                                                                                                    print $ show m
                                                                                                     do
                                                                                                         if newScope == head ss'' then
                                                                                                             execBlock' (Block sts) m'' pm ss'' newScope
@@ -90,14 +93,14 @@ execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
 execStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO (Memory, Scopes, Maybe Value)
 execStmt d@(DeclStmt _) m pm ss = do
                             m' <- varDeclStmt d m pm ss
-                            return (m', ss, Nothing)
+                            return $ (m', ss, Nothing)
 execStmt a@(AttrStmt _ _) m pm ss = do
                             m' <- execAttrStmt a m pm ss
-                            return (m', ss, Nothing)
+                            return $ (m', ss, Nothing)
 execStmt (PrintStmt e) m pm ss = do
                                 v <- eval m pm ss e
                                 putStrLn (show v)
-                                return (m, ss, Nothing)
+                                return $ (m, ss, Nothing)
 execStmt (ReadStmt i) m pm ss = do
                                 value <- getLine
                                 case updateVar m ((\(Ident i) -> i) i) ss (makeCompatibleAssignTypes pm GString (String value)) of
@@ -374,9 +377,64 @@ processSubArgs (a:as) ids m pm ss = case a of
                                                                                 --setter@(Setter _) -> () : remaining
                                                                                 _ -> return $ (Left (i, Right (Just ev)), getType ev) : remaining
  
+data AccessType = ListIndex Value | DictIndex Value | StructField Name deriving (Show, Eq)
+
+execAttrStmt' :: Memory -> ProgramMemory -> Scopes -> [AccessType] -> ArithExpr -> ArithExpr -> IO Memory
+execAttrStmt' m pm ss as lhs rhs = 
+    do 
+        case lhs of
+            (ArithTerm (IdTerm (Ident i))) -> do
+                                                let var = fetchVarValueType m i ss in
+                                                    case var of
+                                                        Left e -> error e
+                                                        Right (t,val) -> do 
+                                                                v <- eval m pm ss rhs 
+                                                                v' <- return $ backwardAccessUpdate m pm ss as i val v
+                                                                case updateVar m i ss (t, Value v') of --(makeCompatibleAssignTypes pm t v') of
+                                                                    Right m' -> do return m'   
+                                                                    Left i -> error i
+            (ListAccess remaining index) -> do
+                                                index' <- eval m pm ss index
+                                                execAttrStmt' m pm ss ((ListIndex index'):as) remaining rhs
+            (DictAccess remaining index) -> do
+                                                index' <- eval m pm ss index
+                                                execAttrStmt' m pm ss ((DictIndex index'):as) remaining rhs
+            (StructAccess remaining (Ident field)) -> 
+                                            do
+                                                execAttrStmt' m pm ss ((StructField field):as) remaining rhs
+            _ -> error $ "Not a valid lhs"
+
+    where
+        backwardAccessUpdate m pm ss [] ident memval v =  if checkCompatType (getType memval) (getType v) then v else
+                                                          error $ "Incompatible types " ++ show (getType memval) ++ " and " ++ show (getType v)
+                                                          --error $ "Incompatible types " ++ show (memval) ++ " and " ++ show (v)
+        backwardAccessUpdate m pm ss (a:as) ident memval v = 
+            case a of
+                ListIndex index -> case index of
+                                        (Integer int) -> 
+                                                case memval of
+                                                    (List xs) -> List (setElemList xs int v'')
+                                                        where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) v
+                                                    _ -> error "You must access a list." 
+                                        _ -> error "List index must be an integer." 
+                DictIndex index -> case memval of
+                                        (Map m') -> if M.notMember index m' then error $ "Key " ++ show index ++ " not in dictionary" 
+                                                    else Map (M.insert index v'' m')
+                                               where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) v
+                                        _ -> error "You must access a dictionary"
+                StructField field -> case memval of
+                                        (Setter m') -> if M.notMember field m' then error $ field ++ " not in the struct"
+                                                        else Setter $ M.insert field v'' m'
+                                                where v'' = backwardAccessUpdate m pm ss as ident (m' M.! field) v
+                                        _ -> error "You must access a struct field"
+
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
-execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
+execAttrStmt (AttrStmt [] []) m pm ss = return m
+execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  m' <- execAttrStmt' m pm ss [] t v
+                                                    execAttrStmt (AttrStmt ts vs) m' pm ss
+{--                                                 
+case t of
             (ArithTerm (IdTerm (Ident i))) ->   do
                                                     k <- eval m pm ss v
                                                     fetched <- return $ fetchVar m i ss
@@ -422,7 +480,8 @@ execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
                                                                                         case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
                                                                                                     Right m' -> return m'
                                                                                                     Left i -> error i
-
+            (StructAccess id@(ArithTerm (IdTerm (Ident i))) index) -> undefined
+--}
                                                                                                         
 -- |From value, guaarantee boolean value
 makeBooleanFromValue :: Value -> Either String Bool
@@ -436,20 +495,23 @@ checkCompatType t t' = if t == t' then True
                         (GFloat, GInteger)  -> True
                         (GList _, GEmpty)   -> True
                         (GEmpty ,GList _)   -> True
-                        (GList l, GList l') -> checkCompatType (GList l) l'
-                        (GList l, GList l') -> checkCompatType (l) $ GList l'
+                        (GList l, GList l') -> checkCompatType l l'
+                        --(GList l, GList l') -> checkCompatType (GList l) l'
+                        --(GList l, GList l') -> checkCompatType (l) $ GList l'
+                        (GUserType _, GAnonymousStruct) -> True
+                        --(GAnonymousStruct, GUserType _) -> True
                         _                   -> False
-
-
+                        
 -- | Given type t and value v, return (t,v) if they are compatible.
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
 makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter m) = (t, makeRegisterFromSetter pm (makeRegister pm u) v u)
-makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType t v)
+--makeCompatibleAssignTypes pm t@(GList (GUserType u)) (List (m:ms)) = foldr (\x xs ->  makeRegisterFromSetter pm (makeRegister pm u) (Setter x)  u 
+makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType pm t v)
 
-coerceAssignByType :: GType -> Value -> Value
-coerceAssignByType GFloat i'@(Integer i) = coerce i'
-coerceAssignByType t v = if checkCompatType t t' then v
+coerceAssignByType :: ProgramMemory -> GType -> Value -> Value
+coerceAssignByType pm GFloat i'@(Integer i) = coerce i'
+coerceAssignByType pm t v = if checkCompatType t t' then v
                    else error ("Incompatible types " ++ show t ++ " and " ++ show t')
                     where
                         t' = getType v
@@ -582,8 +644,8 @@ evalList m pm ss (x:y:xs) =  do
                                   y' <- eval m pm ss y
                                   if not( checkCompatType (getType y') ( getType z) || checkCompatType (getType z) (getType y') ) then error "Type mismatch in List "
                                     else do
-                                        l <- evalList m pm ss  (y:xs)
-                                        return (z:l) 
+                                       l <- evalList m pm ss  (y:xs)
+                                       return (z:l) 
 
 -- | Evaluates a tuple
 evalTuple :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
