@@ -120,7 +120,6 @@ execStmt (ReadStmt i) m pm ss = do
                                     Left e -> error e
                                     Right m' -> return (m', ss, Nothing)
                                 
-
 execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = 
     do 
             v <- eval m pm ss' e
@@ -427,7 +426,7 @@ execAttrStmt' m pm ss as lhs rhs =
             _ -> error $ "Not a valid lhs"
 
     where
-        backwardAccessUpdate m pm ss [] ident memval memtype rightType v =  if checkCompatType (memtype) (rightType) then v else
+        backwardAccessUpdate m pm ss [] ident memval memtype rightType v =  if checkCompatType (getType memval) (rightType) then v else
                                                           error $ "Incompatible types " ++ show memtype ++ " and " ++ show rightType
         backwardAccessUpdate m pm ss (a:as) ident memval memtype rightType v = 
             case a of
