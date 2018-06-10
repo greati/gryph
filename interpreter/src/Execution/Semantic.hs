@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Execution.Semantic where
 
 import Syntactic.Values   as V
@@ -8,6 +9,7 @@ import Execution.Graph    as G
 import Syntactic.Types
 import qualified Data.Map.Strict as M
 import qualified Data.Set        as Se
+import Control.DeepSeq
 
 type Filename = String
 
@@ -38,15 +40,15 @@ exec m pm ss (u:us) = if m == m
 execUnit :: ProgramUnit -> Memory -> ProgramMemory -> Scopes -> IO (Memory, ProgramMemory, Scopes)
 execUnit (SubprogramDecl sub) m pm ss = do 
                                             pm' <- execSubDecl sub m pm ss
-                                            return (m, pm', ss)
+                                            return $ (m, pm', ss)
 execUnit (StructDecl struct) m pm ss = 
                                 do
                                     pm' <- execStructDecl m pm ss struct
-                                    return (m, pm', ss)
+                                    return $ (m, pm', ss)
 
 execUnit (Stmt stmt) m pm ss = do 
                                     (m', ss', v) <- execStmt stmt m pm ss
-                                    return (m', pm, ss')
+                                    return $ (m', pm, ss')
 
 -- |Executes a subprogram declaration.
 execSubDecl :: Subprogram -> Memory -> ProgramMemory -> Scopes -> IO (ProgramMemory)
@@ -54,7 +56,7 @@ execSubDecl s m pm ss = do
                             (si,sc) <- interpretSubDeclaration s m pm ss
                             case declareSubprogram si sc pm of
                                 Left i -> error i
-                                Right pm' -> return pm'
+                                Right pm' -> return $ pm'
 
 -- |Executes a struct declaration.
 execStructDecl :: Memory -> ProgramMemory -> Scopes -> StructDecl -> IO (ProgramMemory)
@@ -62,140 +64,141 @@ execStructDecl m pm ss s = do
                                 (si, sc) <- interpretStructDecl m pm ss s
                                 case declareStruct pm si sc of
                                     Left i -> error i
-                                    Right pm' -> return pm'
+                                    Right pm' -> return $ pm'
 
 type Scoper = (Integer -> Scope)
 
--- |Executes a block of statement, creating a new scope. When finish, clear the scope.
+-- | Executes a block of statement, creating a new scope and declaring variables. When finish, clear the scope.
 -- It also allows taking a list of declarations in the form [(Name,Cell)]
-execBlock :: Block -> Memory -> ProgramMemory -> Scoper -> Scopes -> [(Name,Cell)] -> IO (Memory, Scopes, Maybe Value)
-execBlock (Block []) m pm _ ss _ = return (m, ss, Nothing)
-execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
-                                                        let newScope = scoper (time) in
-                                                            let ss' = (newScope:ss) in
-                                                                let m' = case elabVars m decls newScope of
-                                                                        Left i -> error i
-                                                                        Right m'' -> m'' in
-                                                                            do 
-                                                                                execBlock' b m' pm ss' newScope
-                                                                            where
-                                                                                    execBlock' (Block []) m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
-                                                                                    execBlock' (Block (st:sts)) m pm ss' newScope = do 
-                                                                                                    (m'',ss'', v'') <- execStmt st m pm ss'
-                                                                                                    --print $ show ss''
-                                                                                                    --print $ show m
-                                                                                                    do
-                                                                                                        if newScope == head ss'' then
-                                                                                                            execBlock' (Block sts) m'' pm ss'' newScope
-                                                                                                        else 
-                                                                                                            return $ (m'',ss'',v'')
+execBlockSimple :: Block -> Memory -> ProgramMemory -> Scoper -> Scopes -> [(Name,Cell)] -> IO (Memory, Scopes, Maybe Value)
+--execBlockSimple ([]) m pm _ (s:ss) _ = return (m, ss, Nothing)
+execBlockSimple b@(st:sts) m pm scoper ss decls =  
+    do  time <- getCurSeconds
+        let     newScope = scoper (time)
+                ss' = (newScope:ss) 
+                m' = case elabVars m decls newScope of
+                    Left i -> error i
+                    Right m'' -> m'' in
+                        do 
+                            execBlock' b m' pm ss' newScope Nothing
+
+execBlock' [] m pm (s:ss) newScope v = return (clearScope s m, ss, v)
+execBlock' (st:sts) m pm ss' newScope v = do 
+                (m'',ss'', v'') <- execStmt st m pm ss'
+                do
+                    if newScope == head ss'' then
+                        execBlock' sts m'' pm ss'' newScope v''
+                    else 
+                        return $ (clearScope newScope m'',ss'',v'')
+
+-- | Executes a block for a given scope
+execBlock :: Block -> Memory -> ProgramMemory -> Scopes -> Scope -> IO (Memory, Scopes, Maybe Value)
+execBlock [] m pm ss newScope = return (m, ss, Nothing)
+execBlock (st:sts) m pm ss' newScope = do 
+                (m'',ss'', v'') <- execStmt st m pm ss'
+                do
+                    if newScope == head ss'' then
+                        execBlock sts m'' pm ss'' newScope
+                    else 
+                        return $ (m'',ss'',v'')
 
 -- |Executes any statement.
 execStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO (Memory, Scopes, Maybe Value)
 execStmt d@(DeclStmt _) m pm ss = do
                             m' <- varDeclStmt d m pm ss
-                            return (m', ss, Nothing)
+                            return $ (m', ss, Nothing)
 execStmt a@(AttrStmt _ _) m pm ss = do
                             m' <- execAttrStmt a m pm ss
-                            return (m', ss, Nothing)
+                            return $ (m', ss, Nothing)
 execStmt (PrintStmt e) m pm ss = do
                                 v <- eval m pm ss e
                                 putStrLn (show v)
-                                return (m, ss, Nothing)
+                                return $ (m, ss, Nothing)
 execStmt (ReadStmt i) m pm ss = do
                                 value <- getLine
                                 case updateVar m ((\(Ident i) -> i) i) ss (makeCompatibleAssignTypes pm GString (String value)) of
                                     Left e -> error e
                                     Right m' -> return (m', ss, Nothing)
                                 
+execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = 
+    do 
+            v <- eval m pm ss' e
+            let test = case makeBooleanFromValue v of
+                            Left i -> error i
+                            Right i -> i in 
+                do 
+                    if test then
+                            do execBlockSimple ifbody m pm BlockScope ss' []
+                    else
+                        case elsebody of
+                            NoElse -> do return (m,ss', Nothing)
+                            ElseBody block -> do execBlockSimple block m pm BlockScope ss' []
 
-execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = do 
-                            v <- eval m pm ss' e
-                            let test = case makeBooleanFromValue v of
-                                            Left i -> error i
-                                            Right i -> i in 
-                                do 
-                                    if test then
-                                        case ifbody of
-                                            (CondStmt st) -> do execBlock (Block [st]) m pm BlockScope ss' []
-                                            (CondBlock block) -> do execBlock block m pm BlockScope ss' []
-                                    else
-                                        case elsebody of
-                                            NoElse -> do return (m,ss', Nothing)
-                                            ElseBody (CondStmt st) -> do execBlock (Block [st]) m pm BlockScope ss' []
-                                            ElseBody (CondBlock block) -> do execBlock block m pm BlockScope ss' []
+execStmt (ForStmt ids vs body) m pm ss = 
+    do 
+            vss <- (getLists m pm ss [vs])
+            vss' <- over vss
+            time <- getCurSeconds
+            let newScope = IterationScope time
+                ss' = (newScope:ss) in
+                    forStmt ids vss' body m pm ss' newScope
+            where
+                getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
+                                               case xss of
+                                                    [(List list)] -> do return [(List list)]
+                                                    [(Map map)] -> do return [(List ( makeMap (M.toList map) ))]
+                getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
+                                               xss'' <- (getLists m pm ss xss)
+                                               return (xss' ++ xss'')
 
-execStmt (ForStmt ids vs body) m pm ss' = do
-                                        let new_vs = replicateList ((length ids) - (length vs)) vs 
-                                        vss <- (getLists m pm ss' [new_vs])
-                                        vss' <- over vss
-                                        forStmt ids vss' body m pm ss'
-                                        where
-                                            getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
-                                                                           case xss of
-                                                                                xss'@( (List list) : _ ) -> do return xss'
-                                                                                [(Map map)]              -> do return [(List ( makeMap (M.toList map) ))]
-                                                                                _                        -> error "Wrong pattern!"
-                                            getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
-                                                                           xss'' <- (getLists m pm ss xss)
-                                                                           return (xss' ++ xss'')
-                                            replicateList 0 xs = xs
-                                            replicateList n xs | n < 0     = error "There aren't enough identifiers." 
-                                                               | otherwise = replicateList (n-1) xs ++ [last xs]                                
+                makeMap :: [(Value, Value)] -> [Value]
+                makeMap []     = []
+                makeMap [x]    = [Pair x]
+                makeMap (x:xs) = (Pair x) : makeMap xs
 
-                                            makeMap :: [(Value, Value)] -> [Value]
-                                            makeMap []     = []
-                                            makeMap [x]    = [Pair x]
-                                            makeMap (x:xs) = (Pair x) : makeMap xs
+                forStmt ids vs body m pm ss' newScope = 
+                    do
+                        let nameCell = getNameCell ids (head vs) 
+                        let m' = (case elabVars m nameCell newScope of
+                                Left i -> error i
+                                Right m'' -> m'') in
+                                    if length vs == 1
+                                    then do
+                                            (m'',ss'',v) <- execBlock body m' pm ss' newScope
+                                            return (clearScope newScope m'', tail ss'', v)
+                                    else do
+                                        if length vs > 0
+                                        then do
+                                            (m'',ss'',v) <- execBlock body m' pm ss' newScope
+                                            if (newScope == head ss'') then
+                                                forStmt ids (tail vs) body (clearScope newScope m'') pm ss'' newScope
+                                            else return $ (clearScope newScope m'', ss'', v)
+                                        else do
+                                            return (m, tail ss', Nothing)
 
-                                            forStmt ids vs body m pm ss' = do
-                                                if length vs == 1
-                                                then do
-                                                    let nameCell = getNameCell ids (head vs)
-                                                    case body of
-                                                        (CondStmt st) -> do
-                                                            (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' nameCell
-                                                            return (m', ss'', Nothing)
-                                                        (CondBlock block) -> do
-                                                            (m',ss'',v) <- execBlock block m pm IterationScope ss' nameCell
-                                                            return (m', ss'', Nothing)
-                                                else do
-                                                    if length vs > 0
-                                                    then do
-                                                        let nameCell = getNameCell ids (head vs)                                                        
-                                                        case body of
-                                                            (CondStmt st) -> do
-                                                                (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' nameCell
-                                                                forStmt ids (tail vs) body m' pm ss''
-                                                            (CondBlock block) -> do
-                                                                (m',ss'',v) <- execBlock block m pm IterationScope ss' nameCell
-                                                                forStmt ids (tail vs) body m' pm ss''
-                                                    else do
-                                                        return (m, ss', Nothing)
+execStmt (WhileStmt e body) m pm ss =  --let ss' = (IterationScope (length ss):ss) in 
+                        do  
+                            time <- getCurSeconds
+                            let newScope = IterationScope (time)
+                                ss' = (newScope:ss) in
+                                    repeatWhile body m pm ss' newScope
 
-execStmt (WhileStmt e body) m pm ss' =  --let ss' = (IterationScope (length ss):ss) in 
-                                        repeatWhile body m pm ss'
-                                    where
-                                        repeatWhile body m pm ss' = 
-                                                            do 
-                                                                    v <- eval m pm ss' e
-                                                                    let test = case makeBooleanFromValue v of
-                                                                                    Left i -> error i
-                                                                                    Right i -> i in 
-                                                                        if test then do
-                                                                                case body of
-                                                                                    (CondStmt st) -> do 
-                                                                                            (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' []
-                                                                                            case v of 
-                                                                                                Nothing -> repeatWhile body m' pm ss''
-                                                                                                _ -> return $ (m',ss'',v)
-                                                                                    (CondBlock block) -> do 
-                                                                                            (m',ss'',v) <- execBlock block m pm IterationScope ss' []
-                                                                                            case v of 
-                                                                                                Nothing -> repeatWhile body m' pm ss''
-                                                                                                _ -> return $ (m',ss'',v)
-                                                                         else
-                                                                            return (m, ss', Nothing) 
+    where
+        repeatWhile body' m pm ss newScope =
+            do 
+                    v <- eval m pm ss e
+                    let test = case makeBooleanFromValue v of
+                                    Left i -> error i
+                                    Right i -> i in 
+                        if test then 
+                            do
+                                    do 
+                                        (m'',ss'',v) <- execBlock body' m pm ss newScope
+                                        if (newScope == head ss'') then 
+                                            repeatWhile body (clearScope newScope m'') pm ss'' newScope
+                                        else return $ (clearScope newScope m'', ss'',v)
+                        else
+                           return (m, tail ss, Nothing) 
 
 execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do  
                                                                 arguments <- processSubArgs as [] m pm ss
@@ -204,7 +207,8 @@ execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do
                                                                     case selected of
                                                                         Nothing -> error ("No subprogram found for call to " ++ i)
                                                                         Just sub -> do 
-                                                                                execSubprogram m pm scopes sub arguments
+                                                                                (m',ss',mv) <- execSubprogram m pm scopes sub arguments
+                                                                                return $ (m',ss,mv)
 
 execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                         return $ (m',ss'', Just v)
@@ -213,21 +217,21 @@ execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                                         Just v' -> v'
 
 -- | Produce a register value to store in memory from a struct declaration
-makeRegister :: ProgramMemory -> StructIdentifier -> MemoryValue
-makeRegister pm si = Register $ M.fromList (makeSetList pm sc)
+makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
+makeDefaultSetter pm si = Setter si (M.fromList (makeSetList pm sc))
     where
         makeSetList pm [] = []
         makeSetList pm ((n, t, mv):ds) = 
                                         case mv of
                                             Nothing -> (n, (t, def)) : makeSetList pm ds
                                                 where def = case t of
-                                                            GUserType t' -> makeRegister pm t'
-                                                            _ -> Value $ defaultValue pm t
-                                            Just v -> (n, (t, Value v)) : makeSetList pm ds
+                                                            GUserType t' -> makeDefaultSetter pm t'
+                                                            _ -> defaultValue pm t
+                                            Just v -> (n, (t, memval)) : makeSetList pm ds
                                                 where memval = case v of
-                                                                Setter _ -> makeRegisterFromSetter pm (makeRegister pm t') v t'
+                                                                Setter i _ -> applySetter pm (makeDefaultSetter pm t') v t'
                                                                     where (GUserType t') = t
-                                                                _ -> Value v
+                                                                _ -> v
         (_,sc) = fetchStructDecl pm si
 
 -- | Interpret struct declaration
@@ -300,7 +304,7 @@ clearScopesUntilType m t (s@(BlockScope _):ss) = clearScopesUntilType m' t ss
 -- | Executes a subprogram
 execSubprogram :: Memory -> ProgramMemory -> Scopes -> (SubIdentifier, SubContent) -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
 execSubprogram m pm ss sub@(ident,content@(_,_,block)) as = do
-                                                                (m'',ss'',v) <- execBlock block m pm SubScope ss declarations
+                                                                (m'',ss'',v) <- execBlockSimple block m pm SubScope ss declarations
                                                                 return (m'',ss'',v)
                                                         where declarations = prepareSubcallElabs m pm ss content as
                             
@@ -331,7 +335,7 @@ prepareSubcallElabs m pm ss (fs'@((f@(n,pt,mv)):fs), mt, b) ((a,t):as) = case a 
                                                                     where v' = case fetchCellByScope m n' s' of
                                                                                     Left i -> error i
                                                                                     Right ci'@(t,v'') -> case v'' of 
-                                                                                                Register _ -> (t,Ref ci)
+                                                                                                --Register _ -> (t,Ref ci)
                                                                                                 Value _ -> (t,Ref ci)
                                                                                                 Ref ci'' -> (t, Ref ci'')
                                                                 (GType _) -> (n, (getParamGType pt, v')) : prepareSubcallElabs m pm ss (fs, mt, b) as
@@ -383,55 +387,73 @@ processSubArgs (a:as) ids m pm ss = case a of
                                                                                 --setter@(Setter _) -> () : remaining
                                                                                 _ -> return $ (Left (i, Right (Just ev)), getType ev) : remaining
  
+data AccessType = ListIndex Value | DictIndex Value | StructField Name deriving (Show, Eq)
+
+evalWithType :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> IO (Value, GType)
+evalWithType m pm ss e =
+    case e of
+        (ArithTerm (IdTerm (Ident i))) -> 
+                case fetchVarValueType m i ss of
+                    Left i -> error i
+                    Right i@(t,v) -> return $ (v,t)
+        _ -> do
+                v' <- eval m pm ss e 
+                return $ (v', getType v')
+
+execAttrStmt' :: Memory -> ProgramMemory -> Scopes -> [AccessType] -> ArithExpr -> ArithExpr -> IO Memory
+execAttrStmt' m pm ss as lhs rhs = 
+    do 
+        case lhs of
+            (ArithTerm (IdTerm (Ident i))) -> do
+                                                let var = fetchVarValueType m i ss in
+                                                    case var of
+                                                        Left e -> error e
+                                                        Right (tl,val) -> do 
+                                                                (vr,tr) <- evalWithType m pm ss rhs 
+                                                                v' <- return $ backwardAccessUpdate m pm ss as i val tl tr vr
+                                                                case updateVar m i ss (tr, Value v') of 
+                                                                    Right m' -> do return m'   
+                                                                    Left i -> error i
+            (ListAccess remaining index) -> do
+                                                index' <- eval m pm ss index
+                                                execAttrStmt' m pm ss ((ListIndex index'):as) remaining rhs
+            (DictAccess remaining index) -> do
+                                                index' <- eval m pm ss index
+                                                execAttrStmt' m pm ss ((DictIndex index'):as) remaining rhs
+            (StructAccess remaining (Ident field)) -> 
+                                            do
+                                                execAttrStmt' m pm ss ((StructField field):as) remaining rhs
+            _ -> error $ "Not a valid lhs"
+
+    where
+        backwardAccessUpdate m pm ss [] ident memval memtype rightType v =  if checkCompatType (getType memval) (rightType) then v else
+                                                          error $ "Incompatible types " ++ show memtype ++ " and " ++ show rightType
+        backwardAccessUpdate m pm ss (a:as) ident memval memtype rightType v = 
+            case a of
+                ListIndex index -> case index of
+                                        (Integer int) -> 
+                                                case memval of
+                                                    (List xs) -> List (setElemList xs int v'')
+                                                        where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) (getType memval) rightType v
+                                                    _ -> error "You must access a list." 
+                                        _ -> error "List index must be an integer." 
+                DictIndex index -> case memval of
+                                        (Map m') -> if M.notMember index m' then error $ "Key " ++ show index ++ " not in dictionary" 
+                                                    else Map (M.insert index v'' m')
+                                               where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) (getType memval) rightType v
+                                        _ -> error "You must access a dictionary"
+                StructField field -> case memval of
+                                        (Setter si m') -> if M.notMember field m' then error $ field ++ " not in the struct"
+                                                        else Setter si (M.insert field (t,v'') m')
+                                                where v'' = backwardAccessUpdate m pm ss as ident v''' t rightType v
+                                                      (t,v''') = m' M.! field
+                                        _ -> error "You must access a struct field"
+
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
-execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = case t of
-            (ArithTerm (IdTerm (Ident i))) ->   do
-                                                    k <- eval m pm ss v
-                                                    fetched <- return $ fetchVar m i ss
-                                                    case fetched of
-                                                        Left i -> error i
-                                                        Right (_,(t',_)) -> 
-                                                                do case k of
-                                                                        setter@(Setter _) -> 
-                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' setter) of
-                                                                                    Right m' -> return m'
-                                                                                    Left i -> error i
-                                                                        _ -> do    
-                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
-                                                                                    Right m' -> return m'
-                                                                                    Left i -> error i
-            (ListAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do  v1 <- eval m pm ss id
-                                                                        v2 <- eval m pm ss index
-                                                                        v3 <- eval m pm ss v
-                                                                        let index' = case v2 of
-                                                                                (Integer int) -> int
-                                                                                _ -> error "List index must be an integer." 
-                                                                            k = case v1 of
-                                                                                    (List xs) -> List (setElemList xs index' v3)
-                                                                                    _ -> error "You must access a list." 
-                                                                            t' = getType k in
-                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
-                                                                                    Right m' -> return m'
-                                                                                    Left i -> error i 
-            (DictAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do  
-                                                                        v1 <- eval m pm ss id
-                                                                        v2 <- eval m pm ss v
-                                                                        v3 <- eval m pm ss index
-                                                                        do 
-
-                                                                            let     kt = (\(GDict kt _)->kt) (getType v1)
-                                                                                    index' = case getType v3 of
-                                                                                                kt -> v3
-                                                                                                _ -> error "Incompatible index type."
-                                                                                    k = case v1 of
-                                                                                            (Map m') -> Map (M.insert index' v2 m')
-                                                                                            _ -> error "You must access a dictionary." 
-                                                                                    t' = getType k in
-                                                                                        case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
-                                                                                                    Right m' -> return m'
-                                                                                                    Left i -> error i
-
+execAttrStmt (AttrStmt [] []) m pm ss = return m
+execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  m' <- execAttrStmt' m pm ss [] t v
+                                                    execAttrStmt (AttrStmt ts vs) m' pm ss
                                                                                                         
 -- |From value, guaarantee boolean value
 makeBooleanFromValue :: Value -> Either String Bool
@@ -445,15 +467,17 @@ checkCompatType t t' = if t == t' then True
                         (GFloat, GInteger)  -> True
                         (GList _, GEmpty)   -> True
                         (GEmpty ,GList _)   -> True
-                        (GList l, GList l') -> checkCompatType (GList l) l'
-                        (GList l, GList l') -> checkCompatType (l) $ GList l'
+                        (GList l, GList l') -> checkCompatType l l'
+                        --(GList l, GList l') -> checkCompatType (GList l) l'
+                        --(GList l, GList l') -> checkCompatType (l) $ GList l'
+                        (GUserType _, GAnonymousStruct) -> True
+                        --(GAnonymousStruct, GUserType _) -> True
                         _                   -> False
-
-
+                        
 -- | Given type t and value v, return (t,v) if they are compatible.
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
-makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter m) = (t, makeRegisterFromSetter pm (makeRegister pm u) v u)
+makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter is m) = (t, Value $ applySetter pm (makeDefaultSetter pm u) v u)
 makeCompatibleAssignTypes pm t@(GGraphVertexEdge vertices edges) v = 
     let tv = getType v
     in case tv of
@@ -464,33 +488,32 @@ makeCompatibleAssignTypes pm t@(GGraphVertexEdge vertices edges) v =
         GGraphVertexEdge vertex edge       -> if vertices == vertex && edges == edge
                                               then (t,Value v)
                                               else error ("Incompatible types " ++ show t ++ " and " ++ show v)
+makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType pm t v)
 
-
-
-makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType t v)
-
-coerceAssignByType :: GType -> Value -> Value
-coerceAssignByType GFloat i'@(Integer i) = coerce i'
-coerceAssignByType t v = if checkCompatType t t' then v
+coerceAssignByType :: ProgramMemory -> GType -> Value -> Value
+coerceAssignByType pm GFloat i'@(Integer i) = coerce i'
+coerceAssignByType pm (GUserType ut) s'@(Setter "" m) = applySetter pm (makeDefaultSetter pm ut) s' ut
+coerceAssignByType pm t v = if checkCompatType t t' then v
                    else error ("Incompatible types " ++ show t ++ " and " ++ show t')
                     where
                         t' = getType v
 
 -- | Given a setter, a user type name and a register (memory value), produce a new register
 -- The value is the setter.
-makeRegisterFromSetter :: ProgramMemory -> MemoryValue -> Value -> StructIdentifier -> MemoryValue
-makeRegisterFromSetter pm (Register r) (Setter msetter) si = Register $ updateRegister (M.toList msetter) r
+applySetter :: ProgramMemory -> Value -> Value -> StructIdentifier -> Value
+applySetter pm (Setter ir r) (Setter is msetter) si = Setter ir (updateRegister (M.toList msetter) r)
         where
-                updateRegister :: [(String, Value)] -> M.Map Name Cell -> M.Map Name Cell
+                updateRegister :: [(String, (GType, Value))] -> M.Map Name (GType, Value) -> M.Map Name (GType, Value)
                 updateRegister [] m = m
-                updateRegister ((s,v):ss) m 
+                updateRegister ((s,(t,v)):ss) m 
                             | M.member s m = case v of
-                                                (Setter setter') -> updateRegister ss m''
-                                                    where m'' = M.update (\k -> Just (t',makeRegisterFromSetter pm r' (Setter setter') si)) s m
+                                                (Setter is' setter') -> updateRegister ss m''
+                                                    where m'' = M.update (\k -> Just (t',applySetter pm r' (Setter is' setter') is')) s m
                                                           (t',r') = m M.! s
                                                 _ -> updateRegister ss m''  
                                                     where (t',_) = m M.! s
-                                                          m'' = M.update (\k -> Just (makeCompatibleAssignTypes pm t' v)) s m  
+                                                          m'' = M.update (\k -> Just (t'',v')) s m  
+                                                          (t'', Value v') = makeCompatibleAssignTypes pm t' v
                             | otherwise = error $ "Type " ++ si ++ " doesn't have field " ++ s     
 
 -- | Set the i-element of a list.
@@ -582,7 +605,8 @@ getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( get
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
 getType (Quadruple (v1,v2, v3, v4))   = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
-getType (Setter _ )                   = GAnonymousStruct
+getType (Setter "" _ )                = GAnonymousStruct
+getType (Setter s _ )                 = GUserType s
 getType (V.Graph (G.Graph vertices edges)) = 
     if Se.null vertices
     then GGraphEmpty
@@ -623,8 +647,8 @@ evalList m pm ss (x:y:xs) =  do
                                   y' <- eval m pm ss y
                                   if not( checkCompatType (getType y') ( getType z) || checkCompatType (getType z) (getType y') ) then error "Type mismatch in List "
                                     else do
-                                        l <- evalList m pm ss  (y:xs)
-                                        return (z:l) 
+                                       l <- evalList m pm ss  (y:xs)
+                                       return (z:l) 
 
 -- | Evaluates a tuple
 evalTuple :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
@@ -651,21 +675,6 @@ evalDict m pm ss ((k,v):xs) m1           =
                                                 v' <- eval m pm ss v
                                                 d <- evalDict m pm ss xs m1
                                                 return $ M.insert k' v' d
-
-
-{-
--- | Register to Setter
-makeSetterFromDeclaration :: ProgramMemory -> StructContent -> Value
-makeSetterFromDeclaration pm scs'@((n,t,mv):scs) = Setter (makeMap scs')
-        where 
-                makeMap :: StructContent -> M.Map String Value
-                makeMap [] = M.empty
-                makeMap scs'@((n,t,mv):scs) = M.insert n v' m'
-                    where   m' = makeMap scs
-                            v' = case mv of
-                                    Nothing -> defaultValue pm t
-                                    Just v'' -> v'' 
--}
 
 -- | Binary operation evaluator
 evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO Value
@@ -833,9 +842,10 @@ eval m pm ss (StructAccess e1 (Ident i))        =
                                                 do
                                                     v1 <- eval m pm ss e1
                                                     case v1 of
-                                                        setter@(Setter msetter) -> 
+                                                        setter@(Setter is msetter) -> 
                                                                     if M.notMember i msetter then error $ i ++ " not a field of this user type"
-                                                                    else return $ msetter M.! i
+                                                                    else return $ v'
+                                                                    where (t,v') = msetter M.! i
                                                         _ -> error "Trying to access a non-struct type with {}"
 
 eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) = 
@@ -866,24 +876,35 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                     selected <- return $ selectSubForCall i arguments pm
                                                     case selected of
                                                         Nothing -> error ("No subprogram found for call to " ++ i)
-                                                        Just sub -> do
-                                                                        (m',ss',v) <- execSubprogram m pm scopes sub arguments
-                                                                        do
-                                                                            case v of
-                                                                                Nothing -> error "No return from subprogram call"
-                                                                                Just v -> return v
+                                                        Just sub -> 
+                                                                    case sub of
+                                                                        (_,(_, (Nothing),_)) -> error "Procedure inside expression"
+                                                                        _ -> do
+                                                                                (m',ss',v) <- execSubprogram m pm scopes sub arguments
+                                                                                do
+                                                                                    case v of
+                                                                                        Nothing -> error "No return from subprogram call"
+                                                                                        Just v -> return v
 
-eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}
+eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return $ List r}
 
-eval m pm ss (StructInitExpr (StructInit ias)) = 
-    do case ias of
-            [] -> return $ Setter M.empty
-            ((IdentAssign [(Ident i)] e):ias') -> do
-                                            Setter remain <- eval m pm ss (StructInitExpr (StructInit ias'))
-                                            v <- eval m pm ss e
-                                            return $ Setter (M.insert i v remain)
+eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do 
+    setter <- evalSetter m pm ss e
+    return $ applySetter pm (makeDefaultSetter pm t) setter t
+    where
+        evalSetter m pm ss (StructInitExpr (StructInit (Ident t) ias)) = 
+            do case ias of
+                    [] -> return $ Setter t M.empty
+                    ((IdentAssign [(Ident i)] e):ias') -> do
+                                                    Setter is remain <- evalSetter m pm ss (StructInitExpr (StructInit (Ident t) ias'))
+                                                    v <- eval m pm ss e
+                                                    return $ Setter t (M.insert i (getType v, v) remain)
 
-eval m pm ss (ExprLiteral (GraphLit exp edges )) = evalGraphComp m pm ss exp edges
+eval m pm ss (ExprLiteral (GraphLit exp edges )) = do 
+                time <- getCurSeconds
+                let     newScope = BlockScope time
+                        ss' = (newScope:ss) in
+                    evalGraphComp m pm ss' exp edges
 
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
@@ -1050,9 +1071,14 @@ checkEdgeType w ( ( _ , ( G.Edge _ _ wx : _ ) ) : xs ) = (getType w == getType w
 -- |List Comprehension
 
 forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO [Value]
-forListComp m pm ss lc = do (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss lc
-                            let (Right m') = elabVars m (getNameCell id v) (head ss)
-                            forListComp' m' pm ss exp id vs' when_exp
+forListComp m pm ss lc = do 
+                            time <- getCurSeconds
+                            let     newScope = BlockScope time
+                                    ss' = (newScope:ss) in
+                                    do
+                                        (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss' lc
+                                        let (Right m') = elabVars m (getNameCell id v) (head ss')
+                                        forListComp' m' pm ss' exp id vs' when_exp
 
 forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO [Value]
 forListComp' m pm ss exp id [v] when_exp = do

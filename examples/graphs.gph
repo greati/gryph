@@ -1,3 +1,9 @@
+l1 : [int];
+
+l1 = [1,2,3];
+
+print l1;
+
 print <[1,2,3], a<-b for a,b over [1,2,3] when a==2>;
 print <[1,2,3], a->b for a,b over [1,2,3],[1,2,3]>;
 print <[10,12,14]++b  where a->b+1 for a,b over [0,1],[1,2,3]>;
@@ -11,5 +17,8 @@ g  : <int>;
 g1 : <int, float> = <[1,2,3]>;
 g = <a--a for a over [0, 1, 2] when (a < 2) >;
 
-g = g1;
+#g = g1;
 print g;
+
+#l3:[string] = [];
+#l4:[string] = l3 ++ ["oi"];

@@ -1,5 +1,6 @@
 Pessoa {
     n : string;
+    p : Point;
 }
 
 Point {
@@ -14,13 +15,20 @@ sub abc (i : int&) {
     }
 }
 
-sub f (p : Pessoa; s:string) : Pessoa {
+sub f (p : Pessoa&; i : int&; s:string) : Pessoa {
+    p{n} = s;
+    i = 4;
     return p;
 }
 
-p : Pessoa = {n="aisj"};
+k : int = 10;
+print "k="+k@string;
+abc(k);
+print "k="+k@string;
 
-l : [int] = [1,2,3];
-
-s : string  = p{n};
-print s;
+i : Pessoa = Pessoa{n = "vitor"};
+m : int = 10;
+#f(i, m,"kkkkk");
+print (f(i,m,"kkkkk")){n};
+print i{n};
+print m;

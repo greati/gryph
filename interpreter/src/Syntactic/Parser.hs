@@ -43,10 +43,11 @@ structDecl = do
 
 structInit :: GenParser GphTokenPos st StructInit
 structInit = do
+                (GUserType t) <- userType
                 (tok GTokLCurly)
                 is <- identAssignmentList
                 (tok GTokRCurly)
-                return (StructInit is)
+                return (StructInit (Ident t) is)
 
 {- Stmts.
  -
@@ -79,16 +80,15 @@ stmtBlock = do
                 (tok GTokLCurly)
                 ss <- stmtList
                 (tok GTokRCurly)
-                return (Block ss)
+                return ss
 
-blockOrStmt :: GenParser GphTokenPos st CondBody
+blockOrStmt :: GenParser GphTokenPos st Block
 blockOrStmt =   do 
-                    b <- stmtBlock 
-                    return (CondBlock b)
+                    stmtBlock 
                 <|>
                 do 
                     ms <- matchedStmt
-                    return (CondStmt ms)
+                    return [ms]
 
 matchedStmt :: GenParser GphTokenPos st Stmt
 matchedStmt = do
@@ -486,7 +486,7 @@ ifStmt = do
                 e <- ifExpr
                 s <- stmt
                 (tok GTokSemicolon)
-                return (IfStmt e (IfBody (CondStmt s)) NoElse)
+                return (IfStmt e (IfBody [s]) NoElse)
 
 unmatchedIfElse :: GenParser GphTokenPos st Stmt
 unmatchedIfElse = do
@@ -495,7 +495,7 @@ unmatchedIfElse = do
                         (tok GTokSemicolon)
                         (tok GTokElse)
                         us <- unmatchedStmt
-                        return (IfStmt e (IfBody (CondStmt ms)) (ElseBody (CondStmt us)))
+                        return (IfStmt e (IfBody [ms]) (ElseBody [us]))
                         
 matchedIfElse :: GenParser GphTokenPos st Stmt
 matchedIfElse = do
