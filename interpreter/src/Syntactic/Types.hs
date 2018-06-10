@@ -11,7 +11,8 @@ data GType =    GInteger        |
                 GTriple GType GType GType  |
                 GQuadruple GType GType GType GType |
                 GDict GType GType |
-                GGraphVertex GType |
+                GGraphEmpty |
+                GEdgeEmpty |
                 GGraphVertexEdge GType GType |
                 GUserType String |
                 GAnonymousStruct

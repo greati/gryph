@@ -1,6 +1,6 @@
 module Syntactic.Values where
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Execution.Graph as G
 import Syntactic.Types
 
@@ -17,7 +17,7 @@ data Value =    Integer Integer |
                 Quadruple (Value, Value, Value, Value) | 
                 Map (M.Map Value  Value) |
                 EmptyMap |
-                Graph (G.Graph Value (Maybe Value)) |
+                Graph (G.Graph Value Value) |
                 Setter (M.Map String Value)
 
 instance Eq Value where
