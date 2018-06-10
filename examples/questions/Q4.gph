@@ -3,8 +3,8 @@ Rational_t {
 }
 
 sub mdc (n, m : int; r : int&) {
-    if (m % n == 0) r = n;
-    else if (n % m == 0) r = m;
+    if (n != 0 and m % n == 0) r = n;
+    else if (m != 0 and n % m == 0) r = m;
     else if (m > n) mdc(n, m % n, r); 
     else mdc(n % m, m, r); 
 }
@@ -20,9 +20,11 @@ sub is_same_rational (a, b : Rational_t) : bool {
     return a{numerador} * b{denominador} == a{denominador} * b{numerador};
 }
 
-sub make_rational (a, b : int) : Rational_t {
+sub make_rational (a, b : int; reduced : bool = false) : Rational_t {
     if (b != 0) {
-        return Rational_t {numerador = a, denominador = b}; 
+        r : Rational_t = Rational_t {numerador = a, denominador = b}; 
+        if (reduced) return reduce(r);
+        else return r;
     } else {
         print "erro: b não pode valer 0";
     }
@@ -40,17 +42,37 @@ sub neg (a : Rational_t) : Rational_t {
     return Rational_t {numerador=-a{numerador},denominador=a{denominador}};
 }
 
-#sub sub (a, b : Rational_t) : Rational_t {}
+sub subt (a, b : Rational_t) : Rational_t {
+    return add(a, neg(b));
+}
 
-#sub mult (a, b : Rational_t) : Rational_t {}
+sub mult (a, b : Rational_t) : Rational_t {
+    new_den : int = a{denominador} * b{denominador};
+    new_num : int = a{numerador} * b{numerador};
+    s : Rational_t = make_rational(new_num, new_den);
+    reduce(s);
+    return s;
+}
 
-#sub inv (a, b : Rational_t) : Rational_t {}
+sub inv (a : Rational_t) : Rational_t {
+    if (a{numerador} != 0) {
+       return make_rational(a{denominador}, a{numerador});
+    } else {
+       print "numerador não pode ser zero"; 
+    }
+}
 
-#sub div (a, b : Rational_t) : Rational_t {}
+sub div (a, b : Rational_t) : Rational_t {
+    return mult(a, inv(b));
+}
 
 r1 : Rational_t = make_rational(10,30);
 r2 : Rational_t = make_rational(10,30);
 
 print is_same_rational(r1,r2);
 print add(r1,r2);
+print subt(r1,r2);
+print mult(r1,r2);
 print neg(r1);
+print inv(r1);
+print div(r1,r2);
