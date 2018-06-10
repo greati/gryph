@@ -1,0 +1,56 @@
+Rational_t {
+    numerador, denominador : int = 1;
+}
+
+sub mdc (n, m : int; r : int&) {
+    if (m % n == 0) r = n;
+    else if (n % m == 0) r = m;
+    else if (m > n) mdc(n, m % n, r); 
+    else mdc(n % m, m, r); 
+}
+
+sub reduce (a : Rational_t&) {
+   mdcc : int = 1;
+   mdc(a{numerador},a{denominador},mdcc);
+   a{numerador} = a{numerador} / mdcc;
+   a{denominador} = a{denominador} / mdcc;
+}
+
+sub is_same_rational (a, b : Rational_t) : bool {
+    return a{numerador} * b{denominador} == a{denominador} * b{numerador};
+}
+
+sub make_rational (a, b : int) : Rational_t {
+    if (b != 0) {
+        return Rational_t {numerador = a, denominador = b}; 
+    } else {
+        print "erro: b não pode valer 0";
+    }
+}
+
+sub add (a, b : Rational_t) : Rational_t {
+    new_den : int = a{denominador} * b{denominador};
+    new_num : int = b{denominador}*a{numerador} + b{numerador}*a{denominador};
+    s : Rational_t = make_rational(new_num, new_den);
+    reduce(s);
+    return s; 
+}
+
+sub neg (a : Rational_t) : Rational_t {
+    return Rational_t {numerador=-a{numerador},denominador=a{denominador}};
+}
+
+#sub sub (a, b : Rational_t) : Rational_t {}
+
+#sub mult (a, b : Rational_t) : Rational_t {}
+
+#sub inv (a, b : Rational_t) : Rational_t {}
+
+#sub div (a, b : Rational_t) : Rational_t {}
+
+r1 : Rational_t = make_rational(10,30);
+r2 : Rational_t = make_rational(10,30);
+
+print is_same_rational(r1,r2);
+print add(r1,r2);
+print neg(r1);

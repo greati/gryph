@@ -31,7 +31,6 @@ exec m pm ss [] = if m == m then return () else return ()
 exec m pm ss (u:us) = if m == m 
                       then do
                         (m', pm', ss') <- execUnit u m pm ss
-                        print m'
                         exec m' pm' ss' us
                       else do
                         (m', pm', ss') <- execUnit u m pm ss
@@ -72,7 +71,7 @@ type Scoper = (Integer -> Scope)
 -- | Executes a block of statement, creating a new scope and declaring variables. When finish, clear the scope.
 -- It also allows taking a list of declarations in the form [(Name,Cell)]
 execBlockSimple :: Block -> Memory -> ProgramMemory -> Scoper -> Scopes -> [(Name,Cell)] -> IO (Memory, Scopes, Maybe Value)
-execBlockSimple ([]) m pm _ (s:ss) _ = return (m, ss, Nothing)
+--execBlockSimple ([]) m pm _ (s:ss) _ = return (m, ss, Nothing)
 execBlockSimple b@(st:sts) m pm scoper ss decls =  
     do  time <- getCurSeconds
         let     newScope = scoper (time)
@@ -80,16 +79,17 @@ execBlockSimple b@(st:sts) m pm scoper ss decls =
                 m' = case elabVars m decls newScope of
                     Left i -> error i
                     Right m'' -> m'' in
-                        do execBlock' b m' pm ss' newScope
+                        do 
+                            execBlock' b m' pm ss' newScope Nothing
 
-execBlock' [] m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
-execBlock' (st:sts) m pm ss' newScope = do 
+execBlock' [] m pm (s:ss) newScope v = return (clearScope s m, ss, v)
+execBlock' (st:sts) m pm ss' newScope v = do 
                 (m'',ss'', v'') <- execStmt st m pm ss'
                 do
                     if newScope == head ss'' then
-                        execBlock' sts m'' pm ss'' newScope
+                        execBlock' sts m'' pm ss'' newScope v''
                     else 
-                        return $ (m'',ss'',v'')
+                        return $ (clearScope newScope m'',ss'',v'')
 
 -- | Executes a block for a given scope
 execBlock :: Block -> Memory -> ProgramMemory -> Scopes -> Scope -> IO (Memory, Scopes, Maybe Value)
@@ -208,7 +208,8 @@ execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do
                                                                     case selected of
                                                                         Nothing -> error ("No subprogram found for call to " ++ i)
                                                                         Just sub -> do 
-                                                                                execSubprogram m pm scopes sub arguments
+                                                                                (m',ss',mv) <- execSubprogram m pm scopes sub arguments
+                                                                                return $ (m',ss,mv)
 
 execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                         return $ (m',ss'', Just v)
@@ -427,25 +428,25 @@ execAttrStmt' m pm ss as lhs rhs =
 
     where
         backwardAccessUpdate m pm ss [] ident memval memtype rightType v =  if checkCompatType (memtype) (rightType) then v else
-                                                          error $ "Incompatible types " ++ show (getType memval) ++ " and " ++ show (getType v)
+                                                          error $ "Incompatible types " ++ show memtype ++ " and " ++ show rightType
         backwardAccessUpdate m pm ss (a:as) ident memval memtype rightType v = 
             case a of
                 ListIndex index -> case index of
                                         (Integer int) -> 
                                                 case memval of
                                                     (List xs) -> List (setElemList xs int v'')
-                                                        where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) memtype rightType v
+                                                        where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) (getType memval) rightType v
                                                     _ -> error "You must access a list." 
                                         _ -> error "List index must be an integer." 
                 DictIndex index -> case memval of
                                         (Map m') -> if M.notMember index m' then error $ "Key " ++ show index ++ " not in dictionary" 
                                                     else Map (M.insert index v'' m')
-                                               where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) memtype rightType v
+                                               where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) (getType memval) rightType v
                                         _ -> error "You must access a dictionary"
                 StructField field -> case memval of
                                         (Setter si m') -> if M.notMember field m' then error $ field ++ " not in the struct"
                                                         else Setter si (M.insert field (t,v'') m')
-                                                where v'' = backwardAccessUpdate m pm ss as ident v''' memtype rightType v
+                                                where v'' = backwardAccessUpdate m pm ss as ident v''' t rightType v
                                                       (t,v''') = m' M.! field
                                         _ -> error "You must access a struct field"
 
@@ -876,12 +877,15 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                     selected <- return $ selectSubForCall i arguments pm
                                                     case selected of
                                                         Nothing -> error ("No subprogram found for call to " ++ i)
-                                                        Just sub -> do
-                                                                        (m',ss',v) <- execSubprogram m pm scopes sub arguments
-                                                                        do
-                                                                            case v of
-                                                                                Nothing -> error "No return from subprogram call"
-                                                                                Just v -> return v
+                                                        Just sub -> 
+                                                                    case sub of
+                                                                        (_,(_, (Nothing),_)) -> error "Procedure inside expression"
+                                                                        _ -> do
+                                                                                (m',ss',v) <- execSubprogram m pm scopes sub arguments
+                                                                                do
+                                                                                    case v of
+                                                                                        Nothing -> error "No return from subprogram call"
+                                                                                        Just v -> return v
 
 eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return $ List r}
 
