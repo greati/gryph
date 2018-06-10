@@ -56,10 +56,10 @@ data Stmt = ReadStmt Identifier |
             SubCallStmt SubprogCall |
             IfStmt ArithExpr IfBody ElseBody |
             ReturnStmt ArithExpr |
-            ForStmt [Identifier] [ArithExpr] CondBody |
-            WhileStmt ArithExpr CondBody |
-            BfsStmt [Identifier] ArithExpr (Maybe ArithExpr) CondBody |
-            DfsStmt [Identifier] ArithExpr (Maybe ArithExpr) CondBody 
+            ForStmt [Identifier] [ArithExpr] Block |
+            WhileStmt ArithExpr Block |
+            BfsStmt [Identifier] ArithExpr (Maybe ArithExpr) Block |
+            DfsStmt [Identifier] ArithExpr (Maybe ArithExpr) Block 
             deriving (Show, Eq) 
 
 data ForIterator = ForIterator [Identifier] [ArithExpr] [ArithExpr] deriving (Show, Eq)
@@ -67,12 +67,10 @@ data ForIterator = ForIterator [Identifier] [ArithExpr] [ArithExpr] deriving (Sh
 -- | a+1 for a,b over [1,2],[2,3] when a < 2 
 data ListComp = ListComp ArithExpr ForIterator deriving (Show, Eq)
 
-data IfBody =  IfBody CondBody deriving(Eq, Show)
-data ElseBody = NoElse | ElseBody CondBody deriving(Eq, Show)
+data IfBody =  IfBody Block deriving(Eq, Show)
+data ElseBody = NoElse | ElseBody Block deriving(Eq, Show)
 
-data Block = Block [Stmt] deriving(Show, Eq)
-
-data CondBody = CondStmt Stmt | CondBlock Block deriving(Eq, Show)
+type Block = [Stmt] 
 
 data ArithUnOp =    MinusUnOp | 
                     PlusUnOp |

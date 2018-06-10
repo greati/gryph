@@ -29,6 +29,7 @@ scopes = [GlobalScope]
 -- |Execute a program represented as a list of program units.
 exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO() 
 exec m pm ss [] = do
+                    print ss
                     if m == m then return () else return ()
                     
 exec m pm ss (u:us) = do
@@ -67,28 +68,38 @@ execStructDecl m pm ss s = do
 
 type Scoper = (Integer -> Scope)
 
--- |Executes a block of statement, creating a new scope. When finish, clear the scope.
+-- | Executes a block of statement, creating a new scope and declaring variables. When finish, clear the scope.
 -- It also allows taking a list of declarations in the form [(Name,Cell)]
-execBlock :: Block -> Memory -> ProgramMemory -> Scoper -> Scopes -> [(Name,Cell)] -> IO (Memory, Scopes, Maybe Value)
-execBlock (Block []) m pm _ ss _ = return (m, ss, Nothing)
-execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
-                                                        let newScope = scoper (time) in
-                                                            let ss' = (newScope:ss) in
-                                                                let m' = case elabVars m decls newScope of
-                                                                        Left i -> error i
-                                                                        Right m'' -> m'' in
-                                                                            do 
-                                                                                print m'
-                                                                                execBlock' b m' pm ss' newScope
-                                                                            where
-                                                                                    execBlock' (Block []) m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
-                                                                                    execBlock' (Block (st:sts)) m pm ss' newScope = do 
-                                                                                                    (m'',ss'', v'') <- execStmt st m pm ss'
-                                                                                                    do
-                                                                                                        if newScope == head ss'' then
-                                                                                                            execBlock' (Block sts) m'' pm ss'' newScope
-                                                                                                        else 
-                                                                                                            return $ (m'',ss'',v'')
+execBlockSimple :: Block -> Memory -> ProgramMemory -> Scoper -> Scopes -> [(Name,Cell)] -> IO (Memory, Scopes, Maybe Value)
+execBlockSimple ([]) m pm _ (s:ss) _ = return (m, ss, Nothing)
+execBlockSimple b@(st:sts) m pm scoper ss decls =  
+    do  time <- getCurSeconds
+        let     newScope = scoper (time)
+                ss' = (newScope:ss) 
+                m' = case elabVars m decls newScope of
+                    Left i -> error i
+                    Right m'' -> m'' in
+                        do execBlock' b m' pm ss' newScope
+
+execBlock' [] m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
+execBlock' (st:sts) m pm ss' newScope = do 
+                (m'',ss'', v'') <- execStmt st m pm ss'
+                do
+                    if newScope == head ss'' then
+                        execBlock' sts m'' pm ss'' newScope
+                    else 
+                        return $ (m'',ss'',v'')
+
+-- | Executes a block for a given scope
+execBlock :: Block -> Memory -> ProgramMemory -> Scopes -> Scope -> IO (Memory, Scopes, Maybe Value)
+execBlock [] m pm ss newScope = return (m, ss, Nothing)
+execBlock (st:sts) m pm ss' newScope = do 
+                (m'',ss'', v'') <- execStmt st m pm ss'
+                do
+                    if newScope == head ss'' then
+                        execBlock sts m'' pm ss'' newScope
+                    else 
+                        return $ (m'',ss'',v'')
 
 -- |Executes any statement.
 execStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO (Memory, Scopes, Maybe Value)
@@ -109,88 +120,85 @@ execStmt (ReadStmt i) m pm ss = do
                                     Right m' -> return (m', ss, Nothing)
                                 
 
-execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = do 
-                            v <- eval m pm ss' e
-                            let test = case makeBooleanFromValue v of
-                                            Left i -> error i
-                                            Right i -> i in 
-                                do 
-                                    if test then
-                                        case ifbody of
-                                            (CondStmt st) -> do execBlock (Block [st]) m pm BlockScope ss' []
-                                            (CondBlock block) -> do execBlock block m pm BlockScope ss' []
-                                    else
-                                        case elsebody of
-                                            NoElse -> do return (m,ss', Nothing)
-                                            ElseBody (CondStmt st) -> do execBlock (Block [st]) m pm BlockScope ss' []
-                                            ElseBody (CondBlock block) -> do execBlock block m pm BlockScope ss' []
+execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = 
+    do 
+            v <- eval m pm ss' e
+            let test = case makeBooleanFromValue v of
+                            Left i -> error i
+                            Right i -> i in 
+                do 
+                    if test then
+                            do execBlockSimple ifbody m pm BlockScope ss' []
+                    else
+                        case elsebody of
+                            NoElse -> do return (m,ss', Nothing)
+                            ElseBody block -> do execBlockSimple block m pm BlockScope ss' []
 
-execStmt (ForStmt ids vs body) m pm ss' = do 
-                                        vss <- (getLists m pm ss' [vs])
-                                        vss' <- over vss
-                                        forStmt ids vss' body m pm ss'
-                                        where
-                                            getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
-                                                                           case xss of
-                                                                                [(List list)] -> do return [(List list)]
-                                                                                [(Map map)] -> do return [(List ( makeMap (M.toList map) ))]
-                                            getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
-                                                                           xss'' <- (getLists m pm ss xss)
-                                                                           return (xss' ++ xss'')
+execStmt (ForStmt ids vs body) m pm ss = 
+    do 
+            vss <- (getLists m pm ss [vs])
+            vss' <- over vss
+            time <- getCurSeconds
+            let newScope = IterationScope time
+                ss' = (newScope:ss) in
+                    forStmt ids vss' body m pm ss' newScope
+            where
+                getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
+                                               case xss of
+                                                    [(List list)] -> do return [(List list)]
+                                                    [(Map map)] -> do return [(List ( makeMap (M.toList map) ))]
+                getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
+                                               xss'' <- (getLists m pm ss xss)
+                                               return (xss' ++ xss'')
 
-                                            makeMap :: [(Value, Value)] -> [Value]
-                                            makeMap []     = []
-                                            makeMap [x]    = [Pair x]
-                                            makeMap (x:xs) = (Pair x) : makeMap xs
+                makeMap :: [(Value, Value)] -> [Value]
+                makeMap []     = []
+                makeMap [x]    = [Pair x]
+                makeMap (x:xs) = (Pair x) : makeMap xs
 
-                                            forStmt ids vs body m pm ss' = do
-                                                if length vs == 1
-                                                then do
-                                                    let nameCell = getNameCell ids (head vs)
-                                                    case body of
-                                                        (CondStmt st) -> do
-                                                            (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' nameCell
-                                                            return (m', ss'', Nothing)
-                                                        (CondBlock block) -> do
-                                                            (m',ss'',v) <- execBlock block m pm IterationScope ss' nameCell
-                                                            return (m', ss'', Nothing)
-                                                else do
-                                                    if length vs > 0
-                                                    then do
-                                                        let nameCell = getNameCell ids (head vs)                                                        
-                                                        case body of
-                                                            (CondStmt st) -> do
-                                                                (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' nameCell
-                                                                forStmt ids (tail vs) body m' pm ss''
-                                                            (CondBlock block) -> do
-                                                                (m',ss'',v) <- execBlock block m pm IterationScope ss' nameCell
-                                                                forStmt ids (tail vs) body m' pm ss''
-                                                    else do
-                                                        return (m, ss', Nothing)
+                forStmt ids vs body m pm ss' newScope = 
+                    do
+                        let nameCell = getNameCell ids (head vs) 
+                        let m' = (case elabVars m nameCell newScope of
+                                Left i -> error i
+                                Right m'' -> m'') in
+                                    if length vs == 1
+                                    then do
+                                            (m'',ss'',v) <- execBlock body m' pm ss' newScope
+                                            return (clearScope newScope m'', tail ss'', v)
+                                    else do
+                                        if length vs > 0
+                                        then do
+                                            (m'',ss'',v) <- execBlock body m' pm ss' newScope
+                                            if (newScope == head ss'') then
+                                                forStmt ids (tail vs) body (clearScope newScope m'') pm ss'' newScope
+                                            else return $ (clearScope newScope m'', ss'', v)
+                                        else do
+                                            return (m, tail ss', Nothing)
 
-execStmt (WhileStmt e body) m pm ss' =  --let ss' = (IterationScope (length ss):ss) in 
-                                        repeatWhile body m pm ss'
-                                    where
-                                        repeatWhile body m pm ss' = 
-                                                            do 
-                                                                    v <- eval m pm ss' e
-                                                                    let test = case makeBooleanFromValue v of
-                                                                                    Left i -> error i
-                                                                                    Right i -> i in 
-                                                                        if test then do
-                                                                                case body of
-                                                                                    (CondStmt st) -> do 
-                                                                                            (m',ss'',v) <- execBlock (Block [st]) m pm IterationScope ss' []
-                                                                                            case v of 
-                                                                                                Nothing -> repeatWhile body m' pm ss''
-                                                                                                _ -> return $ (m',ss'',v)
-                                                                                    (CondBlock block) -> do 
-                                                                                            (m',ss'',v) <- execBlock block m pm IterationScope ss' []
-                                                                                            case v of 
-                                                                                                Nothing -> repeatWhile body m' pm ss''
-                                                                                                _ -> return $ (m',ss'',v)
-                                                                         else
-                                                                            return (m, ss', Nothing) 
+execStmt (WhileStmt e body) m pm ss =  --let ss' = (IterationScope (length ss):ss) in 
+                        do  
+                            time <- getCurSeconds
+                            let newScope = IterationScope (time)
+                                ss' = (newScope:ss) in
+                                    repeatWhile body m pm ss' newScope
+
+    where
+        repeatWhile body' m pm ss newScope =
+            do 
+                    v <- eval m pm ss e
+                    let test = case makeBooleanFromValue v of
+                                    Left i -> error i
+                                    Right i -> i in 
+                        if test then 
+                            do
+                                    do 
+                                        (m'',ss'',v) <- execBlock body' m pm ss newScope
+                                        if (newScope == head ss'') then 
+                                            repeatWhile body (clearScope newScope m'') pm ss'' newScope
+                                        else return $ (clearScope newScope m'', ss'',v)
+                        else
+                           return (m, tail ss, Nothing) 
 
 execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do  
                                                                 arguments <- processSubArgs as [] m pm ss
@@ -295,7 +303,7 @@ clearScopesUntilType m t (s@(BlockScope _):ss) = clearScopesUntilType m' t ss
 -- | Executes a subprogram
 execSubprogram :: Memory -> ProgramMemory -> Scopes -> (SubIdentifier, SubContent) -> ProcessedActualParams -> IO (Memory, Scopes, Maybe Value)
 execSubprogram m pm ss sub@(ident,content@(_,_,block)) as = do
-                                                                (m'',ss'',v) <- execBlock block m pm SubScope ss declarations
+                                                                (m'',ss'',v) <- execBlockSimple block m pm SubScope ss declarations
                                                                 return (m'',ss'',v)
                                                         where declarations = prepareSubcallElabs m pm ss content as
                             
