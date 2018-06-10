@@ -15,8 +15,9 @@ sub abc (i : int&) {
     }
 }
 
-sub f (p : Pessoa&; s:string) : Pessoa {
+sub f (p : Pessoa&; i : int&; s:string) : Pessoa {
     p{n} = s;
+    i = 4;
     return p;
 }
 
@@ -26,6 +27,8 @@ abc(k);
 print "k="+k@string;
 
 i : Pessoa = Pessoa{n = "vitor"};
-
-print (f(i,"kkkkk")){n};
+m : int = 10;
+#f(i, m,"kkkkk");
+print (f(i,m,"kkkkk")){n};
 print i{n};
+print m;

@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 module Execution.Semantic where
 
-
 import Syntactic.Values   as V
 import Syntactic.Syntax   as S
 import Execution.Memory
@@ -443,55 +442,6 @@ execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt [] []) m pm ss = return m
 execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  m' <- execAttrStmt' m pm ss [] t v
                                                     execAttrStmt (AttrStmt ts vs) m' pm ss
-{--                                                 
-case t of
-            (ArithTerm (IdTerm (Ident i))) ->   do
-                                                    k <- eval m pm ss v
-                                                    fetched <- return $ fetchVar m i ss
-                                                    case fetched of
-                                                        Left i -> error i
-                                                        Right (_,(t',_)) -> 
-                                                                do case k of
-                                                                        setter@(Setter _) -> 
-                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' setter) of
-                                                                                    Right m' -> return m'
-                                                                                    Left i -> error i
-                                                                        _ -> do    
-                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
-                                                                                    Right m' -> return m'
-                                                                                    Left i -> error i
-            (ListAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do  v1 <- eval m pm ss id
-                                                                        v2 <- eval m pm ss index
-                                                                        v3 <- eval m pm ss v
-                                                                        let index' = case v2 of
-                                                                                (Integer int) -> int
-                                                                                _ -> error "List index must be an integer." 
-                                                                            k = case v1 of
-                                                                                    (List xs) -> List (setElemList xs index' v3)
-                                                                                    _ -> error "You must access a list." 
-                                                                            t' = getType k in
-                                                                                case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
-                                                                                    Right m' -> return m'
-                                                                                    Left i -> error i 
-            (DictAccess id@(ArithTerm (IdTerm (Ident i))) index) -> do  
-                                                                        v1 <- eval m pm ss id
-                                                                        v2 <- eval m pm ss v
-                                                                        v3 <- eval m pm ss index
-                                                                        do 
-
-                                                                            let     kt = (\(GDict kt _)->kt) (getType v1)
-                                                                                    index' = case getType v3 of
-                                                                                                kt -> v3
-                                                                                                _ -> error "Incompatible index type."
-                                                                                    k = case v1 of
-                                                                                            (Map m') -> Map (M.insert index' v2 m')
-                                                                                            _ -> error "You must access a dictionary." 
-                                                                                    t' = getType k in
-                                                                                        case updateVar m i ss (makeCompatibleAssignTypes pm t' k) of
-                                                                                                    Right m' -> return m'
-                                                                                                    Left i -> error i
-            (StructAccess id@(ArithTerm (IdTerm (Ident i))) index) -> undefined
---}
                                                                                                         
 -- |From value, guaarantee boolean value
 makeBooleanFromValue :: Value -> Either String Bool
@@ -516,7 +466,6 @@ checkCompatType t t' = if t == t' then True
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
 makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter is m) = (t, Value $ applySetter pm (makeDefaultSetter pm u) v u)
---makeCompatibleAssignTypes pm t@(GList (GUserType u)) (List (m:ms)) = (t, List l')
 makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType pm t v)
 
 coerceAssignByType :: ProgramMemory -> GType -> Value -> Value
@@ -685,21 +634,6 @@ evalDict m pm ss ((k,v):xs) m1           =
                                                 v' <- eval m pm ss v
                                                 d <- evalDict m pm ss xs m1
                                                 return $ M.insert k' v' d
-
-
-{-
--- | Register to Setter
-makeSetterFromDeclaration :: ProgramMemory -> StructContent -> Value
-makeSetterFromDeclaration pm scs'@((n,t,mv):scs) = Setter (makeMap scs')
-        where 
-                makeMap :: StructContent -> M.Map String Value
-                makeMap [] = M.empty
-                makeMap scs'@((n,t,mv):scs) = M.insert n v' m'
-                    where   m' = makeMap scs
-                            v' = case mv of
-                                    Nothing -> defaultValue pm t
-                                    Just v'' -> v'' 
--}
 
 -- | Binary operation evaluator
 evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO Value
@@ -908,7 +842,7 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                                 Nothing -> error "No return from subprogram call"
                                                                                 Just v -> return v
 
-eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return  $ List r}
+eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return $ List r}
 
 eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do 
     setter <- evalSetter m pm ss e
@@ -1096,9 +1030,14 @@ checkEdgeType weight ( (_, ( G.Edge _ _ weightx : _ )) : xs ) = case weight of
 -- |List Comprehension
 
 forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO [Value]
-forListComp m pm ss lc = do (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss lc
-                            let (Right m') = elabVars m (getNameCell id v) (head ss)
-                            forListComp' m' pm ss exp id vs' when_exp
+forListComp m pm ss lc = do 
+                            time <- getCurSeconds
+                            let     newScope = BlockScope time
+                                    ss' = (newScope:ss) in
+                                    do
+                                        (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss' lc
+                                        let (Right m') = elabVars m (getNameCell id v) (head ss')
+                                        forListComp' m' pm ss' exp id vs' when_exp
 
 forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO [Value]
 forListComp' m pm ss exp id [v] when_exp = do

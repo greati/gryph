@@ -4,4 +4,11 @@ for a over g{
     print (a);
 }
 
+i : int = 20;
+
+l : [int] = [i + 1 for i over [1,2,3]];
+
+print i;
+print l;
+
 #a = [i+2 for i over [1,2,3] when i == 1];
