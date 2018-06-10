@@ -82,8 +82,8 @@ execBlock b@(Block (st:sts)) m pm scoper ss decls =  do time <- getCurSeconds
                                                                                     execBlock' (Block []) m pm (s:ss) newScope = return (clearScope s m, ss, Nothing)
                                                                                     execBlock' (Block (st:sts)) m pm ss' newScope = do 
                                                                                                     (m'',ss'', v'') <- execStmt st m pm ss'
-                                                                                                    print $ show ss''
-                                                                                                    print $ show m
+                                                                                                    --print $ show ss''
+                                                                                                    --print $ show m
                                                                                                     do
                                                                                                         if newScope == head ss'' then
                                                                                                             execBlock' (Block sts) m'' pm ss'' newScope
@@ -125,18 +125,23 @@ execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = do
                                             ElseBody (CondStmt st) -> do execBlock (Block [st]) m pm BlockScope ss' []
                                             ElseBody (CondBlock block) -> do execBlock block m pm BlockScope ss' []
 
-execStmt (ForStmt ids vs body) m pm ss' = do 
-                                        vss <- (getLists m pm ss' [vs])
+execStmt (ForStmt ids vs body) m pm ss' = do
+                                        let new_vs = replicateList ((length ids) - (length vs)) vs 
+                                        vss <- (getLists m pm ss' [new_vs])
                                         vss' <- over vss
                                         forStmt ids vss' body m pm ss'
                                         where
                                             getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
                                                                            case xss of
-                                                                                [(List list)] -> do return [(List list)]
-                                                                                [(Map map)] -> do return [(List ( makeMap (M.toList map) ))]
+                                                                                xss'@( (List list) : _ ) -> do return xss'
+                                                                                [(Map map)]              -> do return [(List ( makeMap (M.toList map) ))]
+                                                                                _                        -> error "Wrong pattern!"
                                             getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
                                                                            xss'' <- (getLists m pm ss xss)
                                                                            return (xss' ++ xss'')
+                                            replicateList 0 xs = xs
+                                            replicateList n xs | n < 0     = error "There aren't enough identifiers." 
+                                                               | otherwise = replicateList (n-1) xs ++ [last xs]                                
 
                                             makeMap :: [(Value, Value)] -> [Value]
                                             makeMap []     = []

@@ -1,7 +1,11 @@
-g : |string,  int| = | "a"? 0, "b"? 1,  "c"? 2 |;
+g : |float,  int| = | 1.0? 0, 2.0? 1,  3.0? 2 |;
 
-for a over g{
-    print (a);
+#for a over g{
+#    print (a);
+#}
+
+a : [int] = [i+2 for i over [1,2,3]];
+
+for i,j over a{
+	print i;
 }
-
-#a = [i+2 for i over [1,2,3] when i == 1];
