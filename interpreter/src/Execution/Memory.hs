@@ -1,8 +1,10 @@
 module Execution.Memory where
 
 import qualified Data.Map.Strict as M
+import qualified Data.Set        as S
+import qualified Execution.Graph as G
 
-import Syntactic.Values
+import Syntactic.Values          as V
 import Syntactic.Syntax
 import Syntactic.Types
 
@@ -217,6 +219,8 @@ defaultValue pm (GQuadruple t1 t2 t3 t4) = Quadruple (defaultValue pm t1, defaul
 defaultValue pm (GDict k v) = Map (M.empty)
 defaultValue pm (GUserType u) = makeSetterFromDeclaration pm sc
     where (si, sc) = fetchStructDecl pm u
+defaultValue pm (GGraphEmpty) = V.Graph (G.Graph S.empty M.empty)
+defaultValue pm (GGraphVertexEdge _ _) = V.Graph (G.Graph S.empty M.empty)
 
 -- | Register to setter
 makeSetterFromRegister :: MemoryValue -> Value

@@ -25,8 +25,12 @@ scopes = [GlobalScope]
 
 -- |Execute a program represented as a list of program units.
 exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO() 
-exec m pm ss [] = return ()
-exec m pm ss (u:us) = do
+exec m pm ss [] = if m == m then return () else return ()
+exec m pm ss (u:us) = if m == m 
+                      then do
+                        (m', pm', ss') <- execUnit u m pm ss
+                        exec m' pm' ss' us
+                      else do
                         (m', pm', ss') <- execUnit u m pm ss
                         exec m' pm' ss' us 
 
@@ -445,6 +449,19 @@ checkCompatType t t' = if t == t' then True
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
 makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter m) = (t, makeRegisterFromSetter pm (makeRegister pm u) v u)
+makeCompatibleAssignTypes pm t@(GGraphVertexEdge vertices edges) v = 
+    let tv = getType v
+    in case tv of
+        GGraphEmpty                        -> (t,Value v)
+        GGraphVertexEdge vertex GEdgeEmpty -> if vertices == vertex 
+                                              then (t,Value v)
+                                              else error ("Incompatible types " ++ show t ++ " and " ++ show v)
+        GGraphVertexEdge vertex edge       -> if vertices == vertex && edges == edge
+                                              then (t,Value v)
+                                              else error ("Incompatible types " ++ show t ++ " and " ++ show v)
+
+
+
 makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType t v)
 
 coerceAssignByType :: GType -> Value -> Value
@@ -561,6 +578,25 @@ getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
 getType (Quadruple (v1,v2, v3, v4))   = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
 getType (Setter _ )                   = GAnonymousStruct
+getType (V.Graph (G.Graph vertices edges)) = 
+    if Se.null vertices
+    then GGraphEmpty
+    else
+        if M.null edges
+        then GGraphVertexEdge (getType $ getVertexValue vertices) GEdgeEmpty
+        else GGraphVertexEdge (getType $ getVertexValue vertices) (getType $ getEdgeValue edges)
+
+-- | Return the type of vertex value
+getVertexValue :: (Se.Set (G.Vertex Value)) -> Value
+getVertexValue vertices = v
+    where
+        ( G.Vertex _ v : _ ) = Se.elems vertices 
+
+-- | Return the type of edge load
+getEdgeValue :: (M.Map Int [G.Edge Value Value]) -> Value
+getEdgeValue edges = v
+    where
+        ( (G.Edge _ _ v) : _ ) = head $ M.elems edges
 
 -- | Return the type dictionary keys
 getKeyType :: Value -> GType
@@ -933,10 +969,10 @@ evalGraphComp m pm ss list edges = case list of
 evalEdgeComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> EdgeComp -> IO Value
 evalEdgeComp m pm ss list (EdgeComp weight edge forIt) = do
     (id, vs'@(v:vs), when_exp) <- evalForIterator m pm ss forIt
-    let (Right m') = elabVars m (getNameCell id v) (head ss)    
+    let (Right m') = elabVars m (getNameCell id v) (head ss)
     case list of
         Nothing -> evalEdgeComp' m' pm ss weight edge id vs' when_exp (G.Graph Se.empty M.empty) True
-        Just l  -> do (List xs) <- eval m pm ss l 
+        Just l  -> do (List xs) <- eval m' pm ss l 
                       let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
                       evalEdgeComp' m' pm ss weight edge id vs' when_exp g False                                        
 
@@ -949,10 +985,10 @@ evalEdgeComp' m pm ss weight edge id vs when_exp g new_vertices = case vs of
                 Just when_exp -> do
                     success <- (eval m' pm ss when_exp)
                     if success == (Bool True)
-                    then do
+                    then do          
                         generateGraph m' pm ss edge weight g new_vertices
                     else do 
-                        return $ V.Graph (G.Graph Se.empty M.empty)
+                        return $ V.Graph g
     (v:vs) -> do (Right m') <- updateListIds m ss id v
                  case when_exp of
                     Nothing -> do
@@ -961,7 +997,7 @@ evalEdgeComp' m pm ss weight edge id vs when_exp g new_vertices = case vs of
                     Just when_exp -> do
                         success <- (eval m' pm ss when_exp)
                         if success == (Bool True)
-                        then do
+                        then do          
                             V.Graph g' <- generateGraph m' pm ss edge weight g new_vertices
                             evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g' new_vertices
                         else do 
