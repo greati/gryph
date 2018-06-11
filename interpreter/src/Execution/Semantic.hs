@@ -1000,13 +1000,19 @@ evalGraphComp m pm ss list edges = case list of
 
 evalEdgeComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> EdgeComp -> IO Value
 evalEdgeComp m pm ss list (EdgeComp weight edge forIt) = do
-    (id, vs'@(v:vs), when_exp) <- evalForIterator m pm ss forIt
-    let (Right m') = elabVars m (getNameCell id v) (head ss)
-    case list of
-        Nothing -> evalEdgeComp' m' pm ss weight edge id vs' when_exp (G.Graph Se.empty M.empty) True
-        Just l  -> do (List xs) <- eval m' pm ss l 
-                      let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
-                      evalEdgeComp' m' pm ss weight edge id vs' when_exp g False                                        
+    (id, vs, when_exp) <- evalForIterator m pm ss forIt
+    case vs of
+        [] -> case list of
+                Nothing -> return $ V.Graph (G.Graph Se.empty M.empty)
+                Just l  -> do (List xs) <- eval m pm ss l 
+                              let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
+                              return $ V.Graph g
+        vs'@(v:vs) -> do let (Right m') = elabVars m (getNameCell id v) (head ss)
+                         case list of
+                            Nothing -> evalEdgeComp' m' pm ss weight edge id vs' when_exp (G.Graph Se.empty M.empty) True
+                            Just l  -> do (List xs) <- eval m' pm ss l 
+                                          let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
+                                          evalEdgeComp' m' pm ss weight edge id vs' when_exp g False                                        
 
 evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO Value
 evalEdgeComp' m pm ss weight edge id vs when_exp g new_vertices = case vs of
