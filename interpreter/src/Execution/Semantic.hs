@@ -803,6 +803,25 @@ eval m pm ss (ExprLiteral (TupleLit te))        =
                                                        else if length l == 3 then Triple ((l !! 0), (l !! 1), (l !! 2))
                                                             else if length  l == 4 then Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3))
                                                              else error "Limit of Quadruples"
+eval m pm ss (GraphAccess e1 e2 )               =
+                                                do
+                                                    v1 <- eval m pm ss e1
+                                                    v2 <- eval m pm ss e2
+                                                    case v1 of
+                                                        (V.Graph g@(G.Graph vertices edges)) ->
+                                                            do  let vertex@(G.Vertex id v') = G.getVertexFromValue g v2 False
+                                                                if id == -1
+                                                                then error "This vertex does not exist"
+                                                                else do
+                                                                    let e = edges M.!? id
+                                                                    case e of
+                                                                        Nothing  -> return $ List []
+                                                                        Just edg -> return $ List $ makeAdjList edg
+                                                        _ -> error "Access Graph mismatch"
+                                                    where
+                                                        makeAdjList [] = []
+                                                        makeAdjList ( G.Edge _ (G.Vertex _ v ) _ : xs) = v : makeAdjList xs 
+
 eval m pm ss (ListAccess e1 e2 )                = 
                                                 do
                                                     v1 <- eval m pm ss e1
