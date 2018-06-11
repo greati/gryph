@@ -59,7 +59,11 @@ data Stmt = ReadStmt Identifier |
             ForStmt [Identifier] [ArithExpr] Block |
             WhileStmt ArithExpr Block |
             BfsStmt [Identifier] ArithExpr (Maybe ArithExpr) Block |
-            DfsStmt [Identifier] ArithExpr (Maybe ArithExpr) Block 
+            DfsStmt [Identifier] ArithExpr (Maybe ArithExpr) Block |
+            AddStmt ArithExpr ArithExpr |
+            AddEdgeStmt (Maybe ArithExpr) Edge ArithExpr |
+            DelStmt ArithExpr ArithExpr |
+            DelEdgeStmt Edge ArithExpr 
             deriving (Show, Eq) 
 
 data ForIterator = ForIterator [Identifier] [ArithExpr] [ArithExpr] deriving (Show, Eq)
