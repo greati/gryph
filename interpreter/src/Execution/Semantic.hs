@@ -811,7 +811,7 @@ eval m pm ss (GraphAccess e1 e2 )               =
                                                         (V.Graph g@(G.Graph vertices edges)) ->
                                                             do  let vertex@(G.Vertex id v') = G.getVertexFromValue g v2 False
                                                                 if id == -1
-                                                                then error "This vertex does not exist"
+                                                                then error $ "The Vertex " ++ (show v') ++ " does not exist"
                                                                 else do
                                                                     let e = edges M.!? id
                                                                     case e of
@@ -821,6 +821,15 @@ eval m pm ss (GraphAccess e1 e2 )               =
                                                     where
                                                         makeAdjList [] = []
                                                         makeAdjList ( G.Edge _ (G.Vertex _ v ) _ : xs) = v : makeAdjList xs 
+
+eval m pm ss (GraphEdgeAccess g (S.Edge edgetype v1 v2) ) = do
+                                                g'  <- eval m pm ss g
+                                                case g' of
+                                                    (V.Graph g@(G.Graph vertices edges)) -> do
+                                                        undefined
+                                                        --v1' <- eval m pm ss e1
+                                                        --v2' <- eval m pm ss e2
+                                                    _ -> error "Access Graph mismatch"
 
 eval m pm ss (ListAccess e1 e2 )                = 
                                                 do
