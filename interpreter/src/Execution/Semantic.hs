@@ -136,7 +136,8 @@ execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' =
 
 execStmt (ForStmt ids vs body) m pm ss = 
     do 
-            vss <- (getLists m pm ss [vs])
+            let new_vs = replicateList ((length ids) - (length vs)) vs 
+            vss <- (getLists m pm ss [new_vs])
             vss' <- over vss
             time <- getCurSeconds
             let newScope = IterationScope time
@@ -145,11 +146,16 @@ execStmt (ForStmt ids vs body) m pm ss =
             where
                 getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
                                                case xss of
-                                                    [(List list)] -> do return [(List list)]
-                                                    [(Map map)] -> do return [(List ( makeMap (M.toList map) ))]
+                                                    xss'@( (List list) : _ ) -> do return xss'
+                                                    [(Map map)]              -> do return [(List ( makeMap (M.toList map) ))]
+                                                    _                        -> error "Wrong pattern!"
                 getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
                                                xss'' <- (getLists m pm ss xss)
                                                return (xss' ++ xss'')
+
+                replicateList 0 xs = xs
+                replicateList n xs | n < 0     = error "There aren't enough identifiers." 
+                                   | otherwise = replicateList (n-1) xs ++ [last xs]
 
                 makeMap :: [(Value, Value)] -> [Value]
                 makeMap []     = []
@@ -1076,9 +1082,11 @@ forListComp m pm ss lc = do
                             let     newScope = BlockScope time
                                     ss' = (newScope:ss) in
                                     do
-                                        (exp, id, vs'@(v:vs), when_exp) <- evalListComp m pm ss' lc
-                                        let (Right m') = elabVars m (getNameCell id v) (head ss')
-                                        forListComp' m' pm ss' exp id vs' when_exp
+                                        (exp, id, vs, when_exp) <- evalListComp m pm ss' lc
+                                        case vs of
+                                            []         -> return []
+                                            vs'@(v:vs) -> do let (Right m') = elabVars m (getNameCell id v) (head ss')
+                                                             forListComp' m' pm ss' exp id vs' when_exp
 
 forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO [Value]
 forListComp' m pm ss exp id [v] when_exp = do
