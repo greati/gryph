@@ -62,7 +62,8 @@ stringLit :: Monad m => ParsecT [GphTokenPos] u m Literal
 stringLit = satisfy' p <?> "string"
     where 
         p (t,_) = case t of
-                    GTokStringLit i -> Just (Lit (String i))
+                    GTokStringLit "" -> Just (Lit (String ""))
+                    GTokStringLit i  -> Just (Lit (String (tail (init (i)))))
                     _ -> Nothing
 
 charLit :: Monad m => ParsecT [GphTokenPos] u m Literal
