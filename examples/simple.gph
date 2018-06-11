@@ -2,5 +2,7 @@
 
 #add 23 in g;
 #add 5 where 2<-3 in g;
-del g<1> from f;
+#del g<1> from f;
+
+break;
 

@@ -63,7 +63,8 @@ data Stmt = ReadStmt Identifier |
             AddStmt ArithExpr ArithExpr |
             AddEdgeStmt (Maybe ArithExpr) Edge ArithExpr |
             DelStmt ArithExpr ArithExpr |
-            DelEdgeStmt Edge ArithExpr 
+            DelEdgeStmt Edge ArithExpr |
+            BreakStmt 
             deriving (Show, Eq) 
 
 data ForIterator = ForIterator [Identifier] [ArithExpr] [ArithExpr] deriving (Show, Eq)
