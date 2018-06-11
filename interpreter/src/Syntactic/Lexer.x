@@ -32,6 +32,9 @@ tokens :-
     or                                  {\p s -> (GTokOr, p)}
     not                                 {\p s -> (GTokNot, p)}
     xor                                 {\p s -> (GTokXor, p)}
+    add                                 {\p s -> (GTokAdd, p)}
+    del                                 {\p s -> (GTokDel, p)}
+    put                                 {\p s -> (GTokPut, p)}
     if                                  {\p s -> (GTokIf, p)}
     else                                {\p s -> (GTokElse, p)}
     for                                 {\p s -> (GTokFor, p)}
