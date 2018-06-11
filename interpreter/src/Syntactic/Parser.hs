@@ -895,9 +895,16 @@ postfixExpr = do
                             do
                                 do
                                     (tok GTokLess) 
-                                    e <- expression
-                                    (tok GTokGreater)
-                                    return (GraphAccess i e)
+                                    do
+                                        try $ do
+                                            e <- expression
+                                            (tok GTokGreater)
+                                            return (GraphAccess i e)
+                                        <|>
+                                        do
+                                            e <- edge
+                                            (tok GTokGreater)
+                                            return (GraphEdgeAccess i e)
                                 <|>
                                 do
                                     (tok GTokPipe) 

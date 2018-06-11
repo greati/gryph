@@ -131,6 +131,7 @@ data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr |
                     ArithTerm Term |
                     ExprLiteral ExprLiteral |
                     GraphAccess ArithExpr ArithExpr |
+                    GraphEdgeAccess ArithExpr Edge |
                     DictAccess ArithExpr ArithExpr |
                     ListAccess ArithExpr ArithExpr |
                     StructAccess ArithExpr Identifier |
