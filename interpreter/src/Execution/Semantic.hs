@@ -853,34 +853,18 @@ eval m pm ss (StructAccess e1 (Ident i))        =
 
 eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) = 
                                                 do
-                                                    v1 <- eval m pm ss e1
-                                                    v2 <- eval m pm ss e2
+                                                    (v1,t1)  <- evalWithType m pm ss e1
+                                                    (v2,t2)  <- evalWithType m pm ss e2
                                                     case v1 of
                                                         l1@(List []) -> case v2 of 
-                                                                         l2@(List [])     -> return $ plusPlusBinList l1 l2
-                                                                         l2@(List (x:xs)) -> return $ plusPlusBinList l1 l2  
-                                                                         k                -> return $ plusPlusBin k l1
+                                                                         l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List (x:xs)) -> if t1 == t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                         l1@(List (x:xs)) -> case v2 of
-                                                                                l2@(List [])     -> return $ List (x:xs)
-                                                                                l2@(List (y:ys)) -> if checkCompatType t1 t2 
+                                                                                l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                                l2@(List (y:ys)) -> if  t1 ==  t2 
                                                                                                     then return $ plusPlusBinList l1 l2
                                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
-                                                                                                     where t1 =  getType l1
-                                                                                                           t2 =  getType l2
-
-                                                                                k -> if checkCompatType t1 (GList t2)
-                                                                                     then return $ plusPlusBin l1 k
-                                                                                     else error  $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
-                                                                                      where t1 = getType l1
-                                                                                            t2 = getType k
-
-                                                        k -> case v2 of 
-                                                                l2@(List [])     -> return $ plusPlusBin k l2
-                                                                l2@(List (y:ys)) ->  if checkCompatType (GList t1) t2
-                                                                                     then return $ plusPlusBin k l2
-                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
-                                                                                      where t1 = getType k
-                                                                                            t2 = getType l2
+ 
 
 eval m pm ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
                                                 Left i -> error i
