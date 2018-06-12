@@ -1232,3 +1232,7 @@ updateListIds m ss ((Ident id):ids) (List (v:vs)) = do
                                                         r <- updateListIds m' ss ids (List vs)
                                                         return r
 
+
+uncapsulate :: GType -> GType
+uncapsulate (GDict t1 t2) = t2
+uncapsulate (GList t1)    = t1
