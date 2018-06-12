@@ -6,10 +6,15 @@
 #print <a<-b for a,b over [1,2,3],[4,5]>;
 #print <[1,2,3]>;
 #print <a--(2*a) for a over [1]>;
+#g : <int> = <a * 10 where a--b for a,b over [0, 1, 2]>;
+#print g<1>;
+#print g<(-1)->2>;
+#print g<1<-2>;
+#print g<1--2>;
+#print g;
 
 g : <int> = <a * 10 where a--b for a,b over [0, 1, 2]>;
-print g<1>;
-print g<(-1)->2>;
-print g<1<-2>;
-print g<1--2>;
+add 5 in g;
 print g;
+#add 5--5 in g;
+#add 10 where 5--5 in g;

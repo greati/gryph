@@ -227,6 +227,26 @@ execStmt (BreakStmt) m pm ss = do
                                             Nothing -> error "Break called outside iteration scope"
                                             Just v' -> v'
 
+execStmt (AddStmt e1 e2) m pm ss =
+                                    do
+                                        e1' <- eval m pm ss e1
+                                        (e2', e2type) <- evalWithType m pm ss e2
+                                        case e2' of
+                                            (V.Graph g@(G.Graph vertices _)) -> do
+                                                case e2type of
+                                                    GGraphEmpty -> do let v  = G.getVertexFromValue g e1' True
+                                                                      let g' = G.insertVertex g v
+                                                                      m' <- execAttrStmt' m pm ss [] e2 (V.Graph g', e2type)
+                                                                      return (m', ss, Nothing)
+                                                    GGraphVertexEdge typeVertice _ -> if not $ typeVertice == (getType e1')
+                                                                                      then error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ show typeVertice
+                                                                                      else do let v  = G.getVertexFromValue g e1' True
+                                                                                              let g' = G.insertVertex g v
+                                                                                              m' <- execAttrStmt' m pm ss [] e2 (V.Graph g', e2type)
+                                                                                              return (m', ss, Nothing)                                            
+                                                
+                                            _ -> error "Wrong pattern"                                                                               
+
 -- | Produce a register value to store in memory from a struct declaration
 makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
 makeDefaultSetter pm si = Setter si (M.fromList (makeSetList pm sc))
@@ -413,8 +433,8 @@ evalWithType m pm ss e =
                 v' <- eval m pm ss e 
                 return $ (v', getType v')
 
-execAttrStmt' :: Memory -> ProgramMemory -> Scopes -> [AccessType] -> ArithExpr -> ArithExpr -> IO Memory
-execAttrStmt' m pm ss as lhs rhs = 
+execAttrStmt' :: Memory -> ProgramMemory -> Scopes -> [AccessType] -> ArithExpr -> (Value,GType) -> IO Memory
+execAttrStmt' m pm ss as lhs rhs@(vr,tr) = 
     do 
         case lhs of
             (ArithTerm (IdTerm (Ident i))) -> do
@@ -422,7 +442,6 @@ execAttrStmt' m pm ss as lhs rhs =
                                                     case var of
                                                         Left e -> error e
                                                         Right (tl,val) -> do 
-                                                                (vr,tr) <- evalWithType m pm ss rhs 
                                                                 v' <- return $ backwardAccessUpdate m pm ss as i val tl tr vr
                                                                 case updateVar m i ss (tr, Value v') of 
                                                                     Right m' -> do return m'   
@@ -467,7 +486,9 @@ execAttrStmt' m pm ss as lhs rhs =
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt [] []) m pm ss = return m
-execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  m' <- execAttrStmt' m pm ss [] t v
+execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  
+                                                    rhs@(vr,tr) <- evalWithType m pm ss v
+                                                    m' <- execAttrStmt' m pm ss [] t rhs
                                                     execAttrStmt (AttrStmt ts vs) m' pm ss
                                                                                                         
 -- |From value, guaarantee boolean value
@@ -479,6 +500,11 @@ makeBooleanFromValue _        = Left "Expected boolean value"
 checkCompatType :: GType -> GType -> Bool
 checkCompatType t t' = if t == t' then True
                     else case (t,t') of
+                        (GGraphVertexEdge v1 _, GGraphVertexEdge v2 GEdgeEmpty) -> (v1 == v2)
+                        (GGraphVertexEdge v2 GEdgeEmpty, GGraphVertexEdge v1 _) -> (v1 == v2)
+                        (GGraphVertexEdge _ _, GGraphEmpty) -> True
+                        (GGraphEmpty, GGraphVertexEdge _ _) -> True
+                        (GGraphVertexEdge v1 e1, GGraphVertexEdge v2 e2) -> (e1 == e2) && (v1 == v2)
                         (GFloat, GInteger)  -> True
                         (GList _, GEmpty)   -> True
                         (GEmpty ,GList _)   -> True
@@ -809,6 +835,7 @@ eval m pm ss (ExprLiteral (TupleLit te))        =
                                                        else if length l == 3 then Triple ((l !! 0), (l !! 1), (l !! 2))
                                                             else if length  l == 4 then Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3))
                                                              else error "Limit of Quadruples"
+
 eval m pm ss (GraphAccess e1 e2 )               =
                                                 do
                                                     g <- eval m pm ss e1
