@@ -92,7 +92,7 @@ blockOrStmt =   do
 
 matchedStmt :: GenParser GphTokenPos st Stmt
 matchedStmt = do
-                matchedIfElse <|> commonStmt <|> forStmt <|> whileStmt <|> bfsStmt <|> dfsStmt <|> addStmt <|> delStmt
+                matchedIfElse <|> commonStmt <|> forStmt <|> whileStmt <|> bfsStmt <|> dfsStmt 
 
 unmatchedStmt :: GenParser GphTokenPos st Stmt
 unmatchedStmt = do
@@ -100,7 +100,7 @@ unmatchedStmt = do
 
 commonStmt :: GenParser GphTokenPos st Stmt
 commonStmt = do 
-                s <- (readStmt <|> printStmt <|> attrStmt <|> subprogCallStmt <|> declStmt <|> returnStmt)
+                s <- (readStmt <|> printStmt <|> attrStmt <|> subprogCallStmt <|> declStmt <|> returnStmt <|> addStmt <|> delStmt <|> breakStmt)
                 (tok GTokSemicolon)
                 return s
 
@@ -108,6 +108,9 @@ subprogCallStmt :: GenParser GphTokenPos st Stmt
 subprogCallStmt = do
                         s <- subprogCall
                         return (SubCallStmt s)
+
+breakStmt :: GenParser GphTokenPos st Stmt
+breakStmt = do {(tok GTokBreak) >> return BreakStmt}
 
 returnStmt :: GenParser GphTokenPos st Stmt
 returnStmt = do

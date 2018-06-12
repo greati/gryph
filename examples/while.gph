@@ -4,6 +4,9 @@ a : int;
 
 for a over [1,2,3] {
     print a;
+    if (a == 2) {
+        break;
+    }
 }
 
 
@@ -21,12 +24,12 @@ sub f (a:int) : int {
     }
 }
 
-sub add (a,b : int) : int {
+sub addi (a,b : int) : int {
     return a + b;
 }
 
 k : int = f(10);
 print k;
 
-m : int = add(2,5);
+m : int = addi(2,5);
 print m;

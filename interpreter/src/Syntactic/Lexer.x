@@ -50,6 +50,7 @@ tokens :-
     return                              {\p s -> (GTokReturn, p)}
     print                               {\p s -> (GTokPrint, p)}
     read                                {\p s -> (GTokRead, p)}
+    break                               {\p s -> (GTokBreak, p)}
     $alpha $varname*[\']+[^\'$white]+   {\p s -> (GTokError s, p)}           
     $alpha $varname*[\']*               {\p s -> (GTokIdentifier s, p)}
     \@                                  {\p s -> (GTokAt, p)}
