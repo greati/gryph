@@ -448,7 +448,9 @@ execAttrStmt' m pm ss as lhs rhs =
                                                 case memval of
                                                     (List xs) -> List (setElemList xs int v'')
                                                         where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) (getType memval) rightType v
-                                                    _ -> error "You must access a list." 
+                                                    (String xs) -> String (setElemList xs int c)
+                                                        where v''@(Char c) = backwardAccessUpdate m pm ss as ident (Char (xs !! fromInteger int)) (getType memval) rightType v
+                                                    _ -> error "You must access a list or a string." 
                                         _ -> error "List index must be an integer." 
                 DictIndex index -> case memval of
                                         (Map m') -> if M.notMember index m' then error $ "Key " ++ show index ++ " not in dictionary" 
@@ -837,6 +839,9 @@ eval m pm ss (ListAccess e1 e2 )                =
                                                         (List l) -> case v2 of
                                                                      Integer i ->  return $ l !! (fromIntegral i)
                                                                      _ -> error "Access List mismatch"
+                                                        (String s) -> case v2 of
+                                                                     Integer i -> return (Char $ s !! (fromIntegral i))
+                                                                     _ -> error "Access string mismatch"
                                                         _ -> error "Access List mismatch"
 eval m pm ss (DictAccess e1 e2)                 = 
                                                 do
