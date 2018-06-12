@@ -221,6 +221,11 @@ execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                                 where (ss'', m') = case clearScopesUntilSub m ss of
                                                         Nothing -> error "Return called outside subprogram scope"
                                                         Just v' -> v'
+execStmt (BreakStmt) m pm ss = do
+                                    return $ (m',ss'',Nothing)
+                                    where (ss'', m') = case clearScopesUntilIter m ss of
+                                            Nothing -> error "Break called outside iteration scope"
+                                            Just v' -> v'
 
 -- | Produce a register value to store in memory from a struct declaration
 makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
@@ -303,6 +308,8 @@ clearScopesUntilType m t@(SubScope _) (s@(SubScope _):ss) = Just (ss, m')
 clearScopesUntilType m t@(SubScope _) (_:ss) = clearScopesUntilType m' t ss
     where m' = clearScope t m
 clearScopesUntilType m t@(IterationScope _) (s@(IterationScope _):ss) = Just (ss, m')
+    where m' = clearScope t m
+clearScopesUntilType m t@(IterationScope _) (_:ss) = clearScopesUntilType m' t ss
     where m' = clearScope t m
 clearScopesUntilType m t (s@(BlockScope _):ss) = clearScopesUntilType m' t ss
     where m' = clearScope t m
@@ -441,7 +448,9 @@ execAttrStmt' m pm ss as lhs rhs =
                                                 case memval of
                                                     (List xs) -> List (setElemList xs int v'')
                                                         where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) (getType memval) rightType v
-                                                    _ -> error "You must access a list." 
+                                                    (String xs) -> String (setElemList xs int c)
+                                                        where v''@(Char c) = backwardAccessUpdate m pm ss as ident (Char (xs !! fromInteger int)) (getType memval) rightType v
+                                                    _ -> error "You must access a list or a string." 
                                         _ -> error "List index must be an integer." 
                 DictIndex index -> case memval of
                                         (Map m') -> if M.notMember index m' then error $ "Key " ++ show index ++ " not in dictionary" 
@@ -591,12 +600,9 @@ interpretParamDeclaration pd@(ParamDeclaration is _ es) m pm ss
  --Get type of a List and make coercion if needed                
 getListType :: [Value] -> GType
 getListType [x]      = getType x
-getListType (x:y:xs) = case getType x of
-                        GInteger -> case getType y of
-                                     GInteger -> getListType (y:xs)
-                                     GFloat -> GFloat
-                        GFloat   -> GFloat
-                        any      -> any 
+getListType (x:y:xs) = if getType x == getType y 
+                       then getListType (y:xs)
+                       else error "Heterogeneous List Type"   
                
 -- | Return the type of a given Gryph value.
 getType :: Value -> GType
@@ -839,6 +845,9 @@ eval m pm ss (ListAccess e1 e2 )                =
                                                         (List l) -> case v2 of
                                                                      Integer i ->  return $ l !! (fromIntegral i)
                                                                      _ -> error "Access List mismatch"
+                                                        (String s) -> case v2 of
+                                                                     Integer i -> return (Char $ s !! (fromIntegral i))
+                                                                     _ -> error "Access string mismatch"
                                                         _ -> error "Access List mismatch"
 eval m pm ss (DictAccess e1 e2)                 = 
                                                 do
@@ -884,22 +893,18 @@ eval m pm ss (StructAccess e1 (Ident i))        =
 
 eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) = 
                                                 do
-                                                    v1 <- eval m pm ss e1
-                                                    v2 <- eval m pm ss e2
+                                                    (v1,t1)  <- evalWithType m pm ss e1
+                                                    (v2,t2)  <- evalWithType m pm ss e2
                                                     case v1 of
                                                         l1@(List []) -> case v2 of 
-                                                                         l2@(List [])     -> return $ plusPlusBin l1 l2
-                                                                         l2@(List (x:xs)) -> return $ plusPlusBin l1 l2  
-                                                                         k                -> return $ plusPlusBin k l1
+                                                                         l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List (x:xs)) -> if t1 == t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                         l1@(List (x:xs)) -> case v2 of
-                                                                                l2@(List (y:ys)) -> if (getType x == getType y) then return $ plusPlusBinList l1 l2
-                                                                                                    else return $ plusPlusBin l1 l2
-                                                                                k -> if (getType k == getType x) then return $ plusPlusBin l1 k
-                                                                                     else error "Type mismatch ++ opeator "
-                                                        k -> case v2 of 
-                                                                l2@(List [])     -> return $ plusPlusBin l2 k
-                                                                l2@(List (y:ys)) -> if (getType k == getType y) then return $ plusPlusBin k l2
-                                                                                else error "Type mismatch ++ operator "
+                                                                                l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                                l2@(List (y:ys)) -> if  t1 ==  t2 
+                                                                                                    then return $ plusPlusBinList l1 l2
+                                                                                                    else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
+ 
 
 eval m pm ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
                                                 Left i -> error i
@@ -941,6 +946,8 @@ eval m pm ss (ExprLiteral (GraphLit exp edges )) = do
                     evalGraphComp m pm ss' exp edges
 
 plusPlusBinList :: Value -> Value -> Value
+plusPlusBinList (List []) (List l1) = List l1;
+plusPlusBinList (List l1) (List []) = List l1;
 plusPlusBinList (List xs'@(x:xs)) (List ys'@(y:ys)) = List (xs' ++ ys')
 
 plusPlusBin :: Value -> Value -> Value

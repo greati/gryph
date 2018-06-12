@@ -32,6 +32,9 @@ tokens :-
     or                                  {\p s -> (GTokOr, p)}
     not                                 {\p s -> (GTokNot, p)}
     xor                                 {\p s -> (GTokXor, p)}
+    add                                 {\p s -> (GTokAdd, p)}
+    del                                 {\p s -> (GTokDel, p)}
+    put                                 {\p s -> (GTokPut, p)}
     if                                  {\p s -> (GTokIf, p)}
     else                                {\p s -> (GTokElse, p)}
     for                                 {\p s -> (GTokFor, p)}
@@ -47,6 +50,7 @@ tokens :-
     return                              {\p s -> (GTokReturn, p)}
     print                               {\p s -> (GTokPrint, p)}
     read                                {\p s -> (GTokRead, p)}
+    break                               {\p s -> (GTokBreak, p)}
     $alpha $varname*[\']+[^\'$white]+   {\p s -> (GTokError s, p)}           
     $alpha $varname*[\']*               {\p s -> (GTokIdentifier s, p)}
     \@                                  {\p s -> (GTokAt, p)}

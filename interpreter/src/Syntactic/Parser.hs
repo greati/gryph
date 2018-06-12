@@ -92,7 +92,7 @@ blockOrStmt =   do
 
 matchedStmt :: GenParser GphTokenPos st Stmt
 matchedStmt = do
-                matchedIfElse <|> commonStmt <|> forStmt <|> whileStmt <|> bfsStmt <|> dfsStmt
+                matchedIfElse <|> commonStmt <|> forStmt <|> whileStmt <|> bfsStmt <|> dfsStmt 
 
 unmatchedStmt :: GenParser GphTokenPos st Stmt
 unmatchedStmt = do
@@ -100,7 +100,7 @@ unmatchedStmt = do
 
 commonStmt :: GenParser GphTokenPos st Stmt
 commonStmt = do 
-                s <- (readStmt <|> printStmt <|> attrStmt <|> subprogCallStmt <|> declStmt <|> returnStmt)
+                s <- (readStmt <|> printStmt <|> attrStmt <|> subprogCallStmt <|> declStmt <|> returnStmt <|> addStmt <|> delStmt <|> breakStmt)
                 (tok GTokSemicolon)
                 return s
 
@@ -108,6 +108,9 @@ subprogCallStmt :: GenParser GphTokenPos st Stmt
 subprogCallStmt = do
                         s <- subprogCall
                         return (SubCallStmt s)
+
+breakStmt :: GenParser GphTokenPos st Stmt
+breakStmt = do {(tok GTokBreak) >> return BreakStmt}
 
 returnStmt :: GenParser GphTokenPos st Stmt
 returnStmt = do
@@ -120,6 +123,48 @@ returnStmt = do
 --                    i <- identList
 --                    do
 --                        attrStmt i <|> declStmtAux i
+
+addStmt :: GenParser GphTokenPos st Stmt
+addStmt = do
+            (tok GTokAdd)
+            do
+                try $ do
+                    e1 <- expression
+                    (tok GTokIn)
+                    e2 <- expression
+                    return $ AddStmt e1 e2
+                <|>
+                do
+                    e1 <- try $ do  e1' <- expression
+                                    (tok GTokWhere)
+                                    return e1'
+                    ed <- edge
+                    (tok GTokIn)
+                    e2 <- expression 
+                    return $ AddEdgeStmt (Just e1) ed e2
+                <|>
+                do
+                    ed <- edge
+                    (tok GTokIn)
+                    e2 <- expression 
+                    return $ AddEdgeStmt Nothing ed e2
+
+delStmt :: GenParser GphTokenPos st Stmt
+delStmt = do
+            (tok GTokDel)
+            do
+                do
+                    ed <- try $ do  ed' <- edge
+                                    (tok GTokFrom)
+                                    return ed'
+                    e <- expression
+                    return $ DelEdgeStmt ed e
+                <|>
+                do
+                    e1 <- expression
+                    (tok GTokFrom)
+                    e2 <- expression
+                    return $ DelStmt e1 e2
 
 attrStmt :: GenParser GphTokenPos st Stmt
 attrStmt = do 
