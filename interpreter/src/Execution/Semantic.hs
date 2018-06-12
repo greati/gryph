@@ -811,13 +811,13 @@ eval m pm ss (ExprLiteral (TupleLit te))        =
                                                              else error "Limit of Quadruples"
 eval m pm ss (GraphAccess e1 e2 )               =
                                                 do
-                                                    v1 <- eval m pm ss e1
-                                                    v2 <- eval m pm ss e2
-                                                    case v1 of
+                                                    g <- eval m pm ss e1
+                                                    v <- eval m pm ss e2
+                                                    case g of
                                                         (V.Graph g@(G.Graph vertices edges)) ->
-                                                            do  let vertex@(G.Vertex id v') = G.getVertexFromValue g v2 False
+                                                            do  let (G.Vertex id v') = G.getVertexFromValue g v False
                                                                 if id == -1
-                                                                then error "This vertex does not exist"
+                                                                then error $ "The Vertex " ++ (show v') ++ " does not exist"
                                                                 else do
                                                                     let e = edges M.!? id
                                                                     case e of
@@ -827,6 +827,30 @@ eval m pm ss (GraphAccess e1 e2 )               =
                                                     where
                                                         makeAdjList [] = []
                                                         makeAdjList ( G.Edge _ (G.Vertex _ v ) _ : xs) = v : makeAdjList xs 
+
+eval m pm ss (GraphEdgeAccess g (S.Edge edgetype v1 v2) ) = do
+                                                g'  <- eval m pm ss g
+                                                case g' of
+                                                    (V.Graph g@(G.Graph vertices edges)) -> do
+                                                        v1' <- eval m pm ss v1
+                                                        v2' <- eval m pm ss v2
+                                                        let vertex1@(G.Vertex id v1'') = G.getVertexFromValue g v1' False
+                                                        if id == -1
+                                                            then error $ "The Vertex " ++ (show v1'') ++ " does not exist"
+                                                        else 
+                                                            do  let vertex2@(G.Vertex id2 v2'') = G.getVertexFromValue g v2' False
+                                                                if id2 == -1
+                                                                    then error $ "The Vertex " ++ (show v2'') ++ " does not exist"
+                                                                else 
+                                                                    do let e = edges M.!? id
+                                                                       case e of
+                                                                            Nothing  -> error $ "There is no Edge between " ++ (show v1'') ++ " and " ++ (show v2'') ++ " does not exist"
+                                                                            Just edg -> return $ getWeightEdge vertex1 vertex2 edg
+                                                    _ -> error "Access Graph mismatch"
+
+                                                where
+                                                    getWeightEdge v1 v2 [] = error $ "There is no Edge between " ++ (show v1) ++ " and " ++ (show v2) ++ " does not exist"
+                                                    getWeightEdge v1 v2 ( G.Edge _ v w : xs) = if v2 == v then w else getWeightEdge v1 v2 xs
 
 eval m pm ss (ListAccess e1 e2 )                = 
                                                 do

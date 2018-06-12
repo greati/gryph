@@ -1,24 +1,15 @@
-l1 : [int];
+#print <[1,2,3], a<-b for a,b over [1,2,3] when a==2>;
+#print <[1,2,3], a->b for a,b over [1,2,3],[1,2,3]>;
+#print <[10,12,14]++b  where a->b+1 for a,b over [0,1],[1,2,3]>;
+#print <a--a for a over [0, 1, 2] when (a < 10)>;
+#print <[1,2,3], a->b for a,b over [1,2],[1,5]>;
+#print <a<-b for a,b over [1,2,3],[4,5]>;
+#print <[1,2,3]>;
+#print <a--(2*a) for a over [1]>;
 
-l1 = [1,2,3];
-
-print l1;
-
-print <[1,2,3], a<-b for a,b over [1,2,3] when a==2>;
-print <[1,2,3], a->b for a,b over [1,2,3],[1,2,3]>;
-print <[10,12,14]++b  where a->b+1 for a,b over [0,1],[1,2,3]>;
-print <a--a for a over [0, 1, 2] when (a < 10)>;
-print <[1,2,3], a->b for a,b over [1,2],[1,5]>;
-print <a<-b for a,b over [1,2,3],[4,5]>;
-print <[1,2,3]>;
-print <a--(2*a) for a over [1]>;
-
-g  : <int>;
-g1 : <int, float> = <[1,2,3]>;
-g = <a--a for a over [0, 1, 2] when (a < 2) >;
-
-#g = g1;
+g : <int> = <a * 10 where a--b for a,b over [0, 1, 2]>;
+print g<1>;
+print g<(-1)->2>;
+print g<1<-2>;
+print g<1--2>;
 print g;
-
-#l3:[string] = [];
-#l4:[string] = l3 ++ ["oi"];
