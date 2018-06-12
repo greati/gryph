@@ -221,6 +221,11 @@ execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
                                                 where (ss'', m') = case clearScopesUntilSub m ss of
                                                         Nothing -> error "Return called outside subprogram scope"
                                                         Just v' -> v'
+execStmt (BreakStmt) m pm ss = do
+                                    return $ (m',ss'',Nothing)
+                                    where (ss'', m') = case clearScopesUntilIter m ss of
+                                            Nothing -> error "Break called outside iteration scope"
+                                            Just v' -> v'
 
 -- | Produce a register value to store in memory from a struct declaration
 makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
@@ -303,6 +308,8 @@ clearScopesUntilType m t@(SubScope _) (s@(SubScope _):ss) = Just (ss, m')
 clearScopesUntilType m t@(SubScope _) (_:ss) = clearScopesUntilType m' t ss
     where m' = clearScope t m
 clearScopesUntilType m t@(IterationScope _) (s@(IterationScope _):ss) = Just (ss, m')
+    where m' = clearScope t m
+clearScopesUntilType m t@(IterationScope _) (_:ss) = clearScopesUntilType m' t ss
     where m' = clearScope t m
 clearScopesUntilType m t (s@(BlockScope _):ss) = clearScopesUntilType m' t ss
     where m' = clearScope t m
