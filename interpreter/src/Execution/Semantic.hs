@@ -602,8 +602,10 @@ checkCompatType t t' = if t == t' then True
                         (GGraphEmpty, GGraphVertexEdge _ _) -> True
                         (GGraphVertexEdge v1 e1, GGraphVertexEdge v2 e2) -> (e1 == e2) && (v1 == v2)
                         (GFloat, GInteger)  -> True
-                        (GList _, GEmpty)   -> True
-                        (GEmpty ,GList _)   -> True
+                        (GList _, GListEmpty)     -> True
+                        (GListEmpty ,GList _)     -> True
+                        (GDict _ _, GDictEmpty)   -> True
+                        (GDictEmpty, GDict _ _ )  -> True
                         (GList l, GList l') -> checkCompatType l l'
                         --(GList l, GList l') -> checkCompatType (GList l) l'
                         --(GList l, GList l') -> checkCompatType (l) $ GList l'
@@ -733,9 +735,9 @@ getType (Float f)                     = GFloat
 getType (String s )                   = GString
 getType (Char c)                      = GChar
 getType (Bool b)                      = GBool
-getType (List [])                     = GEmpty
+getType (List [])                     = GListEmpty
 getType (List (x:xs))                 = GList (getListType (x:xs))
-getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
+getType (Map (m))                     = if M.null m then GDictEmpty else GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
 getType (Quadruple (v1,v2, v3, v4))   = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
@@ -1035,12 +1037,12 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                     (v2,t2)  <- evalWithType m pm ss e2
                                                     case v1 of
                                                         l1@(List []) -> case v2 of 
-                                                                         l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List [])     -> if t1 == t2 || GListEmpty == t2 || t1 == GListEmpty  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                          l2@(List (x:xs)) -> if t1 == t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                          _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 
                                                         l1@(List (x:xs)) -> case v2 of
-                                                                                l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                                l2@(List [])     -> if t1 == t2 || GListEmpty == t2 || t1 == GListEmpty then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                                 l2@(List (y:ys)) -> if  t1 ==  t2 
                                                                                                     then return $ plusPlusBinList l1 l2
                                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 

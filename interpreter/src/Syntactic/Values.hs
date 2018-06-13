@@ -2,6 +2,7 @@ module Syntactic.Values where
 
 import qualified Data.Map.Strict as M
 import qualified Execution.Graph as G
+import qualified Data.Set as S
 import Syntactic.Types
 
 {- Values for all data types -}
@@ -117,9 +118,23 @@ instance Show Value where
    show (Pair x)      = show x
    show (Triple x)    = show x
    show (Quadruple x) = show x
-   show (Map x)       = show x
-   show (Graph x)     = show x
+   show (Map x)       = showDict (Map x)
+   show (Graph x)     = showGraph (Graph x)
    show (Setter t x)  = t ++ " " ++ show x
    show EmptyList     = "[]"
 
+showDict :: Value -> String
+showDict (Map x)     = if M.null x then "||" else "|" ++ f ( M.toList x) ++ "|"
+                        where f []          = ""
+                              f [(k,v)]     = (show k) ++ " ? " ++ (show v)
+                              f ((k,v):xs)  = (show k) ++ " ? " ++ (show v) ++ ", " ++ (f xs) 
 
+
+showGraph :: Value -> String
+showGraph (Graph g@(G.Graph vs es)) = if S.null vs then "<>" else "<\n" ++ f (S.toList vs) g  ++ ">"
+                                        where f [] g                    =  ""
+                                              f (v@(G.Vertex _ x):xs) g = "    " ++  show x ++ " -> " ++ h (G.getEdges g v)  ++  "\n" ++ (f xs g)
+                                              h []                      = ""
+                                              h [(G.Edge _ v@(G.Vertex _ x) b)]         = show x ++ " (" ++ show b ++ ")"
+                                              h ((G.Edge _ v@(G.Vertex _ x) b):xs)      = show x ++ " (" ++ show b ++ "), " ++ h xs   
+                                              
