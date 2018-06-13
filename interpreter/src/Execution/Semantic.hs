@@ -1037,13 +1037,17 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                         l1@(List []) -> case v2 of 
                                                                          l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                          l2@(List (x:xs)) -> if t1 == t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+
                                                         l1@(List (x:xs)) -> case v2 of
                                                                                 l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                                 l2@(List (y:ys)) -> if  t1 ==  t2 
                                                                                                     then return $ plusPlusBinList l1 l2
                                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
- 
+                         
+                                                                                _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 
+                                                        _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 eval m pm ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
                                                 Left i -> error i
                                                 Right i -> return $ i
