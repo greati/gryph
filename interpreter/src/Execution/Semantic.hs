@@ -227,6 +227,122 @@ execStmt (BreakStmt) m pm ss = do
                                             Nothing -> error "Break called outside iteration scope"
                                             Just v' -> v'
 
+execStmt (AddStmt e1 e2) m pm ss =
+                                    do
+                                        e1' <- eval m pm ss e1
+                                        (e2', e2type) <- evalWithType m pm ss e2
+                                        case e2' of
+                                            (V.Graph g@(G.Graph vertices _)) -> do
+                                                case e2type of
+                                                    GGraphEmpty -> do let v  = G.getVertexFromValue g e1' True
+                                                                      let g' = G.insertVertex g v
+                                                                      m' <- execAttrStmt' m pm ss [] e2 (V.Graph g', e2type)
+                                                                      return (m', ss, Nothing)
+                                                    GGraphVertexEdge typeVertice _ -> if not $ typeVertice == (getType e1')
+                                                                                      then error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ show typeVertice
+                                                                                      else do let v  = G.getVertexFromValue g e1' True
+                                                                                              let g' = G.insertVertex g v
+                                                                                              m' <- execAttrStmt' m pm ss [] e2 (V.Graph g', e2type)
+                                                                                              return (m', ss, Nothing)                                            
+                                            _ -> error "Wrong pattern"
+
+execStmt (DelStmt e1 e2) m pm ss =
+                                    do
+                                        e1' <- eval m pm ss e1
+                                        (e2', e2type) <- evalWithType m pm ss e2
+                                        case e2' of
+                                            (V.Graph g@(G.Graph vertices _)) -> do
+                                                let v@(Vertex id _)  = G.getVertexFromValue g e1' False
+                                                if id == -1
+                                                then error $ "The Vertex " ++ (show e1') ++ " doesn't exist"
+                                                else do
+                                                    let g' = G.deleteVertex v g
+                                                    m' <- execAttrStmt' m pm ss [] e2 (V.Graph g', e2type)
+                                                    return (m', ss, Nothing)                                                                                               
+                                            _ -> error "Wrong pattern"
+
+execStmt (AddEdgeStmt weight (S.Edge typeEdge e1 e2) g) m pm ss = 
+    do
+        (g', gtype) <- evalWithType m pm ss g
+        case g' of
+            (V.Graph g1@(G.Graph vertices _)) -> do 
+                e1' <- eval m pm ss e1
+                e2' <- eval m pm ss e2
+                if getType e1' == getType e2'
+                then do
+                    let v1@(G.Vertex id1 _) = G.getVertexFromValue g1 e1' False
+                    if id1 == -1
+                    then error $ "The Vertex " ++ (show e1') ++ " doesn't exist"
+                    else do
+                        let v2@(G.Vertex id2 _) = G.getVertexFromValue g1 e2' False
+                        if id2 == -1
+                            then error $ "The Vertex " ++ (show e2') ++ " doesn't exist"
+                        else
+                            case weight of
+                                Nothing -> do let w = (Integer 1)
+                                              g'' <- addEdge g1 typeEdge v1 v2 w
+                                              m' <- execAttrStmt' m pm ss [] g (g'', gtype)
+                                              return (m', ss, Nothing) 
+                                Just w  -> do w' <- eval m pm ss w
+                                              g'' <- addEdge g1 typeEdge v1 v2 w'
+                                              m' <- execAttrStmt' m pm ss [] g (g'', gtype)
+                                              return (m', ss, Nothing)
+                else error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ (show $ getType e2')
+            _ -> error "Wrong pattern" 
+
+execStmt (DelEdgeStmt (S.Edge typeEdge e1 e2) g) m pm ss = 
+    do
+        (g', gtype) <- evalWithType m pm ss g
+        case g' of
+            (V.Graph g1@(G.Graph vertices _)) -> do
+                e1' <- eval m pm ss e1
+                e2' <- eval m pm ss e2
+                if getType e1' == getType e2'
+                then do
+                    let v1@(G.Vertex id1 _) = G.getVertexFromValue g1 e1' False
+                    if id1 == -1
+                    then error $ "The Vertex " ++ (show e1') ++ " doesn't exist"
+                    else do
+                        let v2@(G.Vertex id2 _) = G.getVertexFromValue g1 e2' False
+                        if id2 == -1
+                            then error $ "The Vertex " ++ (show e2') ++ " doesn't exist"
+                        else
+                            case typeEdge of
+                                DoubleEdge -> do let ed1  = G.Edge v1 v2 (Integer 1)
+                                                 let ed2  = G.Edge v2 v1 (Integer 1)
+                                                 if G.isEdgePresent g1 ed1
+                                                 then
+                                                    if G.isEdgePresent g1 ed2
+                                                    then do
+                                                        let g''  = G.deleteEdge g1 ed1
+                                                        let g''' = G.deleteEdge g'' ed2
+                                                        m' <- execAttrStmt' m pm ss [] g (V.Graph g''', gtype)
+                                                        return (m', ss, Nothing)
+                                                    else 
+                                                        error $ "There isn't any Edge between " ++ (show e2') ++ " and " ++ (show e1')
+                                                 else 
+                                                    error $ "There isn't any Edge between " ++ (show e1') ++ " and " ++ (show e2')
+
+                                RightEdge -> do let ed1  = G.Edge v1 v2 (Integer 1)
+                                                let g''  = G.deleteEdge g1 ed1
+                                                if G.isEdgePresent g1 ed1
+                                                then do
+                                                    m' <- execAttrStmt' m pm ss [] g (V.Graph g'', gtype)
+                                                    return (m', ss, Nothing)
+                                                else 
+                                                    error $ "There isn't any Edge between " ++ (show e1') ++ " and " ++ (show e2')
+
+                                LeftEdge -> do let ed2  = G.Edge v2 v1 (Integer 1)
+                                               let g'' = G.deleteEdge g1 ed2
+                                               if G.isEdgePresent g1 ed2
+                                               then do
+                                                    m' <- execAttrStmt' m pm ss [] g (V.Graph g'', gtype)
+                                                    return (m', ss, Nothing)
+                                               else 
+                                                    error $ "There isn't any Edge between " ++ (show e2') ++ " and " ++ (show e1')
+                else error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ (show $ getType e2')
+            _ -> error "Wrong pattern" 
+
 -- | Produce a register value to store in memory from a struct declaration
 makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
 makeDefaultSetter pm si = Setter si (M.fromList (makeSetList pm sc))
@@ -413,8 +529,8 @@ evalWithType m pm ss e =
                 v' <- eval m pm ss e 
                 return $ (v', getType v')
 
-execAttrStmt' :: Memory -> ProgramMemory -> Scopes -> [AccessType] -> ArithExpr -> ArithExpr -> IO Memory
-execAttrStmt' m pm ss as lhs rhs = 
+execAttrStmt' :: Memory -> ProgramMemory -> Scopes -> [AccessType] -> ArithExpr -> (Value,GType) -> IO Memory
+execAttrStmt' m pm ss as lhs rhs@(vr,tr) = 
     do 
         case lhs of
             (ArithTerm (IdTerm (Ident i))) -> do
@@ -422,7 +538,6 @@ execAttrStmt' m pm ss as lhs rhs =
                                                     case var of
                                                         Left e -> error e
                                                         Right (tl,val) -> do 
-                                                                (vr,tr) <- evalWithType m pm ss rhs 
                                                                 v' <- return $ backwardAccessUpdate m pm ss as i val tl tr vr
                                                                 case updateVar m i ss (tr, Value v') of 
                                                                     Right m' -> do return m'   
@@ -467,7 +582,9 @@ execAttrStmt' m pm ss as lhs rhs =
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt [] []) m pm ss = return m
-execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  m' <- execAttrStmt' m pm ss [] t v
+execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  
+                                                    rhs@(vr,tr) <- evalWithType m pm ss v
+                                                    m' <- execAttrStmt' m pm ss [] t rhs
                                                     execAttrStmt (AttrStmt ts vs) m' pm ss
                                                                                                         
 -- |From value, guaarantee boolean value
@@ -479,6 +596,11 @@ makeBooleanFromValue _        = Left "Expected boolean value"
 checkCompatType :: GType -> GType -> Bool
 checkCompatType t t' = if t == t' then True
                     else case (t,t') of
+                        (GGraphVertexEdge v1 _, GGraphVertexEdge v2 GEdgeEmpty) -> (v1 == v2)
+                        (GGraphVertexEdge v2 GEdgeEmpty, GGraphVertexEdge v1 _) -> (v1 == v2)
+                        (GGraphVertexEdge _ _, GGraphEmpty) -> True
+                        (GGraphEmpty, GGraphVertexEdge _ _) -> True
+                        (GGraphVertexEdge v1 e1, GGraphVertexEdge v2 e2) -> (e1 == e2) && (v1 == v2)
                         (GFloat, GInteger)  -> True
                         (GList _, GEmpty)   -> True
                         (GEmpty ,GList _)   -> True
@@ -809,6 +931,7 @@ eval m pm ss (ExprLiteral (TupleLit te))        =
                                                        else if length l == 3 then Triple ((l !! 0), (l !! 1), (l !! 2))
                                                             else if length  l == 4 then Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3))
                                                              else error "Limit of Quadruples"
+
 eval m pm ss (GraphAccess e1 e2 )               =
                                                 do
                                                     g <- eval m pm ss e1
