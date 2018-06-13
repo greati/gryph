@@ -3,6 +3,14 @@
 
 #g : <int>;
 #k = [a for a over [1,2,3] when a == [1,2,3]];
-g = <a--a for a over [0, 1, 2] when (a > 0)>;
+#g = <a--a for a over [0, 1, 2] when (a > 0)>;
+
+i,j : int;
+d1,d2 : |int, string| = ||, |1?"oi"|;
+print i;
+print j;
+print d1;
+print d2;
+
 
 

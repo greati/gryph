@@ -587,10 +587,16 @@ execAttrStmt' m pm ss as lhs rhs@(vr,tr) =
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt [] []) m pm ss = return m
-execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  
+execAttrStmt (AttrStmt t'@(t:ts) v'@(v:vs)) m pm ss = do
+                                                    let v'' = case fillReplicate t' v' of
+                                                                Nothing -> error "Too many expressions in multiple attribution"
+                                                                Just v'' -> v''
                                                     rhs@(vr,tr) <- evalWithType m pm ss v
-                                                    m' <- execAttrStmt' m pm ss [] t rhs
-                                                    execAttrStmt (AttrStmt ts vs) m' pm ss
+                                                    execMultiAttrStmt t' v'' m pm ss rhs
+    where
+        execMultiAttrStmt t'@(t:ts) v'@(v:vs) m pm ss rhs@(vr,tr) = do
+                                                                        m' <- execAttrStmt' m pm ss [] t rhs
+                                                                        execMultiAttrStmt ts vs m' pm ss rhs
                                                                                                         
 -- |From value, guaarantee boolean value
 makeBooleanFromValue :: Value -> Either String Bool
