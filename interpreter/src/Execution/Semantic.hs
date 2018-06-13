@@ -148,6 +148,7 @@ execStmt (ForStmt ids vs body) m pm ss =
                                                case xss of
                                                     xss'@( (List list) : _ ) -> do return xss'
                                                     [(Map map)]              -> do return [(List ( makeMap (M.toList map) ))]
+                                                    [(V.Graph g)]            -> do return [ List $ removeVerticesId $ G.getVertices g ]
                                                     _                        -> error "Wrong pattern!"
                 getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
                                                xss'' <- (getLists m pm ss xss)
@@ -161,6 +162,10 @@ execStmt (ForStmt ids vs body) m pm ss =
                 makeMap []     = []
                 makeMap [x]    = [Pair x]
                 makeMap (x:xs) = (Pair x) : makeMap xs
+
+                removeVerticesId :: [G.Vertex Value] -> [Value]
+                removeVerticesId [] = []
+                removeVerticesId (G.Vertex _ v : xs) = v : removeVerticesId xs
 
                 forStmt ids vs body m pm ss' newScope = 
                     do
@@ -625,6 +630,7 @@ makeCompatibleAssignTypes pm t@(GGraphVertexEdge vertices edges) v =
         GGraphVertexEdge vertex edge       -> if vertices == vertex && edges == edge
                                               then (t,Value v)
                                               else error ("Incompatible types " ++ show t ++ " and " ++ show v)
+        v'                                 -> error ("Incompatible types " ++ show t ++ " and " ++ show v')
 makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType pm t v)
 
 coerceAssignByType :: ProgramMemory -> GType -> Value -> Value
