@@ -26,5 +26,12 @@ add 2 where 1--5 in g;
 print g;
 
 print g<1>;
-del 1--5 from g;
+print g;
+
+del 5 from g;
+print g;
+
+add 6 in g;
+print g;
+del 6 from g;
 print g;

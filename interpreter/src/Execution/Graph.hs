@@ -157,7 +157,24 @@ getVertices (Graph vs _) = S.toList vs
 
 -- |Delete a vertex of a graph
 deleteVertex :: Vertex a -> Graph a b -> Graph a b
-deleteVertex = undefined
+deleteVertex v@(Vertex id v') g@(Graph vs es) = 
+    if not $ isVertexPresent g v
+    then error $ "The vertex needs exist"
+    else
+       Graph (S.delete v vs') es'
+    where
+        newEdges = (M.delete id es)
+        g' = Graph vs newEdges
+        (Graph vs' es') = (removeEdges v g' $ M.toList newEdges)          
+        
+        removeEdges v g []                 = g
+        removeEdges v g ( ( _ , ys ) : xs) = removeEdges v ( removeEdges' v g ys ) xs
+        
+        removeEdges' v g [] = g
+        removeEdges' v@(Vertex id1 _) g (x@(Edge _ (Vertex id2 _) _) : xs) = 
+            if id1 == id2
+            then removeEdges' v (deleteEdge g x) xs
+            else removeEdges' v g xs
 
 -- | Generate list of vertices
 fromListToVertices :: [(Int,a)] -> [Vertex a]
