@@ -367,9 +367,15 @@ dictEntryList = do
 dictLit :: GenParser GphTokenPos st ArithExpr
 dictLit = do
                     (tok GTokPipe)
-                    l <- dictEntryList 
-                    (tok GTokPipe)
-                    return (ExprLiteral (DictLit l))
+                    do
+                        do
+                            (tok GTokPipe)
+                            return $ ExprLiteral (DictLit [])
+                        <|>
+                        do
+                            l <- dictEntryList 
+                            (tok GTokPipe)
+                            return (ExprLiteral (DictLit l))
 
 {- BFS Stmt
  -
@@ -501,7 +507,9 @@ forIterator = do
                 do
                     do
                         (tok GTokWhen)
+                        (tok GTokLParen)
                         bs <- expressionList
+                        (tok GTokRParen)
                         return (ForIterator is es bs)
                     <|>
                     do

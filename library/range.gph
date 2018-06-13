@@ -1,4 +1,13 @@
-#l : [float] = [2,3,4];
-k : string   = "[5.0,6.0,7.0]"@[int];
+sub range(count : int; end : int; step : int) : [int]{
+	l : [int] = [];
+	
+	while(count < end){
+		l = l ++ [count];
+		count = count + 1;
+	}
+	return l;
+}
 
-print(k);
+count : int = 0;
+
+print range(count, 10, 1);
