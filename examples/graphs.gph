@@ -14,7 +14,12 @@
 #print g;
 
 g : <int> = <a * 10 where a--b for a,b over [0, 1, 2]>;
+
 add 5 in g;
 print g;
-#add 5--5 in g;
-#add 10 where 5--5 in g;
+
+add 5->5 in g;
+print g;
+
+add 10.0 where "1"--5 in g;
+print g;

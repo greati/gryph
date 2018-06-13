@@ -246,6 +246,34 @@ execStmt (AddStmt e1 e2) m pm ss =
                                                                                               return (m', ss, Nothing)                                            
                                                 
                                             _ -> error "Wrong pattern"                                                                               
+execStmt (AddEdgeStmt weight (S.Edge typeEdge e1 e2) g) m pm ss = 
+    do
+        (g', gtype) <- evalWithType m pm ss g
+        case g' of
+            (V.Graph g1@(G.Graph vertices _)) -> do 
+                e1' <- eval m pm ss e1
+                e2' <- eval m pm ss e2
+                if getType e1' == getType e2'
+                then do
+                    let v1@(G.Vertex id1 _) = G.getVertexFromValue g1 e1' False
+                    if id1 == -1
+                    then error $ "The Vertex " ++ (show e1') ++ " doesn't exist"
+                    else do
+                        let v2@(G.Vertex id2 _) = G.getVertexFromValue g1 e2' False
+                        if id2 == -1
+                            then error $ "The Vertex " ++ (show e2') ++ " doesn't exist"
+                        else
+                            case weight of
+                                Nothing -> do let w = (Integer 1)
+                                              g'' <- addEdge g1 typeEdge v1 v2 w
+                                              m' <- execAttrStmt' m pm ss [] g (g'', gtype)
+                                              return (m', ss, Nothing) 
+                                Just w  -> do w' <- eval m pm ss w
+                                              g'' <- addEdge g1 typeEdge v1 v2 w'
+                                              m' <- execAttrStmt' m pm ss [] g (g'', gtype)
+                                              return (m', ss, Nothing)
+                else error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ (show $ getType e2')
+            _ -> error "Wrong pattern" 
 
 -- | Produce a register value to store in memory from a struct declaration
 makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
