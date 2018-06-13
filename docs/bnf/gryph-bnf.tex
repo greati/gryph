@@ -1,8 +1,18 @@
 \documentclass{article}
 
+\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{backnaur}
 \usepackage[margin=2cm]{geometry}
+\usepackage{bm}
+
+% /usr/local/texlive/2017/texmf-dist/tex/latex/backnaur/backnaur.sty
+% \newcommand{\bnfts}[1]{\textnormal{\bnf@tsfont{#1}}}
+% \textnormal -> \textbf
+
+\newenvironment{bnfsplit}[1][0.7\textwidth]
+    {\minipage[t]{#1}$}
+    {$\endminipage}
 
 \title{BNF for the Gryph Programming Language}
 \author{Vitor Greati \and Artur Curinga \and Carlos Vieira \and Vinícius Campos}
@@ -18,16 +28,28 @@
 
     \subsection{Program}
     \begin{bnf*}
-        \bnfprod{program}{\bnfpn{program-unit} \bnfor \bnfpn{program-unit}\bnfpn{program}}\\
-        \bnfprod{program-unit}{\bnfpn{stmt} \bnfsp \bnfts{;} \bnfor \bnfpn{subprog-decl}}
+        \bnfprod{program}{\bnfpn{program-unit} \{\bnfpn{program-unit}\}}\\
+        \bnfprod{program-unit}{\bnfpn{stmt} \bnfor \bnfpn{subprog-decl}}
+    \end{bnf*}
+
+    \subsection{Identifiers}
+    \begin{bnf*}
+        % [a-zA-Z] [$alpha $digit \_]* [\']*
+        \bnfprod{id-list}{\bnfpn{identifier}\{\bnfts{,}\bnfpn{identifier}\}}\\
+        \bnfprod{identifier}{\bnfpn{alpha}\bnfpn{id-tail}}\\
+        \bnfprod{user-type-id}{\bnfpn{upper-alpha}\bnfpn{id-tail}}\\
+        \bnfprod{id-tail}{\{\bnfpn{alpha-num}\} \{\bnfts{'}\}}\\
+        \bnfprod{upper-alpha}{\bnfts{A} \bnfor \bnfsk \bnfor \bnfts{Z}}\\
+        \bnfprod{alpha}{\bnfpn{upper-alpha} \bnfor(\bnfts{a} \bnfor \bnfsk \bnfor \bnfts{z})}\\
+        \bnfprod{alpha-num}{\bnfpn{alpha} \bnfor (\bnfts{0} \bnfor \bnfsk \bnfor \bnfts{9}) \bnfor \bnfts{\_}}\\
     \end{bnf*}
 
     \subsection{Statements}
     \begin{bnf*}
-        \bnfprod{stmt-list}{\bnfpn{stmt} \bnfsp \bnfpn{stmt}\bnfpn{stmt-list}}\\
+        \bnfprod{stmt-list}{\bnfpn{stmt} \{\bnfpn{stmt}\}}\\
         \bnfprod{stmt-block}{\bnfts{\{} \bnfsp \bnfpn{stmt-list} \bnfsp \bnfts{\}}}\\
         \bnfprod{block-or-matched}{\bnfpn{stmt-block} \bnfor \bnfpn{matched-stmt}}\\
-        \bnfprod{com-stmt}{(\bnfpn{read-stmt} \bnfor \bnfpn{print-stmt} \bnfor \bnfpn{var-decl-stmt})\bnfts{;}}\\
+        \bnfprod{com-stmt}{(\bnfpn{read-stmt} \bnfor \bnfpn{print-stmt} \bnfor \bnfpn{var-stmt})\bnfts{;}}\\
         \bnfprod{stmt}{\bnfpn{matched-stmt} \bnfor \bnfpn{unmatched-stmt}}\\
         \bnfprod{matched-stmt}{\bnfpn{matched-if-else} \bnfor \bnfpn{com-stmt}}\\
         \bnfprod{unmatched-stmt}{\bnfpn{if-stmt} \bnfor \bnfpn{unmatched-if-else}}\\
@@ -35,29 +57,30 @@
 
         \subsubsection{IO}
         \begin{bnf*}
-            \bnfprod{read-stmt}{\bnfts{read} \bnfsp \bnfpn{ident}}\\
-            \bnfprod{write-stmt}{\bnfts{print} \bnfsp \bnfpn{ident} \bnfor \bnfts{print} \bnfsp \bnfpn{string-lit}}\\
+            \bnfprod{read-stmt}{\bnfts{read} \bnfsp \bnfpn{identifier}}\\
+            \bnfprod{write-stmt}{\bnfts{print} \bnfsp \bnfpn{expression}}\\
         \end{bnf*}
 
         \subsubsection{Variables}
         \begin{bnf*}
-            \bnfprod{ident-begin-stmt}{\bnfpn{ident-list}\bnfpn{ident-list-post}}\\
-            \bnfprod{ident-list-post}{ \bnfts{:} \bnfpn{type} \bnfpn{var-decl-stmt} \bnfor \bnfpn{var-attr-stmt}}\\
-            \bnfprod{var-decl-stmt}{\bnfes \bnfor \bnfpn{var-attr-stmt}}\\
-            \bnfprod{var-attr-stmt}{\bnfts{=} \bnfpn{expr-list}}\\
+            \bnfprod{var-stmt-list}{\bnfpn{var-stmt}\{\bnfts{;}\bnfpn{var-stmt}\}\bnfts{;}}\\
+            \bnfprod{var-stmt}{\bnfpn{var-decl-stmt}\bnfor\bnfpn{var-attr-stmt}}\\
+            \bnfprod{var-decl-stmt}{\bnfpn{id-list}\bnfts{:}\bnfpn{type}[\bnfpn{var-attr}]}\\
+            \bnfprod{var-attr-stmt}{\bnfpn{id-list}\bnfpn{var-attr}}\\
+            \bnfprod{var-attr}{\bnfts{$\bm{=}$}\bnfpn{expr-list}}\\
         \end{bnf*}
 
     \subsection{Subprograms}
-        \subsubsection{Declaration}
-        \subsubsection{Call}
-            \begin{bnf*}
-                \bnfprod{subprog-call}{\bnfpn{ident}\bnfts{(}\bnfpn{expr-list}\bnfts{)}}
-            \end{bnf*}
+        \begin{bnf*}
+            \bnfprod{subprog-decl}{\bnfts{sub}\bnfpn{identifier}\bnfts{(} \bnfpn{parameters} \bnfts{)}\bnfpn{stmt-block}}\\
+            \bnfprod{parameters}{\bnfpn{var-stmt} \{\bnfts{;}\bnfpn{var-stmt}\}}\\
+            \bnfprod{subprog-call}{\bnfpn{identifier}\bnfts{(}\bnfpn{expr-list}\bnfts{)}}
+        \end{bnf*}
 
 \section{Control Structures}
     \subsection{If-else statements}
         \begin{bnf*}
-        \bnfprod{if-expr}{\bnfts{if} \bnfsp \bnfts{(}\bnfpn{b-exp}\bnfts{)}}\\
+        \bnfprod{if-expr}{\bnfts{if} \bnfsp \bnfts{(}\bnfpn{expression}\bnfts{)}}\\
         \bnfprod{if-stmt}{\bnfpn{if-expr} \bnfsp \bnfpn{stmt}\bnfts{;}}\\
         \bnfprod{unmatched-if-else}{\bnfpn{if-expr} \bnfsp \bnfpn{matched-stmt}\bnfts{;} \bnfsp \bnfts{else} \bnfsp \bnfpn{unmatched-stmt}\bnfts{;}}\\
         \bnfprod{matched-if-else}{\bnfpn{if-expr} \bnfsp \bnfpn{block-or-matched} \bnfsp \bnfts{else} \bnfsp \bnfpn{block-or-matched} \bnfor \bnfpn{if-expr} \bnfsp \bnfpn{stmt-block}}\\
@@ -65,14 +88,14 @@
 
 \section{Types}
     \begin{bnf*}
-        \bnfprod{type-list}{\bnfpn{type}\bnfts{,}\bnfpn{type-list} \bnfor \bnfpn{type}}\\
-        \bnfprod{type}{\bnfpn{native-type} \bnfor \bnfpn{user-type}}\\
+        \bnfprod{type-list}{\bnfpn{type}\{\bnfts{,}\bnfpn{type}\}}\\
+        \bnfprod{type}{\bnfpn{native-type} \bnfor \bnfpn{user-type-id}}\\
         \bnfprod{native-type}{\bnfpn{primitive-type} \bnfor \bnfpn{composite-type}}\\
         \bnfprod{primitive-type}{\bnfts{int} \bnfor \bnfts{float} \bnfor \bnfts{char} \bnfor \bnfts{string}}\\
-        \bnfprod{composite-type}{\bnfts{[} \bnfpn{type} \bnfts{]} \bnfor \bnfts{$\mid$} \bnfpn{type} \bnfts{$\mid$} 
+        \bnfprod{composite-type}{\bnfts{[} \bnfpn{type} \bnfts{]} \bnfor \bnfts{$\bm{|}$} \bnfpn{type} \bnfts{$\bm{|}$} 
         \bnfor \bnfts{(} \bnfpn{type} \bnfts{,} \bnfpn{type-list} \bnfts{)} \bnfor \bnfpn{graph-type}}\\
-        \bnfprod{graph-type}{\bnfts{$<$} \bnfpn{type} \bnfts{$>$} \bnfor \bnfts{$<$} \bnfpn{type} \bnfts{,} \bnfpn{type} \bnfts{$>$}}\\
-        \bnfprod{user-type}{\bnfpn{upper-letter}\bnfpn{alpha-num-list}}\\
+        \bnfprod{graph-type}{\bnfts{$\bm{<}$} \bnfpn{type} \bnfts{$\bm{>}$} \bnfor \bnfts{$\bm{<}$} \bnfpn{type} \bnfts{,} \bnfpn{type} \bnfts{$\bm{>}$}}\\
+        \bnfprod{type-decl}{\bnfpn{user-type-id}\bnfts{\{}\bnfpn{var-stmt-list}\bnfts{\}}}\\
     \end{bnf*}
 
     \paragraph{Observations}
@@ -82,8 +105,6 @@
     \end{itemize}
 
 \section{Expressions}
-
-    {\scriptsize
     \begin{bnf*}
         \bnfprod{expression}{\bnfpn{logical-xor-expr}}\\
         \bnfprod{logical-xor-expr}{\bnfpn{logical-or-expr} \bnfor \bnfpn{logical-or-expr}\bnfpn{logical-xor-expr-aux}}\\
@@ -106,30 +127,33 @@
         \bnfprod{cast-expr}{\bnfpn{unary-expr} \bnfor \bnfpn{unary-expr}\bnfpn{cast-expr-aux}}\\
         \bnfprod{cast-expr-aux}{\bnfts{@}\bnfpn{type} \bnfor \bnfts{@}\bnfpn{type}\bnfpn{cast-expr-aux}}\\
         \bnfprod{unary-expr}{\bnfpn{unary-op}\bnfpn{cast-expr} \bnfor \bnfpn{postfix-expr}}\\
-        \bnfprod{postfix-expr}{\bnfpn{primary-expr} \bnfor \bnfpn{ident}\bnfts{$|$}\bnfts{expression}\bnfts{$|$} \bnfor 
-        \bnfpn{ident}\bnfts{$<$}\bnfts{expression}\bnfts{$>$} \bnfor
-        \bnfpn{ident}\bnfts{$[$}\bnfts{expression}\bnfts{$]$} \bnfor
-        \bnfpn{ident}\bnfts{$\{$}\bnfpn{ident}\bnfts{$\}$} \bnfor
-        \bnfpn{ident}\bnfts{.}\bnfpn{expression}
+        \bnfprod{postfix-expr}{
+            \begin{bnfsplit}
+            \bnfpn{primary-expr} \bnfor \bnfpn{ident}\bnfts{|}\bnfpn{expression}\bnfts{|} \bnfor \\
+            \bnfpn{ident}\bnfts{$\bm{<}$}\bnfpn{expression}\bnfts{$\bm{>}$} \bnfor \\
+            \bnfpn{ident}\bnfts{[}\bnfpn{expression}\bnfts{]} \bnfor \\
+            \bnfpn{ident}\bnfts{\{}\bnfpn{ident}\bnfts{\}} \bnfor \\
+            \bnfpn{ident}\bnfts{.}\bnfpn{expression}
+            \end{bnfsplit}
         }\\
         \bnfprod{primary-expr}{\bnfts{(}\bnfpn{expression}\bnfts{)} \bnfor \bnfpn{ident} \bnfor \bnfpn{subprogcall} \bnfor \bnfpn{constant} }\\
         \bnfprod{constant}{\bnfpn{int-lit} \bnfor \bnfpn{float-lit} \bnfor \bnfpn{string-lit} \bnfor \bnfpn{bool-lit}} \bnfor \bnfpn{list-lit} \bnfor \bnfpn{graph-lit}\\
-        \bnfprod{rel-op}{\bnfts{$>$} \bnfor \bnfts{$<$} \bnfor \bnfts{$<=$} \bnfor \bnfts{$>=$}}\\
-        \bnfprod{equality-op}{\bnfts{==} \bnfor \bnfts{!=}}\\
-        \bnfprod{unary-op}{\bnfts{+} \bnfor \bnfts{-}}\\
+        \bnfprod{rel-op}{\bnfts{$\bm{>}$} \bnfor \bnfts{$\bm{<}$} \bnfor \bnfts{$\bm{<=}$} \bnfor \bnfts{$\bm{>=}$}}\\
+        \bnfprod{equality-op}{\bnfts{$\bm{==}$} \bnfor \bnfts{$\bm{!=}$}}\\
+        \bnfprod{unary-op}{\bnfts{$\bm{+}$} \bnfor \bnfts{$\bm{-}$}}\\
         \bnfprod{add-op}{\bnfts{+} \bnfor \bnfts{-}}\\
         \bnfprod{mult-op}{\bnfts{*} \bnfor \bnfts{/} \bnfor \bnfts{\%} \bnfor \bnfts{++} \bnfor \bnfts{**}}\\
         \bnfprod{exp-op}{\bnfts{\^}}\\
-    \end{bnf*}}
+    \end{bnf*}
 
-    \subsection{Literals}
-        \begin{bnf*}
-            \bnfprod{list-lit}{\bnfts{[}\bnfpn{expression-list}\bnfts{]}}\\
-            \bnfprod{tuple-lit}{\bnfts{(}\bnfpn{expression-list}\bnfts{)}}\\
-            \bnfprod{dict-entry}{\bnfpn{expression} \bnfts{?} \bnfpn{expression}}\\
-            \bnfprod{dict-entry-list}{\bnfpn{dict-entry} \bnfor \bnfpn{dict-entry},\bnfpn{dict-entry-list}}\\
-            \bnfprod{dict-lit}{\bnfts{$|$} \bnfpn{dict-entry-list} \bnfts{$|$}}\\
-        \end{bnf*}
+    % \subsection{Literals}
+        % \begin{bnf*}
+        %     \bnfprod{list-lit}{\bnfts{[}\bnfpn{expression-list}\bnfts{]}}\\
+        %     \bnfprod{tuple-lit}{\bnfts{(}\bnfpn{expression-list}\bnfts{)}}\\
+        %     \bnfprod{dict-entry}{\bnfpn{expression} \bnfts{?} \bnfpn{expression}}\\
+        %     \bnfprod{dict-entry-list}{\bnfpn{dict-entry} \bnfor \bnfpn{dict-entry},\bnfpn{dict-entry-list}}\\
+        %     \bnfprod{dict-lit}{\bnfts{$|$} \bnfpn{dict-entry-list} \bnfts{$|$}}\\
+        % \end{bnf*}
 
 
 \end{document}
