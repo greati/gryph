@@ -20,17 +20,16 @@ sub is_same_rational (a, b : Rational_t) : bool {
     return a{numerador} * b{denominador} == a{denominador} * b{numerador};
 }
 
-sub make_rational (a, b : int; reduced : bool = false) : Rational_t {
+sub make_rational (a, b : int) : Rational_t {
     if (b != 0) {
         r : Rational_t = Rational_t {numerador = a, denominador = b}; 
-        if (reduced) return reduce(r);
-        else return r;
+        return r;
     } else {
         print "erro: b não pode valer 0";
     }
 }
 
-sub add (a, b : Rational_t) : Rational_t {
+sub sum (a, b : Rational_t) : Rational_t {
     new_den : int = a{denominador} * b{denominador};
     new_num : int = b{denominador}*a{numerador} + b{numerador}*a{denominador};
     s : Rational_t = make_rational(new_num, new_den);
@@ -43,7 +42,7 @@ sub neg (a : Rational_t) : Rational_t {
 }
 
 sub subt (a, b : Rational_t) : Rational_t {
-    return add(a, neg(b));
+    return sum(a, neg(b));
 }
 
 sub mult (a, b : Rational_t) : Rational_t {
@@ -66,13 +65,44 @@ sub div (a, b : Rational_t) : Rational_t {
     return mult(a, inv(b));
 }
 
-r1 : Rational_t = make_rational(10,30);
-r2 : Rational_t = make_rational(10,30);
+rs : [Rational_t] = [Rational_t{numerador=1, denominador=1}, Rational_t{numerador=1,denominador=1}];
 
-print is_same_rational(r1,r2);
-print add(r1,r2);
-print subt(r1,r2);
-print mult(r1,r2);
-print neg(r1);
-print inv(r1);
-print div(r1,r2);
+
+s : string;
+a, b : int;
+
+while (true) {
+
+    inputs : [string] = ["_","_","_","_"];
+    
+    for i over [0,1] {
+        while (b == 0) {
+            print inputs[0] + "/" + inputs[1] + ";" + inputs[2] + "/" + inputs[3];
+            read s;
+            a = s@int;
+            read s;
+            b = s@int;  
+            if (b != 0) {
+                rs[i] = make_rational(a, b);
+                inputs[2*i] = a@string;
+                inputs[2*i+1] = b@string;
+            }
+        }
+        b = 0;
+    } 
+
+    print inputs[0] + "/" + inputs[1] + ";" + inputs[2] + "/" + inputs[3];
+
+    print is_same_rational(rs[0],rs[1]);
+    print sum(rs[0],rs[1]);
+    print subt(rs[0],rs[1]);
+    print mult(rs[0],rs[1]);
+    print neg(rs[0]);
+    print inv(rs[0]);
+    print div(rs[0],rs[1]);
+
+    print "De novo? (S/N)";
+    read s;
+    if (s != "S") break; 
+    
+}
