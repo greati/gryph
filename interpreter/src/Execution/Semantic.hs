@@ -138,6 +138,7 @@ execStmt (ForStmt ids vs body) m pm ss =
     do 
             let new_vs = replicateList ((length ids) - (length vs)) vs 
             vss <- (getLists m pm ss [new_vs])
+            print vss
             vss' <- over vss
             time <- getCurSeconds
             let newScope = IterationScope time
@@ -145,12 +146,14 @@ execStmt (ForStmt ids vs body) m pm ss =
                     forStmt ids vss' body m pm ss' newScope
             where
                 getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
+                                               print xss
                                                case xss of
                                                     xss'@( (List list) : _ ) -> do return xss'
+                                                    xss'@[(String s)]        -> do return [List [Char x | x <- s]]
                                                     [(Map map)]              -> do return [(List ( makeMap (M.toList map) ))]
                                                     [(V.Graph g)]            -> do return [ List $ removeVerticesId $ G.getVertices g ]
                                                     _                        -> error "Wrong pattern!"
-                getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
+                getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs)
                                                xss'' <- (getLists m pm ss xss)
                                                return (xss' ++ xss'')
 

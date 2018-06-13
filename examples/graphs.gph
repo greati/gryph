@@ -35,3 +35,6 @@ add 6 in g;
 print g;
 del 6 from g;
 print g;
+
+g = <[]>;
+print g;
