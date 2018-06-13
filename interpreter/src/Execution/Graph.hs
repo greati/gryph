@@ -77,6 +77,13 @@ insertVertex (Graph vs p) v = Graph (S.insert v vs) p
 isVertexPresent :: Graph a b -> Vertex a -> Bool
 isVertexPresent (Graph vs es) v'@(Vertex v _) = S.member v' vs
 
+isEdgePresent :: Graph a b -> Edge a b -> Bool
+isEdgePresent (Graph vc es) (Edge v1@(Vertex id _) v2 _) = isEdgePresent' (es M.!? id) v2
+    where
+        isEdgePresent' Nothing _                     = False
+        isEdgePresent' (Just []) _                   = False
+        isEdgePresent' (Just (Edge _ v2' _ : xs)) v2 = v2 == v2' || isEdgePresent' (Just xs) v2
+
 connect :: Graph a b -> Vertex a -> Vertex a -> b -> Graph a b 
 connect g@(Graph vs es) v1@(Vertex x1 p1) v2@(Vertex x2 p2) p
     | isVertexPresent g v1 && isVertexPresent g v2 = Graph vs (M.adjust (\xs-> (edgeFromVertexes v1 v2 p):xs) x1 es)
@@ -122,14 +129,20 @@ deleteEdge (Graph vs es) ed@(Edge v1@(Vertex id _) v2 p)
     | otherwise = Graph vs (deleteEdge' es id ed)
     where
         deleteEdge' es id ed 
-            | not (M.member id es) = error "the edge must have exist"
+            | not (M.member id es) = error "1the edge must have exist"
             | otherwise            = deleteEdge'' id ed (es M.! id)
-        deleteEdge'' id ed  [x]    = M.delete id es 
+        deleteEdge'' id ed@(Edge v1 v2 _)  [Edge v1' v2' _] = 
+                                    if v1 == v1' && v2 == v2' 
+                                    then M.delete id es
+                                    else error "2The edge must have exist"
         deleteEdge'' id ed   xs    = M.insert id (deleteEdge''' ed xs) es
-        deleteEdge''' ed    [x]    = []
-        deleteEdge''' ed@(Edge v1 v2 _) (x@(Edge x1 x2 _) : xs)
-            | v1 == x1 && v2 == x2 = xs
-            | otherwise            = x : deleteEdge''' ed xs   
+        deleteEdge''' ed@(Edge v1 v2 _)  [Edge v1' v2' _] = 
+                                    if v1 == v1' && v2 == v2' 
+                                    then []
+                                    else error "3The edge must have exist"
+        deleteEdge''' ed@(Edge v1 v2 _) (x@(Edge v1' v2' _) : xs)
+            | v1 == v1' && v2 == v2' = xs
+            | otherwise              = x : deleteEdge''' ed xs   
 
 -- |Get edges of a vertex
 getEdges :: Graph a b -> Vertex a -> [Edge a b]

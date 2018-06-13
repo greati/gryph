@@ -275,6 +275,59 @@ execStmt (AddEdgeStmt weight (S.Edge typeEdge e1 e2) g) m pm ss =
                 else error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ (show $ getType e2')
             _ -> error "Wrong pattern" 
 
+execStmt (DelEdgeStmt (S.Edge typeEdge e1 e2) g) m pm ss = 
+    do
+        (g', gtype) <- evalWithType m pm ss g
+        case g' of
+            (V.Graph g1@(G.Graph vertices _)) -> do
+                e1' <- eval m pm ss e1
+                e2' <- eval m pm ss e2
+                if getType e1' == getType e2'
+                then do
+                    let v1@(G.Vertex id1 _) = G.getVertexFromValue g1 e1' False
+                    if id1 == -1
+                    then error $ "The Vertex " ++ (show e1') ++ " doesn't exist"
+                    else do
+                        let v2@(G.Vertex id2 _) = G.getVertexFromValue g1 e2' False
+                        if id2 == -1
+                            then error $ "The Vertex " ++ (show e2') ++ " doesn't exist"
+                        else
+                            case typeEdge of
+                                DoubleEdge -> do let ed1  = G.Edge v1 v2 (Integer 1)
+                                                 let ed2  = G.Edge v2 v1 (Integer 1)
+                                                 if G.isEdgePresent g1 ed1
+                                                 then
+                                                    if G.isEdgePresent g1 ed2
+                                                    then do
+                                                        let g''  = G.deleteEdge g1 ed1
+                                                        let g''' = G.deleteEdge g'' ed2
+                                                        m' <- execAttrStmt' m pm ss [] g (V.Graph g''', gtype)
+                                                        return (m', ss, Nothing)
+                                                    else 
+                                                        error $ "There isn't any Edge between " ++ (show e2') ++ " and " ++ (show e1')
+                                                 else 
+                                                    error $ "There isn't any Edge between " ++ (show e1') ++ " and " ++ (show e2')
+
+                                RightEdge -> do let ed1  = G.Edge v1 v2 (Integer 1)
+                                                let g''  = G.deleteEdge g1 ed1
+                                                if G.isEdgePresent g1 ed1
+                                                then do
+                                                    m' <- execAttrStmt' m pm ss [] g (V.Graph g'', gtype)
+                                                    return (m', ss, Nothing)
+                                                else 
+                                                    error $ "There isn't any Edge between " ++ (show e1') ++ " and " ++ (show e2')
+
+                                LeftEdge -> do let ed2  = G.Edge v2 v1 (Integer 1)
+                                               let g'' = G.deleteEdge g1 ed2
+                                               if G.isEdgePresent g1 ed2
+                                               then do
+                                                    m' <- execAttrStmt' m pm ss [] g (V.Graph g'', gtype)
+                                                    return (m', ss, Nothing)
+                                               else 
+                                                    error $ "There isn't any Edge between " ++ (show e2') ++ " and " ++ (show e1')
+                else error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ (show $ getType e2')
+            _ -> error "Wrong pattern" 
+
 -- | Produce a register value to store in memory from a struct declaration
 makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
 makeDefaultSetter pm si = Setter si (M.fromList (makeSetList pm sc))
