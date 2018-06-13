@@ -21,5 +21,17 @@ print g;
 add 5->5 in g;
 print g;
 
-add 10.0 where "1"--5 in g;
+add 10 where 1--5 in g;
+add 2 where 1--5 in g;
+print g;
+
+print g<1>;
+print g;
+
+del 5 from g;
+print g;
+
+add 6 in g;
+print g;
+del 6 from g;
 print g;
