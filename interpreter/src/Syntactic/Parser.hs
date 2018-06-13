@@ -507,7 +507,9 @@ forIterator = do
                 do
                     do
                         (tok GTokWhen)
+                        (tok GTokLParen)
                         bs <- expressionList
+                        (tok GTokRParen)
                         return (ForIterator is es bs)
                     <|>
                     do

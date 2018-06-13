@@ -2,3 +2,4 @@ i : |int, int| = ||;
 d : |int, int| = |1 ? 2, 2 ? 4|;
 
 print d;
+
