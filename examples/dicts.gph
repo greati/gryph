@@ -1,8 +1,5 @@
-#i : |int, int| = ||;
-#d : |int, int| = |1 ? 2, 2 ? 4|;
+i : |int, int| = ||;
+d : |int, int| = |1 ? 2, 2 ? 4|;
 
-#g : <int>;
-#k = [a for a over [1,2,3] when a == [1,2,3]];
-g = <a--a for a over [0, 1, 2] when (a > 0)>;
-
+print d;
 
