@@ -579,9 +579,11 @@ execAttrStmt' m pm ss as lhs rhs@(vr,tr) =
                                                     _ -> error "You must access a list or a string." 
                                         _ -> error "List index must be an integer." 
                 DictIndex index -> case memval of
-                                        (Map m') -> if M.notMember index m' then error $ "Key " ++ show index ++ " not in dictionary" 
-                                                    else Map (M.insert index v'' m')
-                                               where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) (getType memval) rightType v
+                                        (Map m') -> case as of
+                                                    [] ->  Map (M.insert index v'' m')
+                                                       where v'' = if checkCompatType (uncapsulate memtype) (getType v) then v else error $ "Incompatible types " ++ show (uncapsulate memtype) ++ " and " ++ show rightType
+                                                    _  -> Map (M.insert index v'' m')
+                                                       where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) (getType memval) rightType v
                                         _ -> error "You must access a dictionary"
                 StructField field -> case memval of
                                         (Setter si m') -> if M.notMember field m' then error $ field ++ " not in the struct"
