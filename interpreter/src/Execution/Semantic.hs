@@ -866,7 +866,9 @@ fromString _ _                  = error "No parser from String"
 
 
 cast:: Value -> GType -> Value
-cast v1 g@GString     =  String (show v1)
+cast v1 g@GString     = case v1 of
+                         (List l1) -> if (getListType l1) == GChar then String (map (\(Char c) -> c)  l1) else String (show v1)  
+                         _         -> String (show v1) 
 cast v1 g@GInteger    = case v1 of
                          Float f   -> Integer ( floor f)
                          Bool  b   -> if b then Integer 1 else Integer 0

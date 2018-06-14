@@ -39,18 +39,20 @@ else
 
 
 gsss : <int, int> = <2 where a--a for a over [1,2,3]>;
-gss : <int, <int, float>> = <[1,2,3], gsss where a->(a%3) + 1 for a over [1,2,3]>;
+#gss : <int, <int, float>> = <[1,2,3], gsss where a->(a%3) + 1 for a over [1,2,3]>;
 
 ls : [[int]] = [[1,2],[2,3],[2,2]];
 lss : [float] = [1.0,3.0];
-ls[1] = lss;
+#ls[1] = lss;
+
+a : float = (ls[0])[0];
 
 print ls;
 
 print gsss;
 
 
-if (gss != <[]>)
-    print gss;
+#if (gss != <[]>)
+ #   print gss;
 
 
