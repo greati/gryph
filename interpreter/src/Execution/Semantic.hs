@@ -544,7 +544,7 @@ execAttrStmt' m pm ss as lhs rhs@(vr,tr) =
                                                         Left e -> error e
                                                         Right (tl,val) -> do 
                                                                 v' <- return $ backwardAccessUpdate m pm ss as i val tl tr vr
-                                                                case updateVar m i ss (tr, Value v') of 
+                                                                case updateVar m i ss (tl, Value v') of 
                                                                     Right m' -> do return m'   
                                                                     Left i -> error i
             (ListAccess remaining index) -> do
@@ -587,10 +587,17 @@ execAttrStmt' m pm ss as lhs rhs@(vr,tr) =
 -- | Auxiliar for execting attribute statements
 execAttrStmt :: Stmt -> Memory -> ProgramMemory -> Scopes -> IO Memory
 execAttrStmt (AttrStmt [] []) m pm ss = return m
-execAttrStmt (AttrStmt (t:ts) (v:vs)) m pm ss = do  
-                                                    rhs@(vr,tr) <- evalWithType m pm ss v
-                                                    m' <- execAttrStmt' m pm ss [] t rhs
-                                                    execAttrStmt (AttrStmt ts vs) m' pm ss
+execAttrStmt (AttrStmt t'@(t:ts) v'@(v:vs)) m pm ss = do
+                                                    let v'' = case fillReplicate t' v' of
+                                                                Nothing -> error "Too many expressions in multiple attribution"
+                                                                Just v'' -> v''
+                                                    execMultiAttrStmt t' v'' m pm ss
+    where
+        execMultiAttrStmt [] [] m pm ss = return m
+        execMultiAttrStmt t'@(t:ts) v'@(v:vs) m pm ss = do
+                                                                        rhs@(vr,tr) <- evalWithType m pm ss v
+                                                                        m' <- execAttrStmt' m pm ss [] t rhs
+                                                                        execMultiAttrStmt ts vs m' pm ss
                                                                                                         
 -- |From value, guaarantee boolean value
 makeBooleanFromValue :: Value -> Either String Bool
@@ -601,14 +608,17 @@ makeBooleanFromValue _        = Left "Expected boolean value"
 checkCompatType :: GType -> GType -> Bool
 checkCompatType t t' = if t == t' then True
                     else case (t,t') of
-                        (GGraphVertexEdge v1 _, GGraphVertexEdge v2 GEdgeEmpty) -> (v1 == v2)
-                        (GGraphVertexEdge v2 GEdgeEmpty, GGraphVertexEdge v1 _) -> (v1 == v2)
+                        (GGraphVertexEdge v1 _, GGraphVertexEdge v2 GEdgeEmpty) -> checkCompatType v1 v2--(v1 == v2)
+                        (GGraphVertexEdge v2 GEdgeEmpty, GGraphVertexEdge v1 _) -> checkCompatType v1 v2--(v1 == v2)(v1 == v2)
                         (GGraphVertexEdge _ _, GGraphEmpty) -> True
                         (GGraphEmpty, GGraphVertexEdge _ _) -> True
-                        (GGraphVertexEdge v1 e1, GGraphVertexEdge v2 e2) -> (e1 == e2) && (v1 == v2)
+                        (GGraphVertexEdge v1 e1, GGraphVertexEdge v2 e2) -> checkCompatType e1 e2 && checkCompatType v1 v2--(e1 == e2) && (v1 == v2)
                         (GFloat, GInteger)  -> True
-                        (GList _, GEmpty)   -> True
-                        (GEmpty ,GList _)   -> True
+                        (GList _, GListEmpty)     -> True
+                        (GListEmpty ,GList _)     -> True
+                        (GDict _ _, GDictEmpty)   -> True
+                        (GDictEmpty, GDict _ _ )  -> True
+                        (GDict k1 v1, GDict k2 v2)  -> checkCompatType k1 k2 && checkCompatType v1 v2--(e1 == e2) && (v1 == v2)
                         (GList l, GList l') -> checkCompatType l l'
                         --(GList l, GList l') -> checkCompatType (GList l) l'
                         --(GList l, GList l') -> checkCompatType (l) $ GList l'
@@ -624,12 +634,12 @@ makeCompatibleAssignTypes pm t@(GGraphVertexEdge vertices edges) v =
     let tv = getType v
     in case tv of
         GGraphEmpty                        -> (t,Value v)
-        GGraphVertexEdge vertex GEdgeEmpty -> if vertices == vertex 
+        GGraphVertexEdge vertex GEdgeEmpty -> if checkCompatType vertices vertex--vertices == vertex 
                                               then (t,Value v)
                                               else error ("Incompatible types " ++ show t ++ " and " ++ show v)
-        GGraphVertexEdge vertex edge       -> if vertices == vertex && edges == edge
+        GGraphVertexEdge vertex edge       -> if checkCompatType vertices vertex && checkCompatType edges edge--vertices == vertex && edges == edge
                                               then (t,Value v)
-                                              else error ("Incompatible types " ++ show t ++ " and " ++ show v)
+                                              else error ("Incompatible types " ++ show t ++ " and " ++ show tv)
         v'                                 -> error ("Incompatible types " ++ show t ++ " and " ++ show v')
 makeCompatibleAssignTypes pm t v = (t, Value $ coerceAssignByType pm t v)
 
@@ -739,9 +749,9 @@ getType (Float f)                     = GFloat
 getType (String s )                   = GString
 getType (Char c)                      = GChar
 getType (Bool b)                      = GBool
-getType (List [])                     = GEmpty
+getType (List [])                     = GListEmpty
 getType (List (x:xs))                 = GList (getListType (x:xs))
-getType (Map (m))                     = GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
+getType (Map (m))                     = if M.null m then GDictEmpty else GDict ( getType (head (M.keys m))) ( getType (head (M.elems m)))
 getType (Pair (v1,v2))                = GPair (getType v1) (getType v2 )
 getType (Triple (v1,v2, v3))          = GTriple (getType v1) (getType v2 ) (getType v3)
 getType (Quadruple (v1,v2, v3, v4))   = GQuadruple (getType v1) (getType v2 ) (getType v3) (getType v4)
@@ -1041,12 +1051,12 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                     (v2,t2)  <- evalWithType m pm ss e2
                                                     case v1 of
                                                         l1@(List []) -> case v2 of 
-                                                                         l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List [])     -> if t1 == t2 || GListEmpty == t2 || t1 == GListEmpty  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                          l2@(List (x:xs)) -> if t1 == t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                          _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 
                                                         l1@(List (x:xs)) -> case v2 of
-                                                                                l2@(List [])     -> if t1 == t2 || GEmpty == t2 || t1 == GEmpty then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                                l2@(List [])     -> if t1 == t2 || GListEmpty == t2 || t1 == GListEmpty then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                                 l2@(List (y:ys)) -> if  t1 ==  t2 
                                                                                                     then return $ plusPlusBinList l1 l2
                                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 

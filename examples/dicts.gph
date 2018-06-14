@@ -1,8 +1,56 @@
-#i : |int, int| = ||;
-#d : |int, int| = |1 ? 2, 2 ? 4|;
+i,j : int;
+d1,d2 : |int, string| = ||, |1?"oi"|;
+d1, d2 = |2 ? "ola"|, |3 ? "ola"|;
+i,j = 4,5;
+d3 : |int, string| = d1;
+print i;
+print j;
+print d1;
+print d2;
+print d3;
+d3|2|="oi";
+print d3;
+k,m,l : int = 1;
+print k;
+print m;
+print l;
 
-#g : <int>;
-#k = [a for a over [1,2,3] when a == [1,2,3]];
-g = <a--a for a over [0, 1, 2] when (a > 0)>;
+
+print d3;
+
+d3 = ||;
+
+d4, d5 : |int, string|;
+
+d4, d5 = d1, d3;
+print d4;
+print d5;
+
+
+if (d3 != ||) 
+    print "não deu pau";
+
+gs : <int>;
+
+if (gs != <[]>) 
+    print "não deu pau grafos";
+else
+    print "é igual";
+
+
+gsss : <int, int> = <2 where a--a for a over [1,2,3]>;
+gss : <int, <int, float>> = <[1,2,3], gsss where a->(a%3) + 1 for a over [1,2,3]>;
+
+ls : [[int]] = [[1,2],[2,3],[2,2]];
+lss : [float] = [1.0,3.0];
+ls[1] = lss;
+
+print ls;
+
+print gsss;
+
+
+if (gss != <[]>)
+    print gss;
 
 

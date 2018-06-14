@@ -1,0 +1,3 @@
+g : <int> = <[0,1,2,3], a*b where a--b for a,b over [0,1,2,3] when (b*a > 5)>;
+
+print g; 
