@@ -149,7 +149,7 @@ execStmt (ForStmt ids vs body) m pm ss =
                                                print xss
                                                case xss of
                                                     xss'@( (List list) : _ ) -> do return xss'
-                                                    xss'@[(String s)]        -> do return [List [Char x | x <- s]]
+                                                    xss'@((String s) : _ )   -> do return $ makeListChars xss'
                                                     [(Map map)]              -> do return [(List ( makeMap (M.toList map) ))]
                                                     [(V.Graph g)]            -> do return [ List $ removeVerticesId $ G.getVertices g ]
                                                     _                        -> error "Wrong pattern!"
@@ -160,6 +160,9 @@ execStmt (ForStmt ids vs body) m pm ss =
                 replicateList 0 xs = xs
                 replicateList n xs | n < 0     = error "There aren't enough identifiers." 
                                    | otherwise = replicateList (n-1) xs ++ [last xs]
+
+                makeListChars [] = []
+                makeListChars ((String s) : xs) = [List [Char x | x <- s]] ++ (makeListChars xs)
 
                 makeMap :: [(Value, Value)] -> [Value]
                 makeMap []     = []
