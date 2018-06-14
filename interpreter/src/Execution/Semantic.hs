@@ -614,23 +614,31 @@ makeBooleanFromValue _        = Left "Expected boolean value"
 checkCompatType :: GType -> GType -> Bool
 checkCompatType t t' = if t == t' then True
                     else case (t,t') of
-                        (GGraphVertexEdge v1 _, GGraphVertexEdge v2 GEdgeEmpty) -> checkCompatType v1 v2--(v1 == v2)
-                        (GGraphVertexEdge v2 GEdgeEmpty, GGraphVertexEdge v1 _) -> checkCompatType v1 v2--(v1 == v2)(v1 == v2)
+                        (GFloat, GInteger)  -> True
+                        _                   -> checkCompatType' t t'
+
+checkCompatType' :: GType -> GType -> Bool
+checkCompatType' t t' = if t == t' then True
+                     else case (t,t') of
+                        (GGraphVertexEdge v1 _, GGraphVertexEdge v2 GEdgeEmpty) -> checkCompatType' v1 v2--(v1 == v2)
+                        (GGraphVertexEdge v2 GEdgeEmpty, GGraphVertexEdge v1 _) -> checkCompatType' v1 v2--(v1 == v2)(v1 == v2)
                         (GGraphVertexEdge _ _, GGraphEmpty) -> True
                         (GGraphEmpty, GGraphVertexEdge _ _) -> True
-                        (GGraphVertexEdge v1 e1, GGraphVertexEdge v2 e2) -> checkCompatType e1 e2 && checkCompatType v1 v2--(e1 == e2) && (v1 == v2)
-                        (GFloat, GInteger)  -> True
+                        (GGraphVertexEdge v1 e1, GGraphVertexEdge v2 e2) -> checkCompatType' e1 e2 && checkCompatType' v1 v2--(e1 == e2) && (v1 == v2)
                         (GList _, GListEmpty)     -> True
                         (GListEmpty ,GList _)     -> True
                         (GDict _ _, GDictEmpty)   -> True
                         (GDictEmpty, GDict _ _ )  -> True
-                        (GDict k1 v1, GDict k2 v2)  -> checkCompatType k1 k2 && checkCompatType v1 v2--(e1 == e2) && (v1 == v2)
-                        (GList l, GList l') -> checkCompatType l l'
+                        (GDict k1 v1, GDict k2 v2)  -> checkCompatType' k1 k2 && checkCompatType' v1 v2--(e1 == e2) && (v1 == v2)
+                        (GList l, GList l') -> checkCompatType' l l'
                         --(GList l, GList l') -> checkCompatType (GList l) l'
                         --(GList l, GList l') -> checkCompatType (l) $ GList l'
                         (GUserType _, GAnonymousStruct) -> True
                         --(GAnonymousStruct, GUserType _) -> True
                         _                   -> False
+
+
+
                         
 -- | Given type t and value v, return (t,v) if they are compatible.
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
