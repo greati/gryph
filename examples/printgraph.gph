@@ -1,3 +1,10 @@
 g : <int> = <[0,1,2,3], a*b where a--b for a,b over [0,1,2,3] when (b*a > 5)>;
 
 print g; 
+
+d : |int, int| = |1 ? 1, 2 ? 2|;
+
+d|3| = 3;
+d|2| = 4;
+
+print d;
