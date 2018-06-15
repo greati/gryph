@@ -373,18 +373,18 @@ execStmt (AddStmt e1 e2) m pm ss =
                                                                                               let g' = G.insertVertex g v
                                                                                               m'' <- execAttrStmt' m' pm ss' [] e2 (V.Graph g', e2type)
                                                                                               return (m'', ss', Nothing)                                            
-                                            (List l) -> 
+                                            (List l) -> do 
                                                 case e2type of
                                                     GListEmpty -> do 
                                                                     m'' <- execAttrStmt' m' pm ss' [] e2 (List ([e1']), e2type)
                                                                     return (m'', ss', Nothing)
                                                     GList lt   -> do
-                                                                    if checkCompatType (getType (head l)) (getType e1')
+                                                                    if checkCompatType lt (getType e1')
                                                                     then do
                                                                         m'' <- execAttrStmt' m' pm ss' [] e2 (List (l ++ [e1']), e2type)
                                                                         return (m'', ss', Nothing)
                                                                     else
-                                                                        error $ "Incompatible types between " ++ (show $ getType $ head l) ++ " and " ++ (show $ getType e1')
+                                                                        error $ "Incompatible types between " ++ (show lt) ++ " and " ++ (show $ getType e1')
                                             _ -> error "Wrong pattern"
 
 execStmt (DelStmt e1 e2) m pm ss =
