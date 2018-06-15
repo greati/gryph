@@ -1,0 +1,17 @@
+l : [[int]] = [[1,2],[3],[4]];
+
+l1 : [int] = l[1];
+print l1;
+l2 : int = l[0][1];
+print l2;
+
+
+dl : [|int,([string], <int>)|] = [|1?(["2","2"],<[]>),2?(["3"],<[]>)|,|5?(["oi","oioi"],<[]>)|];
+print dl;
+
+print dl[1]|5|[1];
+
+i : int = 4;
+
+print i;
+
