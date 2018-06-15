@@ -85,6 +85,26 @@ sub multiply_matrices(m1, m2 : Matrix&) : Matrix {
 		result{data} = result{data} ++ [result_row];
 	}
 
+	result{height} = m1{height};
+	result{width} = m2{width};
+    return result;
+}
+
+sub add_matrices(m1, m2 : Matrix&) : Matrix {
+	result : Matrix;
+	if (m1{height} != m2{height} or m1{width} != m2{width}) {
+		print "Can't add matrices";
+		return result;
+	}
+
+	for i over range(m1{height}) {
+		result{data} = result{data} ++ [
+			[m1{data}[i][j] + m2{data}[i][j] for j over range(m1{width})]
+		];
+	}
+
+	result{height} = m1{height};
+	result{width} = m1{width};
     return result;
 }
 
@@ -102,5 +122,10 @@ print "Input second matrix:";
 m2 : Matrix = read_matrix();
 print_matrix(m2);
 
-r1 : Matrix = multiply_matrices(m1, m2);
+print "Sum of matrices:";
+r1 : Matrix = add_matrices(m1, m2);
 print_matrix(r1);
+
+print "Product of matrices:";
+r2 : Matrix = multiply_matrices(m1, m2);
+print_matrix(r2);
