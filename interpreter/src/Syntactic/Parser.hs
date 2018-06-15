@@ -12,8 +12,15 @@ import Syntactic.Types
 
 gryphParser :: GenParser GphTokenPos st [ProgramUnit]
 gryphParser = 
-    do result <- many (programUnit)
-       return result
+        do
+            do
+                u <- programUnit
+                remain <- gryphParser
+                return (u:remain)
+            <|>
+            do  
+                eof
+                return []
 
 programUnit :: GenParser GphTokenPos st ProgramUnit
 programUnit = do 
@@ -21,14 +28,13 @@ programUnit = do
                         s <- structDecl
                         return (StructDecl s)
                     <|>
-                    do 
-                        s <- stmt
-                        return (Stmt s)
-                    <|>
                     do
                         s <- subprogDecl
                         return (SubprogramDecl s)
-
+                    <|>
+                    do 
+                        s <- stmt
+                        return (Stmt s)
 {- Structs.
  -
  --}
