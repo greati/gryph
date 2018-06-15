@@ -266,7 +266,6 @@ execStmt (ForStmt ids vs body) m pm ss =
                     forStmt ids vss' body m pm ss' newScope
             where
                 getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
-                                               print xss
                                                case xss of
                                                     xss'@( (List list) : _ ) -> do return xss'
                                                     xss'@((String s) : _ )   -> do return $ makeListChars xss'
@@ -1219,7 +1218,7 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                                 do
                                                                                     case v of
                                                                                         Nothing -> error "No return from subprogram call"
-                                                                                        Just v -> return (v, m, ss)
+                                                                                        Just v -> return (v, m', ss)
 
 eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return $ (List r, m, ss)}
 
