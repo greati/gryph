@@ -9,4 +9,10 @@ sub range(begin : int; end : int; step : int = 1) : [int] {
 	return l;
 }
 
+sub range(end : int) : [int] {
+	return range(0, end);
+}
+
 print range(0, 10, 1);
+print range(1, 5);
+print range(7);
