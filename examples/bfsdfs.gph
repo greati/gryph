@@ -8,6 +8,13 @@
 
 g : <int> = <a*b where a--b for a,b over [1,2,3],[4,5]>;
 print g;
-bfs a,b,c in g from 3{
+
+print "--Running a dfs--";
+dfs a,b,c in g from 1{
+	print a@string + ";" + b@string + ";" + c@string;
+}
+
+print "--Running a bfs--";
+bfs a,b,c in g from 1{
 	print a@string + ";" + b@string + ";" + c@string;
 }

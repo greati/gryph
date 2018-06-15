@@ -134,6 +134,71 @@ execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' =
                             NoElse -> do return (m,ss', Nothing)
                             ElseBody block -> do execBlockSimple block m pm BlockScope ss' []
 
+execStmt (DfsStmt ids graph starter body) m pm ss =
+    if length ids > 3
+    then error "There are too many identifiers"
+    else do
+        (g, gtype) <- evalWithType m pm ss graph
+        case g of
+            (V.Graph g'@(G.Graph vertices edges)) ->
+                if Se.null vertices
+                then return (m, ss, Nothing)
+                else
+                    case starter of
+                        Nothing -> do 
+                            let v1 = head $ Se.toList vertices
+                            time <- getCurSeconds 
+                            let newScope = IterationScope time
+                                ss' = (newScope:ss) in
+                                    dfsStmt ids g' [(v1, v1, (Integer 1))] (Se.empty) body m pm ss' newScope 
+                        Just v  -> do
+                            v' <- eval m pm ss v 
+                            let v1@(G.Vertex id1 _) = G.getVertexFromValue g' v' False
+                            if id1 == -1
+                            then error $ "The Vertex " ++ (show v') ++ " doesn't exist"
+                            else do
+                                time <- getCurSeconds 
+                                let newScope = IterationScope time
+                                    ss' = (newScope:ss) in
+                                        dfsStmt ids g' [(v1, v1, (Integer 1))] (Se.empty) body m pm ss' newScope
+            _ -> error "The expression must be a graph"
+    where
+        dfsStmt ids graph stack vis body m pm ss' newScope =
+            if stack == []
+            then return (m, ss, Nothing)
+            else do 
+                let h@(v@(Vertex id _), dad, step) = (head stack)
+                if Se.member v vis
+                then if length stack == 1
+                     then 
+                        return (m, ss, Nothing)
+                     else 
+                        dfsStmt ids graph (tail stack) vis body m pm ss' newScope
+                else do 
+                        let new_vis = Se.insert v vis
+                        let nameCell = getNameCellGraph ids (head stack) 
+                        let m' = (case elabVars m nameCell newScope of
+                                        Left i -> error i
+                                        Right m'' -> m'') in
+                                    do
+                                        let new_stack = fillStack graph h (tail stack)
+                                        if length new_stack == 0
+                                        then do 
+                                            (m'',ss'',v) <- execBlock body m' pm ss' newScope
+                                            return (clearScope newScope m'', tail ss'', v)
+                                        else do 
+                                            (m'',ss'',v) <- execBlock body m' pm ss' newScope
+                                            if (newScope == head ss'') then
+                                                dfsStmt ids graph new_stack new_vis body (clearScope newScope m'') pm ss'' newScope
+                                            else 
+                                                return (clearScope newScope m'', ss'', v)
+
+        fillStack g (v, _, step) stack = fillStack' (G.getEdges g v) step stack
+        fillStack' [] _ stack = stack
+        fillStack' (G.Edge v1 v2 _: xs) step stack =
+            let (Integer step') = step in
+                fillStack' xs step ((v2, v1, Integer (step' + 1)) : stack)
+
 execStmt (BfsStmt ids graph starter body) m pm ss =
     if length ids > 3
     then error "There are too many identifiers"
