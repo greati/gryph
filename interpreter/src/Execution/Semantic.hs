@@ -258,23 +258,23 @@ execStmt (BfsStmt ids graph starter body) m pm ss =
 execStmt (ForStmt ids vs body) m pm ss = 
     do 
             let new_vs = replicateList ((length ids) - (length vs)) vs 
-            vss <- (getLists m pm ss [new_vs])
+            (vss, m', ss') <- (getLists m pm ss [new_vs])
             vss' <- over vss
             time <- getCurSeconds
             let newScope = IterationScope time
                 ss' = (newScope:ss) in
                     forStmt ids vss' body m pm ss' newScope
             where
-                getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
+                getLists m pm ss (xs:[])  = do (xss, m',ss') <- (evalList m pm ss xs)
                                                case xss of
-                                                    xss'@( (List list) : _ ) -> do return xss'
-                                                    xss'@((String s) : _ )   -> do return $ makeListChars xss'
-                                                    [(Map map)]              -> do return [(List ( makeMap (M.toList map) ))]
-                                                    [(V.Graph g)]            -> do return [ List $ removeVerticesId $ G.getVertices g ]
+                                                    xss'@( (List list) : _ ) -> do return (xss', m',ss')
+                                                    xss'@((String s) : _ )   -> do return $ (makeListChars xss', m', ss')
+                                                    [(Map map)]              -> do return ([(List ( makeMap (M.toList map) ))], m',ss')
+                                                    [(V.Graph g)]            -> do return ([ List $ removeVerticesId $ G.getVertices g ], m', ss')
                                                     _                        -> error "Wrong pattern!"
-                getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs)
-                                               xss'' <- (getLists m pm ss xss)
-                                               return (xss' ++ xss'')
+                getLists m pm ss (xs:xss) = do (xss', m',ss')   <- (evalList m pm ss xs)
+                                               (xss'', m'', ss'') <- (getLists m' pm ss' xss)
+                                               return ((xss' ++ xss''), m'', ss'')
 
                 replicateList 0 xs = xs
                 replicateList n xs | n < 0     = error "There aren't enough identifiers." 
@@ -366,7 +366,7 @@ execStmt (AddStmt e1 e2) m pm ss =
                                                     GGraphEmpty -> do let v  = G.getVertexFromValue g e1' True
                                                                       let g' = G.insertVertex g v
                                                                       m'' <- execAttrStmt' m' pm ss' [] e2 (V.Graph g', e2type)
-                                                                      return (m', ss', Nothing)
+                                                                      return (m'', ss', Nothing)
                                                     GGraphVertexEdge typeVertice _ -> if not $ typeVertice == (getType e1')
                                                                                       then error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ show typeVertice
                                                                                       else do let v  = G.getVertexFromValue g e1' True
@@ -924,15 +924,15 @@ coerce (Integer x) = (Float (fromInteger x))
 coerce v = v
 
 -- | Evaluates a list of expressions
-evalList :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
-evalList m pm ss [x]      =  do {(x', m', ss') <- eval m pm ss x ; return $ [x']}
+evalList :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO ([Value], Memory, Scopes)
+evalList m pm ss [x]      =  do {(x', m', ss') <- eval m pm ss x ; return $ ([x'], m', ss')}
 evalList m pm ss (x:y:xs) =  do 
                                   (z, m', ss')  <- eval m pm ss x
                                   (y', m'', ss'') <- eval m' pm ss' y
                                   if not( checkCompatType (getType y') ( getType z) || checkCompatType (getType z) (getType y') ) then error "Type mismatch in List "
                                     else do
-                                       l <- evalList m'' pm ss''  (y:xs)
-                                       return (z:l) 
+                                       (l, m''', ss''') <- evalList m'' pm ss''  (y:xs)
+                                       return ((z:l), m''', ss''') 
 
 -- | Evaluates a tuple
 evalTuple :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
@@ -1040,7 +1040,7 @@ eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExp
 eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ExpBinOp e1 e2) expBin
 eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ModBinOp e1 e2) modBin
 eval m pm ss (ExprLiteral (ListLit [] ))        = return $ (List [], m, ss)
-eval m pm ss (ExprLiteral (ListLit es ))        = do {v <- evalList m pm ss es; if getListType v == GFloat then return $(List (map coerce v), m, ss)  else  return $ (List v, m, ss)}
+eval m pm ss (ExprLiteral (ListLit es ))        = do {(v, m', ss') <- evalList m pm ss es; if getListType v == GFloat then return $(List (map coerce v), m', ss')  else  return $ (List v, m', ss')}
 eval m pm ss (ExprLiteral (DictLit de))         = do {v <- evalDict m pm ss de M.empty ; return $ (Map v, m, ss)}
 eval m pm ss (ArithEqExpr Equals e1 e2)         = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 == v2), m'', ss'') }
 eval m pm ss (ArithEqExpr NotEquals e1 e2)      = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 /= v2), m'', ss'')} 
@@ -1188,13 +1188,13 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                     (v2,t2)  <- evalWithType m pm ss e2
                                                     case v1 of
                                                         l1@(List []) -> case v2 of 
-                                                                         l2@(List [])     -> if t1 == t2 || GListEmpty == t2 || t1 == GListEmpty  then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
-                                                                         l2@(List (x:xs)) -> if t1 == t2 then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List [])     -> if checkCompatType' t1 t2 then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List (x:xs)) -> if checkCompatType' t1 t2 then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                          _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 
                                                         l1@(List (x:xs)) -> case v2 of
-                                                                                l2@(List [])     -> if t1 == t2 || GListEmpty == t2 || t1 == GListEmpty then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
-                                                                                l2@(List (y:ys)) -> if  t1 ==  t2 
+                                                                                l2@(List [])     -> if checkCompatType t1 t2  then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                                l2@(List (y:ys)) -> if checkCompatType t1 t2 
                                                                                                     then return $ (plusPlusBinList l1 l2, m, ss)
                                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
                          
@@ -1468,18 +1468,18 @@ evalListComp m pm ss (ListComp expression forIt ) = do
 evalForIterator :: Memory -> ProgramMemory -> Scopes -> ForIterator -> IO ([Identifier], [Value], Maybe ArithExpr)
 evalForIterator m pm ss (ForIterator is xs when_exp) = do
         let new_xs = replicateList ((length is) - (length xs)) xs
-        xss <- (getLists m pm ss [new_xs])
+        (xss, m', ss') <- (getLists m pm ss [new_xs])
         xss' <- (over xss)
         if when_exp == []
         then do
             return (is, xss', Nothing)
         else do
             return (is, xss', (Just (head when_exp)))            
-    where getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
-                                         return xss
-          getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
-                                         xss'' <- (getLists m pm ss xss)
-                                         return (xss' ++ xss'')
+    where getLists m pm ss (xs:[])  = do (xss, m', ss') <- (evalList m pm ss xs)
+                                         return (xss, m', ss')
+          getLists m pm ss (xs:xss) = do (xss', m', ss') <- (evalList m pm ss xs) 
+                                         (xss'', m'', ss'') <- (getLists m' pm ss' xss)
+                                         return ((xss' ++ xss''), m'', ss'')
           replicateList 0 xs = xs
           replicateList n xs | n < 0     = error "There aren't enough identifiers." 
                              | otherwise = replicateList (n-1) xs ++ [last xs]
