@@ -264,3 +264,9 @@ Session.vim
 tags
 
 # End of https://www.gitignore.io/api/latex
+
+# MacOS
+*.DS_Store
+._*
+.Spotlight-V100
+.Trashes
