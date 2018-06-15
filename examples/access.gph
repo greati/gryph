@@ -1,0 +1,7 @@
+l : (<int>,<int>) = (<[]>, <[]>);
+
+for a over [1,2,3]{
+	print a;
+}
+
+print a;

@@ -373,6 +373,18 @@ execStmt (AddStmt e1 e2) m pm ss =
                                                                                               let g' = G.insertVertex g v
                                                                                               m'' <- execAttrStmt' m' pm ss' [] e2 (V.Graph g', e2type)
                                                                                               return (m'', ss', Nothing)                                            
+                                            (List l) -> 
+                                                case e2type of
+                                                    GListEmpty -> do 
+                                                                    m'' <- execAttrStmt' m' pm ss' [] e2 (List ([e1']), e2type)
+                                                                    return (m'', ss', Nothing)
+                                                    GList lt   -> do
+                                                                    if getType (head l) == getType e1'
+                                                                    then do
+                                                                        m'' <- execAttrStmt' m' pm ss' [] e2 (List (l ++ [e1']), e2type)
+                                                                        return (m'', ss', Nothing)
+                                                                    else
+                                                                        error $ "Incompatible types between " ++ (show $ getType $ head l) ++ " and " ++ (show $ getType e1')
                                             _ -> error "Wrong pattern"
 
 execStmt (DelStmt e1 e2) m pm ss =
@@ -683,25 +695,25 @@ execAttrStmt' m pm ss as lhs rhs@(vr,tr) =
             _ -> error $ "Not a valid lhs"
 
     where
-        backwardAccessUpdate m pm ss [] ident memval memtype rightType v =  if checkCompatType (getType memval) (rightType) then v else
-                                                          error $ "Incompatible types " ++ show memtype ++ " and " ++ show rightType
+        backwardAccessUpdate m pm ss [] ident memval memtype rightType v =  if checkCompatType (memtype) (rightType) then v else
+                                                          error $ "Incompatible types " ++ show (memtype) ++ " and " ++ show rightType
         backwardAccessUpdate m pm ss (a:as) ident memval memtype rightType v = 
             case a of
                 ListIndex index -> case index of
                                         (Integer int) -> 
                                                 case memval of
                                                     (List xs) -> List (setElemList xs int v'')
-                                                        where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) (getType memval) rightType v
+                                                        where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) (uncapsulate Nothing memtype) rightType v
                                                     (String xs) -> String (setElemList xs int c)
-                                                        where v''@(Char c) = backwardAccessUpdate m pm ss as ident (Char (xs !! fromInteger int)) (getType memval) rightType v
+                                                        where v''@(Char c) = backwardAccessUpdate m pm ss as ident (Char (xs !! fromInteger int)) (uncapsulate Nothing memtype) rightType v
                                                     _ -> error "You must access a list or a string." 
                                         _ -> error "List index must be an integer." 
                 DictIndex index -> case memval of
                                         (Map m') -> case as of
                                                     [] ->  Map (M.insert index v'' m')
-                                                       where v'' = if checkCompatType (uncapsulate memtype) (getType v) then v else error $ "Incompatible types " ++ show (uncapsulate memtype) ++ " and " ++ show rightType
+                                                       where v'' = if checkCompatType (uncapsulate Nothing memtype) (getType v) then v else error $ "Incompatible types " ++ show (uncapsulate Nothing memtype) ++ " and " ++ show rightType
                                                     _  -> Map (M.insert index v'' m')
-                                                       where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) (getType memval) rightType v
+                                                       where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) (uncapsulate Nothing memtype) rightType v
                                         _ -> error "You must access a dictionary"
                 StructField field -> case memval of
                                         (Setter si m') -> if M.notMember field m' then error $ field ++ " not in the struct"
@@ -1530,6 +1542,16 @@ updateListIds m ss ((Ident id):ids) (List (v:vs)) = do
                                                         return r
 
 
-uncapsulate :: GType -> GType
-uncapsulate (GDict t1 t2) = t2
-uncapsulate (GList t1)    = t1
+uncapsulate ::(Maybe Integer) -> GType -> GType
+uncapsulate Nothing (GDict t1 t2) = t2
+uncapsulate Nothing (GList t1)    = t1
+uncapsulate (Just 0) (GPair t1 _) = t1
+uncapsulate (Just 1) (GPair _ t2) = t2
+uncapsulate (Just 0) (GTriple t1 _ _) = t1
+uncapsulate (Just 1) (GTriple _ t2 _) = t2
+uncapsulate (Just 2) (GTriple _ _ t3) = t3
+uncapsulate (Just 0) (GQuadruple t1 _ _ _) = t1
+uncapsulate (Just 1) (GQuadruple _ t2 _ _) = t2
+uncapsulate (Just 2) (GQuadruple _ _ t3 _) = t3
+uncapsulate (Just 3) (GQuadruple _ _ _ t4) = t4
+uncapsulate  _ x             = x
