@@ -1,0 +1,14 @@
+sub split (original : string; split_char : char) : [string] {
+	results : [string] = [""];
+	i : int = 0;
+	for c over original {
+		if (c == split_char) {
+			results = results ++ [""];
+			i = i + 1;
+		} else {
+			results[i] = results[i] + c@string;
+		}
+	}
+
+	return results;
+}
