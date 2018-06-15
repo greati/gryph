@@ -1190,13 +1190,13 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                     (v2,t2)  <- evalWithType m pm ss e2
                                                     case v1 of
                                                         l1@(List []) -> case v2 of 
-                                                                         l2@(List [])     -> if t1 == t2 || GListEmpty == t2 || t1 == GListEmpty  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
-                                                                         l2@(List (x:xs)) -> if t1 == t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List [])     -> if checkCompatType t1  t2  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List (x:xs)) -> if checkCompatType t1 t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                          _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 
                                                         l1@(List (x:xs)) -> case v2 of
-                                                                                l2@(List [])     -> if t1 == t2 || GListEmpty == t2 || t1 == GListEmpty then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
-                                                                                l2@(List (y:ys)) -> if  t1 ==  t2 
+                                                                                l2@(List [])     -> if checkCompatType t1 t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                                l2@(List (y:ys)) -> if checkCompatType t1  t2 
                                                                                                     then return $ plusPlusBinList l1 l2
                                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
                          
