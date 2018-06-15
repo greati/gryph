@@ -940,9 +940,60 @@ postfixExprList = do
                             <|>
                             return [e]
 
+accessOperator :: ArithExpr -> GenParser GphTokenPos st ArithExpr 
+accessOperator i = do
+                        do
+                            (tok GTokLess) 
+                            do
+                                try $ do
+                                    e <- expression
+                                    (tok GTokGreater)
+                                    return (GraphAccess i e)
+                                <|>
+                                do
+                                    e <- edge
+                                    (tok GTokGreater)
+                                    return (GraphEdgeAccess i e)
+                        <|>
+                        do
+                            (tok GTokPipe) 
+                            e <- expression
+                            (tok GTokPipe)
+                            return (DictAccess i e)
+                        <|>
+                        do
+                            (tok GTokLSquare) 
+                            e <- expression
+                            (tok GTokRSquare)
+                            return (ListAccess i e)
+                        <|>
+                        do
+                            (tok GTokLCurly) 
+                            e <- anyIdent
+                            (tok GTokRCurly)
+                            return (StructAccess i e)
+                        <|>
+                        do
+                            (tok GTokDot) 
+                            e <- expression
+                            return (TupleAccess i e)
+
+accessOperatorSequence :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+accessOperatorSequence i = do
+                                try $ do
+                                    ae <- accessOperator i
+                                    accessOperatorSequence ae
+                                <|>
+                                do
+                                    return i
+
 postfixExpr :: GenParser GphTokenPos st ArithExpr
 postfixExpr = do
-                    do
+                do  
+                    i <- primaryExpr
+                    accessOperatorSequence i 
+
+{--                    do
                         try $ do
                             i <- primaryExpr
                             do
@@ -984,7 +1035,7 @@ postfixExpr = do
                     <|>
                     do
                         primaryExpr
-
+--}
 primaryExpr :: GenParser GphTokenPos st ArithExpr
 primaryExpr = do
                     do
