@@ -5,7 +5,10 @@ sub mdc (n, m : int) : int {
     else return mdc(n % m, m); 
 }
 
-x : [int];
+x : [(int,int)];
 x = [(a,b) for a,b over [2,3,4,5],[6,7,8,9,10]];
+print x;
+
+add (10,10) in x;
 print x;
 
