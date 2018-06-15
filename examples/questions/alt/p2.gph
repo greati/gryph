@@ -1,12 +1,19 @@
-sub range(l1, l2 : int) : [int] {
-	r : [int] = [l1];
-	i : int = l1+1;
-	while (i < l2) {
-		r = r ++ i;
-		i = i + 1;
+sub range(begin : int; end : int; step : int = 1) : [int] {
+	l : [int] = [];
+	count : int = begin;
+	
+	while(count < end){
+		l = l ++ [count];
+		count = count + 1;
 	}
-	return r;
+	return l;
 }
+
+sub range(end : int) : [int] {
+	return range(0, end);
+}
+
+### END LIB ###
 
 sub read_float() : float {
 	str : string;
@@ -18,9 +25,9 @@ num : float = read_float();
 limits : [float] = [-1.0, 25.0, 50.0, 75.0, 100.0];
 n_intervals : int = 5;
 
-in_interval : [int] = [0, 0, 0, 0];
-#for i over range(0, n_intervals-1)
-# 	in_interval = in_interval ++ 0;
+in_interval : [int] = [];
+for i over range(n_intervals-1)
+ 	in_interval = in_interval ++ [0];
 
 while (num >= 0.0) {
  	i : int = num@int;
@@ -34,4 +41,4 @@ while (num >= 0.0) {
  	num = read_float();
 }
 
-print(in_interval@string);
+print(in_interval);
