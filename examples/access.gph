@@ -6,12 +6,20 @@ l2 : int = l[0][1];
 print l2;
 
 
-dl : [|int,([string], <int>)|] = [|1?(["2","2"],<[]>),2?(["3"],<[]>)|,|5?(["oi","oioi"],<[]>)|];
-print dl;
+#dl : [|int,([string], <int>)|] = [|1?(["2","2"],<[]>),2?(["3"],<[]>)|,|5?(["oi","oioi"],<[]>)|];
+#print dl;
 
-print dl[1]|5|[1];
+#print dl[1]|5|[1];
 
 i : int = 4;
 
-print i;
+print i + l[0][1];
 
+l[0][1] = 10;
+print l;
+
+d1 : |string, [int]| = |"oi"?[1,2,3]|;
+d1|"oie"| = [5,6];
+d1|"oie"|[1] = 1000;
+d1 = ||;
+print d1;
