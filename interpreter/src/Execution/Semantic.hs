@@ -145,7 +145,12 @@ execStmt (BfsStmt ids graph starter body) m pm ss =
                 then return (m, ss, Nothing)
                 else
                     case starter of
-                        Nothing -> do undefined 
+                        Nothing -> do 
+                            let v1 = head $ Se.toList vertices
+                            time <- getCurSeconds 
+                            let newScope = IterationScope time
+                                ss' = (newScope:ss) in
+                                    bfsStmt ids g' [(v1, v1, (Integer 1))] (Se.fromList [v1]) body m pm ss' newScope 
                         Just v  -> do
                             v' <- eval m pm ss v 
                             let v1@(G.Vertex id1 _) = G.getVertexFromValue g' v' False

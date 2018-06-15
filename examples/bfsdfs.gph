@@ -6,8 +6,8 @@
 #    a = 1+s;
 #}
 
-g : <int>;# = <a*b where a--b for a,b over [1,2,3],[4,5]>;
+g : <int> = <a*b where a--b for a,b over [1,2,3],[4,5]>;
 print g;
-bfs a,b,c in g from 0{
+bfs a,b,c in g from 3{
 	print a@string + ";" + b@string + ";" + c@string;
 }
