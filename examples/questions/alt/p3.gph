@@ -1,0 +1,59 @@
+sub split (original : string; split_char : char) : [string] {
+	results : [string] = [""];
+	i : int = 0;
+	for c over original {
+		if (c == split_char) {
+			results = results ++ [""];
+			i = i + 1;
+		} else {
+			results[i] = results[i] + c@string;
+		}
+	}
+
+	return results;
+}
+
+Matrix {
+	height, width : int = 0;
+	data : [[int]] = [];
+}
+
+sub read_matrix() : Matrix {
+	print "Input matrix:";
+	input : string;
+	line, column : int = 0;
+	last_width : int = 0;
+	mat : Matrix;
+
+	read input;
+	while (input != "") {
+		mat{data} = mat{data} ++ [[]];
+		print mat{data};
+		nums : [string] = split(input, ' ');
+		column = 0;
+		for n over nums {
+			(mat{data})[line] = (mat{data})[line] ++ [n@int];
+			column = column + 1;
+		}
+
+		if (line > 1 and column != last_width) {
+			print "Invalid matrix!";
+			break;
+		}
+		last_width = column;
+		line = line + 1;
+		read input;
+	}
+
+	mat{height} = line;
+	mat{width} = last_width;
+	return mat;
+}
+
+m : Matrix = read_matrix();
+#for l over m {
+#	for c over l {
+#		print c@string+" ";
+#	}
+#	print "";
+#}
