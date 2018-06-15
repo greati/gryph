@@ -874,7 +874,7 @@ interpretParamDeclaration pd@(ParamDeclaration is _ es) m pm ss
  --Get type of a List and make coercion if needed                
 getListType :: [Value] -> GType
 getListType [x]      = getType x
-getListType (x:y:xs) = if getType x == getType y 
+getListType (x:y:xs) = if checkCompatType' (getType x) ( getType y)
                        then getListType (y:xs)
                        else error "Heterogeneous List Type"   
                
