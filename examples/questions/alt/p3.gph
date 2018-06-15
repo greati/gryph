@@ -13,47 +13,94 @@ sub split (original : string; split_char : char) : [string] {
 	return results;
 }
 
+sub range(begin : int; end : int; step : int = 1) : [int] {
+	l : [int] = [];
+	count : int = begin;
+	
+	while(count < end){
+		l = l ++ [count];
+		count = count + 1;
+	}
+	return l;
+}
+
+sub range(end : int) : [int] {
+	return range(0, end);
+}
+
+#### END LIB ####
+
 Matrix {
 	height, width : int = 0;
 	data : [[int]] = [];
 }
 
 sub read_matrix() : Matrix {
-	print "Input matrix:";
 	input : string;
-	line, column : int = 0;
+	row, column : int = 0;
 	last_width : int = 0;
 	mat : Matrix;
 
 	read input;
 	while (input != "") {
 		mat{data} = mat{data} ++ [[]];
-		print mat{data};
 		nums : [string] = split(input, ' ');
 		column = 0;
 		for n over nums {
-			(mat{data})[line] = (mat{data})[line] ++ [n@int];
+			(mat{data})[row] = (mat{data})[row] ++ [n@int];
 			column = column + 1;
 		}
 
-		if (line > 1 and column != last_width) {
-			print "Invalid matrix!";
-			break;
+		if (row > 0 and column != last_width) {
+			print "Invalid matrix";
+			empty : Matrix;
+			return empty;
 		}
 		last_width = column;
-		line = line + 1;
+		row = row + 1;
 		read input;
 	}
 
-	mat{height} = line;
+	mat{height} = row;
 	mat{width} = last_width;
 	return mat;
 }
 
-m : Matrix = read_matrix();
-#for l over m {
-#	for c over l {
-#		print c@string+" ";
-#	}
-#	print "";
-#}
+sub multiply_matrices(m1, m2 : Matrix&) : Matrix {
+	result : Matrix;
+	if (m1{width} != m2{height}) {
+		print "Can't multiply matrices";
+		return result;
+	}
+
+	for i over range(m1{height}) {
+		result_row : [int] = [];
+		for j over range(m2{width}) {
+			result_row = result_row ++ [0];
+			for k over range(m1{width}) {
+				result_row[j] = result_row[j] +
+					(m1{data}[i][k] * m2{data}[k][j]);
+			}
+		}
+		result{data} = result{data} ++ [result_row];
+	}
+
+    return result;
+}
+
+sub print_matrix(m : Matrix&) {
+	print m{height}@string + ", " + m{width}@string;
+	for l over m{data}
+		print l;
+}
+
+print "Input first matrix:";
+m1 : Matrix = read_matrix();
+print_matrix(m1);
+
+print "Input second matrix:";
+m2 : Matrix = read_matrix();
+print_matrix(m2);
+
+r1 : Matrix = multiply_matrices(m1, m2);
+print_matrix(r1);
