@@ -367,7 +367,7 @@ execStmt (AddStmt e1 e2) m pm ss =
                                                                       let g' = G.insertVertex g v
                                                                       m'' <- execAttrStmt' m' pm ss' [] e2 (V.Graph g', e2type)
                                                                       return (m'', ss', Nothing)
-                                                    GGraphVertexEdge typeVertice _ -> if not $ typeVertice == (getType e1')
+                                                    GGraphVertexEdge typeVertice _ -> if not $ checkCompatType typeVertice (getType e1')
                                                                                       then error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ show typeVertice
                                                                                       else do let v  = G.getVertexFromValue g e1' True
                                                                                               let g' = G.insertVertex g v
@@ -379,7 +379,7 @@ execStmt (AddStmt e1 e2) m pm ss =
                                                                     m'' <- execAttrStmt' m' pm ss' [] e2 (List ([e1']), e2type)
                                                                     return (m'', ss', Nothing)
                                                     GList lt   -> do
-                                                                    if getType (head l) == getType e1'
+                                                                    if checkCompatType (getType (head l)) (getType e1')
                                                                     then do
                                                                         m'' <- execAttrStmt' m' pm ss' [] e2 (List (l ++ [e1']), e2type)
                                                                         return (m'', ss', Nothing)
