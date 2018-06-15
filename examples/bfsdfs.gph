@@ -1,7 +1,13 @@
-bfs a,b,c in g from 2
-    bfs a in f from k
-        a = 2;
+#bfs a,b,c in g from 2
+#    bfs a in f from k
+#        a = 2;
+#
+#dfs a, b in f(a) from g(b,c) {
+#    a = 1+s;
+#}
 
-dfs a, b in f(a) from g(b,c) {
-    a = 1+s;
+g : <int> = <a*b where a--b for a,b over [1,2,3],[4,5]>;
+print g;
+bfs a,b,c in g from 3{
+	print a@string + ";" + b@string + ";" + c@string;
 }

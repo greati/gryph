@@ -134,11 +134,66 @@ execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' =
                             NoElse -> do return (m,ss', Nothing)
                             ElseBody block -> do execBlockSimple block m pm BlockScope ss' []
 
+execStmt (BfsStmt ids graph starter body) m pm ss =
+    if length ids > 3
+    then error "There are too many identifiers"
+    else do
+        (g, gtype) <- evalWithType m pm ss graph
+        case g of
+            (V.Graph g'@(G.Graph vertices edges)) ->
+                if Se.null vertices
+                then return (m, ss, Nothing)
+                else
+                    case starter of
+                        Nothing -> do 
+                            let v1 = head $ Se.toList vertices
+                            time <- getCurSeconds 
+                            let newScope = IterationScope time
+                                ss' = (newScope:ss) in
+                                    bfsStmt ids g' [(v1, v1, (Integer 1))] (Se.fromList [v1]) body m pm ss' newScope 
+                        Just v  -> do
+                            v' <- eval m pm ss v 
+                            let v1@(G.Vertex id1 _) = G.getVertexFromValue g' v' False
+                            if id1 == -1
+                            then error $ "The Vertex " ++ (show v') ++ " doesn't exist"
+                            else do
+                                time <- getCurSeconds 
+                                let newScope = IterationScope time
+                                    ss' = (newScope:ss) in
+                                        bfsStmt ids g' [(v1, v1, (Integer 1))] (Se.fromList [v1]) body m pm ss' newScope
+            _ -> error "The expression must be a graph"
+    where
+        bfsStmt ids graph queue vis body m pm ss' newScope = 
+            do let nameCell = getNameCellGraph ids (head queue) 
+               let m' = (case elabVars m nameCell newScope of
+                    Left i -> error i
+                    Right m'' -> m'') in
+                do
+                    let h@(v@(Vertex id _), dad, step) = (head queue)
+                    let (new_vis, new_queue) = fillQueue graph h vis queue
+                    if length new_queue == 1
+                    then do 
+                        (m'',ss'',v) <- execBlock body m' pm ss' newScope
+                        return (clearScope newScope m'', tail ss'', v)
+                    else do 
+                        (m'',ss'',v) <- execBlock body m' pm ss' newScope
+                        if (newScope == head ss'') then
+                            bfsStmt ids graph (tail new_queue) new_vis body (clearScope newScope m'') pm ss'' newScope
+                        else 
+                            return $ (clearScope newScope m'', ss'', v)
+
+        fillQueue g (v, _, step) vis queue = fillQueue' (G.getEdges g v) vis step queue
+        fillQueue' [] vis _ queue = (vis, queue)
+        fillQueue' (G.Edge v1 v2 _: xs) vis step queue =
+            if Se.member v2 vis
+            then fillQueue' xs vis step queue  
+            else let (Integer step') = step in
+                    fillQueue' xs (Se.insert v2 vis) step (queue ++ [(v2, v1, Integer (step' + 1))])
+
 execStmt (ForStmt ids vs body) m pm ss = 
     do 
             let new_vs = replicateList ((length ids) - (length vs)) vs 
             vss <- (getLists m pm ss [new_vs])
-            print vss
             vss' <- over vss
             time <- getCurSeconds
             let newScope = IterationScope time
@@ -1383,6 +1438,11 @@ join v ((List xs):xss) = do xss' <- (join v xss)
 getNameCell :: [Identifier] -> Value -> [(Name,Cell)]
 getNameCell [(Ident id)] (List [v]) = [ (id, ((getType v), (Value v)) ) ]
 getNameCell ((Ident id):ids) (List (v:vs)) = (id, ((getType v), (Value v)) ) : (getNameCell ids (List vs))                                          
+
+getNameCellGraph :: [Identifier] -> (Vertex Value, Vertex Value, Value) -> [(Name,Cell)]
+getNameCellGraph [(Ident id1)] (Vertex _ a,_,_)                                    = [ (id1, ((getType a), (Value a)) ) ]
+getNameCellGraph [(Ident id1), (Ident id2)] (Vertex _ a,Vertex _ b,_)              = [ (id1, ((getType a), (Value a)) ), (id2, ((getType b), (Value b)) ) ]
+getNameCellGraph [(Ident id1), (Ident id2), (Ident id3)] (Vertex _ a,Vertex _ b,c) = [ (id1, ((getType a), (Value a)) ), (id2, ((getType b), (Value b)) ), (id3, ((getType c), (Value c)) )]
 
 updateListIds :: Memory -> Scopes -> [Identifier] -> Value -> IO (Either String Memory)
 updateListIds m ss [(Ident id)] (List [v])        = do 
