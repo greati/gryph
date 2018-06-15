@@ -1,5 +1,6 @@
-sub range(count : int; end : int; step : int) : [int]{
+sub range(begin : int; end : int; step : int = 1) : [int] {
 	l : [int] = [];
+	count : int = begin;
 	
 	while(count < end){
 		l = l ++ [count];
@@ -8,6 +9,10 @@ sub range(count : int; end : int; step : int) : [int]{
 	return l;
 }
 
-count : int = 0;
+sub range(end : int) : [int] {
+	return range(0, end);
+}
 
-print range(count, 10, 1);
+print range(0, 10, 1);
+print range(1, 5);
+print range(7);

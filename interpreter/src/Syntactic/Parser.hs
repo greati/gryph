@@ -12,8 +12,15 @@ import Syntactic.Types
 
 gryphParser :: GenParser GphTokenPos st [ProgramUnit]
 gryphParser = 
-    do result <- many (programUnit)
-       return result
+        do
+            do
+                u <- programUnit
+                remain <- gryphParser
+                return (u:remain)
+            <|>
+            do  
+                eof
+                return []
 
 programUnit :: GenParser GphTokenPos st ProgramUnit
 programUnit = do 
@@ -21,14 +28,13 @@ programUnit = do
                         s <- structDecl
                         return (StructDecl s)
                     <|>
-                    do 
-                        s <- stmt
-                        return (Stmt s)
-                    <|>
                     do
                         s <- subprogDecl
                         return (SubprogramDecl s)
-
+                    <|>
+                    do 
+                        s <- stmt
+                        return (Stmt s)
 {- Structs.
  -
  --}
@@ -940,9 +946,60 @@ postfixExprList = do
                             <|>
                             return [e]
 
+accessOperator :: ArithExpr -> GenParser GphTokenPos st ArithExpr 
+accessOperator i = do
+                        do
+                            (tok GTokLess) 
+                            do
+                                try $ do
+                                    e <- expression
+                                    (tok GTokGreater)
+                                    return (GraphAccess i e)
+                                <|>
+                                do
+                                    e <- edge
+                                    (tok GTokGreater)
+                                    return (GraphEdgeAccess i e)
+                        <|>
+                        do
+                            (tok GTokPipe) 
+                            e <- expression
+                            (tok GTokPipe)
+                            return (DictAccess i e)
+                        <|>
+                        do
+                            (tok GTokLSquare) 
+                            e <- expression
+                            (tok GTokRSquare)
+                            return (ListAccess i e)
+                        <|>
+                        do
+                            (tok GTokLCurly) 
+                            e <- anyIdent
+                            (tok GTokRCurly)
+                            return (StructAccess i e)
+                        <|>
+                        do
+                            (tok GTokDot) 
+                            e <- expression
+                            return (TupleAccess i e)
+
+accessOperatorSequence :: ArithExpr -> GenParser GphTokenPos st ArithExpr
+accessOperatorSequence i = do
+                                try $ do
+                                    ae <- accessOperator i
+                                    accessOperatorSequence ae
+                                <|>
+                                do
+                                    return i
+
 postfixExpr :: GenParser GphTokenPos st ArithExpr
 postfixExpr = do
-                    do
+                do  
+                    i <- primaryExpr
+                    accessOperatorSequence i 
+
+{--                    do
                         try $ do
                             i <- primaryExpr
                             do
@@ -984,7 +1041,7 @@ postfixExpr = do
                     <|>
                     do
                         primaryExpr
-
+--}
 primaryExpr :: GenParser GphTokenPos st ArithExpr
 primaryExpr = do
                     do

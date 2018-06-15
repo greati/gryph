@@ -62,10 +62,11 @@
 
     \subsection{Variables}
     \begin{bnf*}
-        \bnfprod{var-stmt-list}{\bnfpn{var-stmt}\{\bnfts{;}\bnfpn{var-stmt}\}\bnfts{;}}\\
         \bnfprod{var-stmt}{\bnfpn{var-decl-stmt}\bnfor\bnfpn{var-attr-stmt}}\\
+        \bnfprod{var-decl-list}{\bnfpn{var-decl-stmt}\{\bnfts{;}\bnfpn{var-decl-stmt}\}\bnfts{;}}\\
         \bnfprod{var-decl-stmt}{\bnfpn{id-list}\bnfts{:}\bnfpn{type}[\bnfpn{var-attr}]}\\
-        \bnfprod{var-attr-stmt}{\bnfpn{id-list}\bnfpn{var-attr}}\\
+        \bnfprod{var-attr-stmt}{\bnfpn{expr-list}\bnfpn{var-attr}}\\
+        \bnfprod{single-var-attr}{\bnfpn{expr}\bnfpn{var-attr}}\\
         \bnfprod{var-attr}{\bnfts{$\bm{=}$}\bnfpn{expr-list}}\\
     \end{bnf*}
 
@@ -86,13 +87,13 @@
     \begin{bnf*}
         \bnfprod{iteration-stmt}{\bnfpn{for-stmt} \bnfor \bnfpn{while-stmt}}\\
         \bnfprod{while-stmt}{\bnfts{while}\bnfpn{expression}\bnfpn{block-or-matched}}\\
-        \bnfprod{for-loop}{\bnfts{for}\bnfpn{id-list}\bnfts{over}\bnfpn{id-list}}\\
+        \bnfprod{for-loop}{\bnfts{for}\bnfpn{id-list}\bnfts{over}\bnfpn{expr-list}}\\
         \bnfprod{for-stmt}{\bnfpn{for-loop}\bnfpn{block-or-matched}}\\
     \end{bnf*}
     
 \section{Subprograms}
 \begin{bnf*}
-    \bnfprod{subprog-decl}{\bnfts{sub}\bnfpn{identifier}\bnfts{(} \bnfpn{parameters} \bnfts{)}\bnfpn{stmt-block}}\\
+    \bnfprod{subprog-decl}{\bnfts{sub}\bnfpn{identifier}\bnfts{(} \bnfpn{parameters} \bnfts{)}[\bnfts{:}\bnfpn{type}]\bnfpn{stmt-block}}\\
     \bnfprod{parameters}{\bnfpn{var-stmt} \{\bnfts{;}\bnfpn{var-stmt}\}}\\
     \bnfprod{subprog-call}{\bnfpn{identifier}\bnfts{(}\bnfpn{expr-list}\bnfts{)}}
 \end{bnf*}
@@ -106,41 +107,39 @@
     \bnfprod{composite-type}{\bnfts{[} \bnfpn{type} \bnfts{]} \bnfor \bnfts{$\bm{|}$} \bnfpn{type} \bnfts{$\bm{|}$} 
     \bnfor \bnfts{(} \bnfpn{type} \bnfts{,} \bnfpn{type-list} \bnfts{)} \bnfor \bnfpn{graph-type}}\\
     \bnfprod{graph-type}{\bnfts{$\bm{<}$} \bnfpn{type} \bnfts{$\bm{>}$} \bnfor \bnfts{$\bm{<}$} \bnfpn{type} \bnfts{,} \bnfpn{type} \bnfts{$\bm{>}$}}\\
-    \bnfprod{type-decl}{\bnfpn{user-type-id}\bnfts{\{}\bnfpn{var-stmt-list}\bnfts{\}}}\\
+    \bnfprod{type-decl}{\bnfpn{user-type-id}\bnfts{\{}\bnfpn{var-decl-list}\bnfts{\}}}\\
 \end{bnf*}
 
 \paragraph{Observation} Although there is no maximum size for tuples in the definition above, there may be one for specific language implementations.
 
 \section{Expressions}
 \begin{bnf*}
+    \bnfprod{expr-list}{\bnfpn{expression}\{\bnfts{,}\bnfpn{expression}\}}\\
     \bnfprod{expression}{\bnfpn{logical-xor-expr}}\\
-    \bnfprod{logical-xor-expr}{\bnfpn{logical-or-expr} \bnfor \bnfpn{logical-or-expr}\bnfpn{logical-xor-expr-aux}}\\
-    \bnfprod{logical-xor-expr-aux}{\bnfts{xor}\bnfsp\bnfpn{logical-or-expr}\bnfor \bnfts{xor}\bnfsp\bnfpn{logical-or-expr}\bnfpn{logical-xor-expr-aux}}\\
-    \bnfprod{logical-or-expr}{\bnfpn{logical-and-expr} \bnfor \bnfpn{logical-and-expr}\bnfpn{logical-or-expr-aux}}\\
-    \bnfprod{logical-or-expr-aux}{\bnfts{or}\bnfsp\bnfpn{logical-and-expr}\bnfor \bnfts{or}\bnfsp\bnfpn{logical-and-expr}\bnfpn{logical-or-expr-aux}}\\
-    \bnfprod{logical-and-expr}{\bnfpn{equality-expr} \bnfor \bnfpn{equality-expr}\bnfpn{logical-and-expr-aux}}\\
-    \bnfprod{logical-and-expr-aux}{\bnfts{and}\bnfsp\bnfpn{equality-expr}\bnfor \bnfts{and}\bnfsp\bnfpn{equality-expr}\bnfpn{logical-and-expr-aux}}\\
-    \bnfprod{equality-expr}{\bnfpn{rel-expr} \bnfor \bnfpn{rel-expr}\bnfpn{rel-expr-aux}}\\
-    \bnfprod{equality-expr-aux}{\bnfpn{equality-op}\bnfsp\bnfpn{rel-expr}\bnfor \bnfpn{equality-op}\bnfsp\bnfpn{rel-expr}\bnfpn{equality-expr-aux}}\\
-    \bnfprod{rel-expr}{\bnfpn{add-expr}\bnfpn{rel-expr-aux}}\\
-    \bnfprod{rel-expr-aux}{ \bnfpn{rel-op}\bnfpn{add-expr} \bnfor \bnfpn{rel-op}\bnfpn{add-expr}\bnfpn{rel-expr-aux}}\\
-    \bnfprod{add-expr}{\bnfpn{mult-expr} \bnfor \bnfpn{mult-expr}\bnfpn{add-expr-aux}}\\
-    \bnfprod{add-expr-aux}{\bnfpn{add-op}\bnfpn{mult-expr} \bnfor \bnfpn{add-op}\bnfpn{mult-expr}\bnfpn{add-expr-aux}}\\
-    \bnfprod{mult-expr}{\bnfpn{exp-expr} \bnfor \bnfpn{exp-expr}\bnfpn{mult-expr-aux}}\\
-    \bnfprod{mult-expr-aux}{\bnfpn{mult-op}\bnfpn{exp-expr} \bnfor \bnfpn{mult-op}\bnfpn{exp-expr}\bnfpn{mult-expr-aux}}\\
-    \bnfprod{exp-expr}{\bnfpn{cast-expr} \bnfor \bnfpn{cast-expr}\bnfpn{exp-op}\bnfpn{exp-expr}}\\
-    %\bnfprod{exp-expr}{\bnfpn{cast-expr} \bnfor \bnfpn{cast-expr}\bnfpn{exp-expr-aux}}\\
-    %\bnfprod{exp-expr-aux}{\bnfpn{exp-op}\bnfpn{cast-expr} \bnfor \bnfpn{exp-op}\bnfpn{cast-expr}\bnfpn{exp-expr-aux}}\\
-    \bnfprod{cast-expr}{\bnfpn{unary-expr} \bnfor \bnfpn{unary-expr}\bnfpn{cast-expr-aux}}\\
-    \bnfprod{cast-expr-aux}{\bnfts{@}\bnfpn{type} \bnfor \bnfts{@}\bnfpn{type}\bnfpn{cast-expr-aux}}\\
+    \bnfprod{logical-xor-expr}{\bnfpn{logical-or-expr}\{\bnfts{xor}\bnfsp\bnfpn{logical-or-expr}\}}\\
+    \bnfprod{logical-or-expr}{\bnfpn{logical-and-expr} \{\bnfts{or}\bnfsp\bnfpn{logical-and-expr}\}}\\
+    \bnfprod{logical-and-expr}{\bnfpn{equality-expr} \{\bnfts{and}\bnfsp\bnfpn{equality-expr}\}}\\
+    \bnfprod{equality-expr}{\bnfpn{rel-expr} \{\bnfpn{equality-op}\bnfsp\bnfpn{rel-expr}\}}\\
+    \bnfprod{rel-expr}{\bnfpn{add-expr}\{\bnfpn{rel-op}\bnfpn{add-expr}\}}\\
+    \bnfprod{add-expr}{\bnfpn{mult-expr} \{\bnfpn{add-op}\bnfpn{mult-expr}\}}\\
+    \bnfprod{mult-expr}{\bnfpn{exp-expr} \{\bnfpn{mult-op}\bnfpn{exp-expr}\}}\\
+    \bnfprod{exp-expr}{\bnfpn{cast-expr}[\bnfpn{exp-op}\bnfpn{exp-expr}]}\\
+    \bnfprod{cast-expr}{\bnfpn{unary-expr} \{\bnfts{@}\bnfpn{type}\}}\\
     \bnfprod{unary-expr}{\bnfpn{unary-op}\bnfpn{cast-expr} \bnfor \bnfpn{postfix-expr}}\\
-    \bnfprod{postfix-expr}{\bnfpn{primary-expr} \bnfor \bnfpn{identifier}\bnfpn{access-expr}}\\
-    \bnfprod{access-expr}{\bnfts{|}\bnfpn{expression}\bnfts{|} \bnfor
-    \bnfts{$\bm{<}$}\bnfpn{expression}\bnfts{$\bm{>}$} \bnfor
-    \bnfts{[}\bnfpn{expression}\bnfts{]} \bnfor
-    \bnfts{\{}\bnfpn{identifier}\bnfts{\}} \bnfor
-    \bnfts{.}\bnfpn{expression}}\\
-    \bnfprod{primary-expr}{\bnfts{(}\bnfpn{expression}\bnfts{)} \bnfor \bnfpn{identifier} \bnfor \bnfpn{subprog-call} \bnfor \bnfpn{litearal} \bnfor \bnfpn{structure} }\\
+    \bnfprod{postfix-expr}{\bnfpn{primary-expr}\{\bnfpn{access-expr}\}}\\
+    \bnfprod{access-expr}{
+    \begin{bnfsplit}
+        \bnfts{|}\bnfpn{expression}\bnfts{|} \bnfor
+        \bnfts{$\bm{<}$}\bnfpn{expression}\bnfts{$\bm{>}$} \bnfor
+        \bnfts{[}\bnfpn{expression}\bnfts{]} \bnfor\\
+        \bnfts{\{}\bnfpn{identifier}\bnfts{\}} \bnfor
+        \bnfts{.}\bnfpn{expression}
+    \end{bnfsplit}}\\
+    \bnfprod{primary-expr}{
+    \begin{bnfsplit}
+        \bnfts{(}\bnfpn{expression}\bnfts{)} \bnfor \bnfpn{identifier} \bnfor \bnfpn{subprog-call} \bnfor\\
+        \bnfpn{literal} \bnfor \bnfpn{structure}
+    \end{bnfsplit}}\\
 \end{bnf*}
 
 \subsection{Literals}
@@ -162,7 +161,7 @@
     \bnfprod{dict}{\bnfts{$\bm{|}$} \bnfpn{dict-entry-list} \bnfts{$\bm{|}$}}\\
     \bnfprod{dict-entry}{\bnfpn{expression} \bnfts{?} \bnfpn{expression}}\\
     \bnfprod{dict-entry-list}{\bnfpn{dict-entry} \{\bnfts{,}\bnfpn{dict-entry}\}}\\
-    \bnfprod{user-type}{\bnfpn{user-type-id}\bnfts{\{} \bnfpn{var-attr-stmt} \{,\bnfpn{var-attr-stmt}\} \bnfts{\}}}\\
+    \bnfprod{user-type}{\bnfpn{user-type-id}\bnfts{\{} \bnfpn{single-var-attr} \{,\bnfpn{single-var-attr}\} \bnfts{\}}}\\
     \bnfprod{list}{\bnfts{[}(\bnfpn{expr-list} \bnfor \bnfpn{list-comprehension} )\bnfts{]}}\\
     \bnfprod{list-comprehension}{\bnfpn{expression}\bnfpn{for-loop}[\bnfpn{comp-condition}]}\\
     \bnfprod{graph-comprehension}{\bnfpn{edge}\bnfpn{for-loop}[\bnfpn{comp-condition}]}\\
