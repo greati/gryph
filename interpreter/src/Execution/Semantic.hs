@@ -111,9 +111,9 @@ execStmt a@(AttrStmt _ _) m pm ss = do
                             m' <- execAttrStmt a m pm ss
                             return $ (m', ss, Nothing)
 execStmt (PrintStmt e) m pm ss = do
-                                v <- eval m pm ss e
+                                (v, m', ss') <- eval m pm ss e
                                 putStrLn (show v)
-                                return $ (m, ss, Nothing)
+                                return $ (m', ss', Nothing)
 execStmt (ReadStmt i) m pm ss = do
                                 value <- getLine
                                 case updateVar m ((\(Ident i) -> i) i) ss (makeCompatibleAssignTypes pm GString (String value)) of
@@ -122,17 +122,17 @@ execStmt (ReadStmt i) m pm ss = do
                                 
 execStmt (IfStmt e (IfBody ifbody) elsebody) m pm ss' = 
     do 
-            v <- eval m pm ss' e
+            (v, m'', ss'') <- eval m pm ss' e
             let test = case makeBooleanFromValue v of
                             Left i -> error i
                             Right i -> i in 
                 do 
                     if test then
-                            do execBlockSimple ifbody m pm BlockScope ss' []
+                            do execBlockSimple ifbody m'' pm BlockScope ss'' []
                     else
                         case elsebody of
-                            NoElse -> do return (m,ss', Nothing)
-                            ElseBody block -> do execBlockSimple block m pm BlockScope ss' []
+                            NoElse -> do return (m'',ss'', Nothing)
+                            ElseBody block -> do execBlockSimple block m'' pm BlockScope ss'' []
 
 execStmt (DfsStmt ids graph starter body) m pm ss =
     if length ids > 3
@@ -152,26 +152,26 @@ execStmt (DfsStmt ids graph starter body) m pm ss =
                                 ss' = (newScope:ss) in
                                     dfsStmt ids g' [(v1, v1, (Integer 1))] (Se.empty) body m pm ss' newScope 
                         Just v  -> do
-                            v' <- eval m pm ss v 
+                            (v', m'', ss'') <- eval m pm ss v 
                             let v1@(G.Vertex id1 _) = G.getVertexFromValue g' v' False
                             if id1 == -1
                             then error $ "The Vertex " ++ (show v') ++ " doesn't exist"
                             else do
                                 time <- getCurSeconds 
                                 let newScope = IterationScope time
-                                    ss' = (newScope:ss) in
-                                        dfsStmt ids g' [(v1, v1, (Integer 1))] (Se.empty) body m pm ss' newScope
+                                    ss' = (newScope:ss'') in
+                                        dfsStmt ids g' [(v1, v1, (Integer 1))] (Se.empty) body m'' pm ss' newScope
             _ -> error "The expression must be a graph"
     where
         dfsStmt ids graph stack vis body m pm ss' newScope =
             if stack == []
-            then return (m, ss, Nothing)
+            then return (m, ss', Nothing)
             else do 
                 let h@(v@(Vertex id _), dad, step) = (head stack)
                 if Se.member v vis
                 then if length stack == 1
                      then 
-                        return (m, ss, Nothing)
+                        return (m, ss', Nothing)
                      else 
                         dfsStmt ids graph (tail stack) vis body m pm ss' newScope
                 else do 
@@ -217,15 +217,15 @@ execStmt (BfsStmt ids graph starter body) m pm ss =
                                 ss' = (newScope:ss) in
                                     bfsStmt ids g' [(v1, v1, (Integer 1))] (Se.fromList [v1]) body m pm ss' newScope 
                         Just v  -> do
-                            v' <- eval m pm ss v 
+                            (v', m', ss'') <- eval m pm ss v 
                             let v1@(G.Vertex id1 _) = G.getVertexFromValue g' v' False
                             if id1 == -1
                             then error $ "The Vertex " ++ (show v') ++ " doesn't exist"
                             else do
                                 time <- getCurSeconds 
                                 let newScope = IterationScope time
-                                    ss' = (newScope:ss) in
-                                        bfsStmt ids g' [(v1, v1, (Integer 1))] (Se.fromList [v1]) body m pm ss' newScope
+                                    ss' = (newScope:ss'') in
+                                        bfsStmt ids g' [(v1, v1, (Integer 1))] (Se.fromList [v1]) body m' pm ss' newScope
             _ -> error "The expression must be a graph"
     where
         bfsStmt ids graph queue vis body m pm ss' newScope = 
@@ -258,24 +258,23 @@ execStmt (BfsStmt ids graph starter body) m pm ss =
 execStmt (ForStmt ids vs body) m pm ss = 
     do 
             let new_vs = replicateList ((length ids) - (length vs)) vs 
-            vss <- (getLists m pm ss [new_vs])
+            (vss, m', ss') <- (getLists m pm ss [new_vs])
             vss' <- over vss
             time <- getCurSeconds
             let newScope = IterationScope time
                 ss' = (newScope:ss) in
                     forStmt ids vss' body m pm ss' newScope
             where
-                getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
-                                               print xss
+                getLists m pm ss (xs:[])  = do (xss, m',ss') <- (evalList m pm ss xs)
                                                case xss of
-                                                    xss'@( (List list) : _ ) -> do return xss'
-                                                    xss'@((String s) : _ )   -> do return $ makeListChars xss'
-                                                    [(Map map)]              -> do return [(List ( makeMap (M.toList map) ))]
-                                                    [(V.Graph g)]            -> do return [ List $ removeVerticesId $ G.getVertices g ]
+                                                    xss'@( (List list) : _ ) -> do return (xss', m',ss')
+                                                    xss'@((String s) : _ )   -> do return $ (makeListChars xss', m', ss')
+                                                    [(Map map)]              -> do return ([(List ( makeMap (M.toList map) ))], m',ss')
+                                                    [(V.Graph g)]            -> do return ([ List $ removeVerticesId $ G.getVertices g ], m', ss')
                                                     _                        -> error "Wrong pattern!"
-                getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs)
-                                               xss'' <- (getLists m pm ss xss)
-                                               return (xss' ++ xss'')
+                getLists m pm ss (xs:xss) = do (xss', m',ss')   <- (evalList m pm ss xs)
+                                               (xss'', m'', ss'') <- (getLists m' pm ss' xss)
+                                               return ((xss' ++ xss''), m'', ss'')
 
                 replicateList 0 xs = xs
                 replicateList n xs | n < 0     = error "There aren't enough identifiers." 
@@ -323,19 +322,19 @@ execStmt (WhileStmt e body) m pm ss =  --let ss' = (IterationScope (length ss):s
     where
         repeatWhile body' m pm ss newScope =
             do 
-                    v <- eval m pm ss e
+                    (v, m', ss') <- eval m pm ss e
                     let test = case makeBooleanFromValue v of
                                     Left i -> error i
                                     Right i -> i in 
                         if test then 
                             do
                                     do 
-                                        (m'',ss'',v) <- execBlock body' m pm ss newScope
+                                        (m'',ss'',v') <- execBlock body' m' pm ss' newScope
                                         if (newScope == head ss'') then 
                                             repeatWhile body (clearScope newScope m'') pm ss'' newScope
-                                        else return $ (clearScope newScope m'', ss'',v)
+                                        else return $ (clearScope newScope m'', ss'',v')
                         else
-                           return (m, tail ss, Nothing) 
+                           return (m', tail ss', Nothing) 
 
 execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do  
                                                                 arguments <- processSubArgs as [] m pm ss
@@ -347,11 +346,10 @@ execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do
                                                                                 (m',ss',mv) <- execSubprogram m pm scopes sub arguments
                                                                                 return $ (m',ss,mv)
 
-execStmt (ReturnStmt e) m pm ss = do    v <- eval m pm ss e
-                                        return $ (m',ss'', Just v)
-                                                where (ss'', m') = case clearScopesUntilSub m ss of
-                                                        Nothing -> error "Return called outside subprogram scope"
-                                                        Just v' -> v'
+execStmt (ReturnStmt e) m pm ss = do    (v, m'', ss'') <- eval m pm ss e
+                                        let (ss', m') = case clearScopesUntilSub m'' ss'' of
+                                                Nothing -> error "Return called outside subprogram scope"
+                                                Just v' -> v' in return $ (m',ss', Just v)
 execStmt (BreakStmt) m pm ss = do
                                     return $ (m',ss'',Nothing)
                                     where (ss'', m') = case clearScopesUntilIter m ss of
@@ -360,27 +358,39 @@ execStmt (BreakStmt) m pm ss = do
 
 execStmt (AddStmt e1 e2) m pm ss =
                                     do
-                                        e1' <- eval m pm ss e1
-                                        (e2', e2type) <- evalWithType m pm ss e2
+                                        (e1', m', ss') <- eval m pm ss e1
+                                        (e2', e2type) <- evalWithType m' pm ss' e2
                                         case e2' of
                                             (V.Graph g@(G.Graph vertices _)) -> do
                                                 case e2type of
                                                     GGraphEmpty -> do let v  = G.getVertexFromValue g e1' True
                                                                       let g' = G.insertVertex g v
-                                                                      m' <- execAttrStmt' m pm ss [] e2 (V.Graph g', e2type)
-                                                                      return (m', ss, Nothing)
+                                                                      m'' <- execAttrStmt' m' pm ss' [] e2 (V.Graph g', e2type)
+                                                                      return (m'', ss', Nothing)
                                                     GGraphVertexEdge typeVertice _ -> if not $ typeVertice == (getType e1')
                                                                                       then error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ show typeVertice
                                                                                       else do let v  = G.getVertexFromValue g e1' True
                                                                                               let g' = G.insertVertex g v
-                                                                                              m' <- execAttrStmt' m pm ss [] e2 (V.Graph g', e2type)
-                                                                                              return (m', ss, Nothing)                                            
+                                                                                              m'' <- execAttrStmt' m' pm ss' [] e2 (V.Graph g', e2type)
+                                                                                              return (m'', ss', Nothing)                                            
+                                            (List l) -> 
+                                                case e2type of
+                                                    GListEmpty -> do 
+                                                                    m'' <- execAttrStmt' m' pm ss' [] e2 (List ([e1']), e2type)
+                                                                    return (m'', ss', Nothing)
+                                                    GList lt   -> do
+                                                                    if getType (head l) == getType e1'
+                                                                    then do
+                                                                        m'' <- execAttrStmt' m' pm ss' [] e2 (List (l ++ [e1']), e2type)
+                                                                        return (m'', ss', Nothing)
+                                                                    else
+                                                                        error $ "Incompatible types between " ++ (show $ getType $ head l) ++ " and " ++ (show $ getType e1')
                                             _ -> error "Wrong pattern"
 
 execStmt (DelStmt e1 e2) m pm ss =
                                     do
-                                        e1' <- eval m pm ss e1
-                                        (e2', e2type) <- evalWithType m pm ss e2
+                                        (e1', m', ss') <- eval m pm ss e1
+                                        (e2', e2type) <- evalWithType m' pm ss' e2
                                         case e2' of
                                             (V.Graph g@(G.Graph vertices _)) -> do
                                                 let v@(Vertex id _)  = G.getVertexFromValue g e1' False
@@ -388,8 +398,8 @@ execStmt (DelStmt e1 e2) m pm ss =
                                                 then error $ "The Vertex " ++ (show e1') ++ " doesn't exist"
                                                 else do
                                                     let g' = G.deleteVertex v g
-                                                    m' <- execAttrStmt' m pm ss [] e2 (V.Graph g', e2type)
-                                                    return (m', ss, Nothing)                                                                                               
+                                                    m'' <- execAttrStmt' m' pm ss' [] e2 (V.Graph g', e2type)
+                                                    return (m'', ss', Nothing)                                                                                               
                                             _ -> error "Wrong pattern"
 
 execStmt (AddEdgeStmt weight (S.Edge typeEdge e1 e2) g) m pm ss = 
@@ -397,8 +407,8 @@ execStmt (AddEdgeStmt weight (S.Edge typeEdge e1 e2) g) m pm ss =
         (g', gtype) <- evalWithType m pm ss g
         case g' of
             (V.Graph g1@(G.Graph vertices _)) -> do 
-                e1' <- eval m pm ss e1
-                e2' <- eval m pm ss e2
+                (e1', m', ss') <- eval m pm ss e1
+                (e2', m'', ss'') <- eval m' pm ss' e2
                 if getType e1' == getType e2'
                 then do
                     let v1@(G.Vertex id1 _) = G.getVertexFromValue g1 e1' False
@@ -412,12 +422,12 @@ execStmt (AddEdgeStmt weight (S.Edge typeEdge e1 e2) g) m pm ss =
                             case weight of
                                 Nothing -> do let w = (Integer 1)
                                               g'' <- addEdge g1 typeEdge v1 v2 w
-                                              m' <- execAttrStmt' m pm ss [] g (g'', gtype)
-                                              return (m', ss, Nothing) 
-                                Just w  -> do w' <- eval m pm ss w
+                                              m''' <- execAttrStmt' m'' pm ss'' [] g (g'', gtype)
+                                              return (m''', ss'', Nothing) 
+                                Just w  -> do (w', m''', ss''') <- eval m'' pm ss'' w
                                               g'' <- addEdge g1 typeEdge v1 v2 w'
-                                              m' <- execAttrStmt' m pm ss [] g (g'', gtype)
-                                              return (m', ss, Nothing)
+                                              m'''' <- execAttrStmt' m''' pm ss''' [] g (g'', gtype)
+                                              return (m'''', ss''', Nothing)
                 else error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ (show $ getType e2')
             _ -> error "Wrong pattern" 
 
@@ -426,8 +436,8 @@ execStmt (DelEdgeStmt (S.Edge typeEdge e1 e2) g) m pm ss =
         (g', gtype) <- evalWithType m pm ss g
         case g' of
             (V.Graph g1@(G.Graph vertices _)) -> do
-                e1' <- eval m pm ss e1
-                e2' <- eval m pm ss e2
+                (e1', m', ss')   <- eval m pm ss e1
+                (e2', m'', ss'') <- eval m' pm ss' e2
                 if getType e1' == getType e2'
                 then do
                     let v1@(G.Vertex id1 _) = G.getVertexFromValue g1 e1' False
@@ -447,8 +457,8 @@ execStmt (DelEdgeStmt (S.Edge typeEdge e1 e2) g) m pm ss =
                                                     then do
                                                         let g''  = G.deleteEdge g1 ed1
                                                         let g''' = G.deleteEdge g'' ed2
-                                                        m' <- execAttrStmt' m pm ss [] g (V.Graph g''', gtype)
-                                                        return (m', ss, Nothing)
+                                                        m''' <- execAttrStmt' m'' pm ss'' [] g (V.Graph g''', gtype)
+                                                        return (m''', ss'', Nothing)
                                                     else 
                                                         error $ "There isn't any Edge between " ++ (show e2') ++ " and " ++ (show e1')
                                                  else 
@@ -458,8 +468,8 @@ execStmt (DelEdgeStmt (S.Edge typeEdge e1 e2) g) m pm ss =
                                                 let g''  = G.deleteEdge g1 ed1
                                                 if G.isEdgePresent g1 ed1
                                                 then do
-                                                    m' <- execAttrStmt' m pm ss [] g (V.Graph g'', gtype)
-                                                    return (m', ss, Nothing)
+                                                    m''' <- execAttrStmt' m'' pm ss'' [] g (V.Graph g'', gtype)
+                                                    return (m''', ss'', Nothing)
                                                 else 
                                                     error $ "There isn't any Edge between " ++ (show e1') ++ " and " ++ (show e2')
 
@@ -467,8 +477,8 @@ execStmt (DelEdgeStmt (S.Edge typeEdge e1 e2) g) m pm ss =
                                                let g'' = G.deleteEdge g1 ed2
                                                if G.isEdgePresent g1 ed2
                                                then do
-                                                    m' <- execAttrStmt' m pm ss [] g (V.Graph g'', gtype)
-                                                    return (m', ss, Nothing)
+                                                    m''' <- execAttrStmt' m'' pm ss'' [] g (V.Graph g'', gtype)
+                                                    return (m''', ss, Nothing)
                                                else 
                                                     error $ "There isn't any Edge between " ++ (show e2') ++ " and " ++ (show e1')
                 else error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ (show $ getType e2')
@@ -518,8 +528,8 @@ interpretVarDeclaration m pm ss (VarDeclaration ns t es) = interpret m pm ss (Va
                                                                 remain <- interpret m pm ss (VarDeclaration ns t [])
                                                                 return $ (n,t, Nothing) : remain
         interpret m pm ss (VarDeclaration ((Ident n):ns) t (e:es)) = do
-                                                                v <- eval m pm ss e
-                                                                remain <- interpret m pm ss (VarDeclaration ns t es)
+                                                                (v, m', ss') <- eval m pm ss e
+                                                                remain <- interpret m' pm ss' (VarDeclaration ns t es)
                                                                 return $ (n, t, Just v) : remain
                 
 -- | Given two lists, l1 and l2, error if |l1|<|l2|, and fill l2 with its last element if |l2|<|l1|
@@ -634,14 +644,14 @@ processSubArgs (a:as) ids m pm ss = case a of
                                                                                                 Left err -> error err
                                                                                                 Right cell -> cell
                                                                     _ -> do 
-                                                                            ev <- eval m pm ss expr
+                                                                            (ev, m', ss') <- eval m pm ss expr
                                                                             case ev of 
                                                                                 --setter@(Setter _) -> return $ (Right setter, GAnonymousStruct) : remaining
                                                                                 _ -> return $ (Right ev, getType ev) : remaining
                                                             else error "Optional parameter before ordered parameter"
                                        ArgIdentAssign (IdentAssign [i] expr) -> do
-                                                                        ev <- eval m pm ss expr
-                                                                        remaining <- processSubArgs as (i:ids) m pm ss
+                                                                        (ev, m', ss') <- eval m pm ss expr
+                                                                        remaining <- processSubArgs as (i:ids) m' pm ss'
                                                                         if elem i ids then error "Multiple assignment to same parameter"
                                                                             else case ev of
                                                                                 --setter@(Setter _) -> () : remaining
@@ -657,7 +667,7 @@ evalWithType m pm ss e =
                     Left i -> error i
                     Right i@(t,v) -> return $ (v,t)
         _ -> do
-                v' <- eval m pm ss e 
+                (v', m', ss') <- eval m pm ss e 
                 return $ (v', getType v')
 
 execAttrStmt' :: Memory -> ProgramMemory -> Scopes -> [AccessType] -> ArithExpr -> (Value,GType) -> IO Memory
@@ -674,36 +684,36 @@ execAttrStmt' m pm ss as lhs rhs@(vr,tr) =
                                                                     Right m' -> do return m'   
                                                                     Left i -> error i
             (ListAccess remaining index) -> do
-                                                index' <- eval m pm ss index
-                                                execAttrStmt' m pm ss ((ListIndex index'):as) remaining rhs
+                                                (index', m', ss') <- eval m pm ss index
+                                                execAttrStmt' m' pm ss' ((ListIndex index'):as) remaining rhs
             (DictAccess remaining index) -> do
-                                                index' <- eval m pm ss index
-                                                execAttrStmt' m pm ss ((DictIndex index'):as) remaining rhs
+                                                (index', m', ss') <- eval m pm ss index
+                                                execAttrStmt' m' pm ss' ((DictIndex index'):as) remaining rhs
             (StructAccess remaining (Ident field)) -> 
                                             do
                                                 execAttrStmt' m pm ss ((StructField field):as) remaining rhs
             _ -> error $ "Not a valid lhs"
 
     where
-        backwardAccessUpdate m pm ss [] ident memval memtype rightType v =  if checkCompatType (getType memval) (rightType) then v else
-                                                          error $ "Incompatible types " ++ show memtype ++ " and " ++ show rightType
+        backwardAccessUpdate m pm ss [] ident memval memtype rightType v =  if checkCompatType (memtype) (rightType) then v else
+                                                          error $ "Incompatible types " ++ show (memtype) ++ " and " ++ show rightType
         backwardAccessUpdate m pm ss (a:as) ident memval memtype rightType v = 
             case a of
                 ListIndex index -> case index of
                                         (Integer int) -> 
                                                 case memval of
                                                     (List xs) -> List (setElemList xs int v'')
-                                                        where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) (getType memval) rightType v
+                                                        where v'' = backwardAccessUpdate m pm ss as ident (xs !! fromInteger int) (uncapsulate Nothing memtype) rightType v
                                                     (String xs) -> String (setElemList xs int c)
-                                                        where v''@(Char c) = backwardAccessUpdate m pm ss as ident (Char (xs !! fromInteger int)) (getType memval) rightType v
+                                                        where v''@(Char c) = backwardAccessUpdate m pm ss as ident (Char (xs !! fromInteger int)) (uncapsulate Nothing memtype) rightType v
                                                     _ -> error "You must access a list or a string." 
                                         _ -> error "List index must be an integer." 
                 DictIndex index -> case memval of
                                         (Map m') -> case as of
                                                     [] ->  Map (M.insert index v'' m')
-                                                       where v'' = if checkCompatType (uncapsulate memtype) (getType v) then v else error $ "Incompatible types " ++ show (uncapsulate memtype) ++ " and " ++ show rightType
+                                                       where v'' = if checkCompatType (uncapsulate Nothing memtype) (getType v) then v else error $ "Incompatible types " ++ show (uncapsulate Nothing memtype) ++ " and " ++ show rightType
                                                     _  -> Map (M.insert index v'' m')
-                                                       where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) (getType memval) rightType v
+                                                       where v'' = backwardAccessUpdate m pm ss as ident (m' M.! index) (uncapsulate Nothing memtype) rightType v
                                         _ -> error "You must access a dictionary"
                 StructField field -> case memval of
                                         (Setter si m') -> if M.notMember field m' then error $ field ++ " not in the struct"
@@ -757,6 +767,9 @@ checkCompatType' t t' = if t == t' then True
                         --(GList l, GList l') -> checkCompatType (l) $ GList l'
                         (GUserType _, GAnonymousStruct) -> True
                         --(GAnonymousStruct, GUserType _) -> True
+                        (GPair p1 p2, GPair p1' p2') -> (checkCompatType' p1 p1') && (checkCompatType' p2 p2')
+                        (GTriple p1 p2 p3, GTriple p1' p2' p3') -> (checkCompatType' p1 p1') && (checkCompatType' p2 p2') && (checkCompatType' p3 p3')
+                        (GQuadruple p1 p2 p3 p4, GQuadruple p1' p2' p3' p4') -> (checkCompatType' p1 p1') && (checkCompatType' p2 p2') && (checkCompatType' p3 p3') && (checkCompatType' p4 p4')
                         _                   -> False
 
 
@@ -766,6 +779,13 @@ checkCompatType' t t' = if t == t' then True
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
 makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter is m) = (t, Value $ applySetter pm (makeDefaultSetter pm u) v u)
+makeCompatibleAssignTypes pm t@(GGraphEmpty) v =
+    let tv = getType v
+    in case tv of
+        GGraphEmpty          -> (t, Value v)
+        GGraphVertexEdge _ _ -> (tv, Value v)
+        v'                   -> error ("Incompatible types " ++ show t ++ " and " ++ show v')
+
 makeCompatibleAssignTypes pm t@(GGraphVertexEdge vertices edges) v = 
     let tv = getType v
     in case tv of
@@ -825,15 +845,15 @@ varDeclStmt (DeclStmt (VarDeclaration [] t (_:es))) m pm ss =     do
                                                                     error "Too many expressions in right side."
 varDeclStmt (DeclStmt (VarDeclaration (x:xs'@(y:xs)) t (e:[]))) m pm ss = do 
                                                                 do
-                                                                    v <- eval m pm ss e
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes pm t v) m of
+                                                                    (v, m', ss') <- eval m pm ss e
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes pm t v) m' of
                                                                         (Left i) -> error i
-                                                                        (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs' t (e:[]))) i pm ss
+                                                                        (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs' t (e:[]))) i pm ss'
 varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m pm ss = do 
-                                                                    v <- eval m pm ss e
-                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes pm t v) m of
+                                                                    (v, m', ss') <- eval m pm ss e
+                                                                    case elabVar (head ss) ((\(Ident x) -> x) x) (makeCompatibleAssignTypes pm t v) m' of
                                                                         (Left i) -> error i
-                                                                        (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i pm ss
+                                                                        (Right i) -> varDeclStmt (DeclStmt (VarDeclaration xs t es)) i pm ss'
 
 -- | Interpret subprogram declaration
 interpretSubDeclaration :: Subprogram -> Memory -> ProgramMemory -> Scopes -> IO (SubIdentifier, SubContent)
@@ -858,18 +878,18 @@ interpretParamDeclaration pd@(ParamDeclaration is _ es) m pm ss
     where
         interpretParamDeclaration' (ParamDeclaration [] _ []) _ _ _ = return []
         interpretParamDeclaration' (ParamDeclaration [(Ident i)] gt [e]) m pm ss = 
-                                                        do  v <- eval m pm ss e 
+                                                        do  (v, m', ss') <- eval m pm ss e 
                                                             return [(i, gt, Just v)]
         interpretParamDeclaration' (ParamDeclaration ((Ident i):is) gt []) m pm ss = 
                                                         do  remain <- interpretParamDeclaration (ParamDeclaration is gt []) m pm ss
                                                             return $ (i, gt, Nothing) : remain
         interpretParamDeclaration' (ParamDeclaration ((Ident i):is) gt [e]) m pm ss = 
-                                                        do  v <- eval m pm ss e 
-                                                            remain <- interpretParamDeclaration (ParamDeclaration is gt [e]) m pm ss
+                                                        do  (v, m', ss') <- eval m pm ss e 
+                                                            remain <- interpretParamDeclaration (ParamDeclaration is gt [e]) m' pm ss'
                                                             return $ (i, gt, Just v) : remain
         interpretParamDeclaration' (ParamDeclaration ((Ident i):is) gt (e:es)) m pm ss = 
-                                                        do  v <- eval m pm ss e 
-                                                            remain <- interpretParamDeclaration (ParamDeclaration is gt es) m pm ss
+                                                        do  (v, m', ss') <- eval m pm ss e 
+                                                            remain <- interpretParamDeclaration (ParamDeclaration is gt es) m' pm ss'
                                                             return $ (i, gt, Just v) : remain
  --Get type of a List and make coercion if needed                
 getListType :: [Value] -> GType
@@ -926,56 +946,56 @@ coerce (Integer x) = (Float (fromInteger x))
 coerce v = v
 
 -- | Evaluates a list of expressions
-evalList :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
-evalList m pm ss [x]      =  do {x' <- eval m pm ss x ; return $ [x']}
+evalList :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO ([Value], Memory, Scopes)
+evalList m pm ss [x]      =  do {(x', m', ss') <- eval m pm ss x ; return $ ([x'], m', ss')}
 evalList m pm ss (x:y:xs) =  do 
-                                  z  <- eval m pm ss x
-                                  y' <- eval m pm ss y
+                                  (z, m', ss')  <- eval m pm ss x
+                                  (y', m'', ss'') <- eval m' pm ss' y
                                   if not( checkCompatType (getType y') ( getType z) || checkCompatType (getType z) (getType y') ) then error "Type mismatch in List "
                                     else do
-                                       l <- evalList m pm ss  (y:xs)
-                                       return (z:l) 
+                                       (l, m''', ss''') <- evalList m'' pm ss''  (y:xs)
+                                       return ((z:l), m''', ss''') 
 
 -- | Evaluates a tuple
 evalTuple :: Memory -> ProgramMemory -> Scopes -> [ArithExpr] -> IO [Value]
-evalTuple m pm ss [x] = do {x' <-eval m pm ss x; return $ [x']}
-evalTuple m pm ss (x:xs) = do   z <- eval m pm ss x
-                                t <- evalTuple m pm ss xs
+evalTuple m pm ss [x] = do {(x', m', ss') <-eval m pm ss x; return $ [x']}
+evalTuple m pm ss (x:xs) = do   (z, m', ss') <- eval m pm ss x
+                                t <- evalTuple m' pm ss' xs
                                 return $ (z:t)
 
 -- | Evaluates a dictionary
 evalDict :: Memory -> ProgramMemory -> Scopes -> [DictEntry] -> M.Map Value Value -> IO (M.Map Value Value)
 evalDict m pm ss [] m1                   = return $ M.empty
 evalDict m pm ss ((k1,v1):(k2,v2):xs) m1 = 
-                                         do     ek1 <- eval m pm ss k1
-                                                ek2 <- eval m pm ss k2
-                                                ev1 <- eval m pm ss v1
-                                                ev2 <- eval m pm ss v2
+                                         do     (ek1, m', ss') <- eval m pm ss k1
+                                                (ek2, m'', ss'') <- eval m' pm ss' k2
+                                                (ev1, m''', ss''') <- eval m'' pm ss'' v1
+                                                (ev2, m'''', ss'''') <- eval m''' pm ss''' v2
                                                 if (getType ek1) == (getType ek2) && (getType ev1 == getType ev2)
                                                  then do
-                                                        d <- evalDict m pm ss ((k2,v2):xs) m1
+                                                        d <- evalDict m'''' pm ss'''' ((k2,v2):xs) m1
                                                         return $ M.insert ek1 ev1 d
                                                 else error "Dict Type mismatch"
 evalDict m pm ss ((k,v):xs) m1           = 
-                                        do      k' <- eval m pm ss k
-                                                v' <- eval m pm ss v
-                                                d <- evalDict m pm ss xs m1
+                                        do      (k', m', ss')   <- eval m pm ss k
+                                                (v', m'', ss'') <- eval m' pm ss' v
+                                                d <- evalDict m'' pm ss'' xs m1
                                                 return $ M.insert k' v' d
 
 -- | Binary operation evaluator
-evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO Value
+evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO (Value, Memory, Scopes)
 evalBinOp m pm ss (ArithBinExpr _  e1 e2) f = 
                                             do
-                                                v1 <- eval m pm ss e1
-                                                v2 <- eval m pm ss e2
-                                                k <- eval m pm ss e2
+                                                (v1, m', ss')    <- eval m pm ss e1
+                                                (v2, m'', ss'')  <- eval m' pm ss' e2
+                                                (k, m''', ss''') <- eval m'' pm ss'' e2
                                                 case v1 of
-                                                     l1@(List (x:xs)) -> if (getType k == getType x) then return $ f l1 k
+                                                     l1@(List (x:xs)) -> if (getType k == getType x) then return $ (f l1 k, m''', ss''')
                                                                          else error "Type mismatch operation"
                                                      k -> case v2 of 
-                                                           l2@(List (x:xs) ) -> if (getType k == getType x) then return $ f l2 k 
+                                                           l2@(List (x:xs) ) -> if (getType k == getType x) then return $ (f l2 k, m''', ss''')
                                                                          else error "Type mismatch  operation"
-                                                           x -> return $ f k  x
+                                                           x -> return ( f k x, m''', ss''') 
                                                            --x -> if (getType k == getType x) then return $ f k  x
                                                              --            else error "Type mismatch  operation"
 -- | Convert a string to other type
@@ -1030,67 +1050,67 @@ cast v1 g@(GList GString)  = case v1 of
 cast _   _          =  error "Unknown type"
 
 -- | Main expression evaluator
-eval :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> IO Value
-eval m pm ss (ArithTerm (LitTerm (Lit v)))      = return v
-eval m pm ss (ArithUnExpr MinusUnOp e)          = do {v <- eval m pm ss e ; return $ minusUn v}
-eval m pm ss (ArithUnExpr PlusUnOp e)           = do {v <- eval m pm ss e; return $ plusUn v}
-eval m pm ss (ArithUnExpr NotUnOp e)            = do {v <- eval m pm ss e; return $ not' v}
+eval :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> IO (Value, Memory, Scopes)
+eval m pm ss (ArithTerm (LitTerm (Lit v)))      = return (v, m, ss)
+eval m pm ss (ArithUnExpr MinusUnOp e)          = do {(v, m', ss') <- eval m pm ss e ; return $ (minusUn v, m', ss')}
+eval m pm ss (ArithUnExpr PlusUnOp e)           = do {(v, m', ss') <- eval m pm ss e; return $ (plusUn v, m', ss')}
+eval m pm ss (ArithUnExpr NotUnOp e)            = do {(v, m', ss') <- eval m pm ss e; return $ (not' v, m', ss')}
 eval m pm ss (ArithBinExpr MinusBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr MinusBinOp e1 e2) minusBin
 eval m pm ss (ArithBinExpr PlusBinOp  e1 e2)    = evalBinOp m pm ss (ArithBinExpr PlusBinOp e1 e2) plusBin
 eval m pm ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr TimesBinOp e1 e2) timesBin
 eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr DivBinOp e1 e2) divBin
 eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ExpBinOp e1 e2) expBin
 eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ModBinOp e1 e2) modBin
-eval m pm ss (ExprLiteral (ListLit [] ))        = return $ List []
-eval m pm ss (ExprLiteral (ListLit es ))        = do {v <- evalList m pm ss es; if getListType v == GFloat then return $List (map coerce v)  else  return $ List v}
-eval m pm ss (ExprLiteral (DictLit de))         = do {v <- evalDict m pm ss de M.empty ; return $ Map v}
-eval m pm ss (ArithEqExpr Equals e1 e2)         = do {v1 <- eval m pm ss e1; v2 <- eval m pm ss e2; return $ Bool (v1 == v2)}
-eval m pm ss (ArithEqExpr NotEquals e1 e2)      = do {v1 <- eval m pm ss e1; v2 <- eval m pm ss e2; return $ Bool (v1 /= v2)} 
-eval m pm ss (ArithRelExpr Greater e1 e2)       = do {v1 <- eval m pm ss e1; v2 <- eval m pm ss e2; return $ Bool (v1 > v2)}  
-eval m pm ss (ArithRelExpr GreaterEq e1 e2)     = do {v1 <- eval m pm ss e1; v2 <- eval m pm ss e2; return $ Bool (v1 >= v2)}  
-eval m pm ss (ArithRelExpr Less e1 e2)          = do {v1 <- eval m pm ss e1; v2 <- eval m pm ss e2; return $ Bool (v1 < v2)}   
-eval m pm ss (ArithRelExpr LessEq e1 e2)        = do {v1 <- eval m pm ss e1; v2 <- eval m pm ss e2; return $ Bool (v1 <= v2)}    
+eval m pm ss (ExprLiteral (ListLit [] ))        = return $ (List [], m, ss)
+eval m pm ss (ExprLiteral (ListLit es ))        = do {(v, m', ss') <- evalList m pm ss es; if getListType v == GFloat then return $(List (map coerce v), m', ss')  else  return $ (List v, m', ss')}
+eval m pm ss (ExprLiteral (DictLit de))         = do {v <- evalDict m pm ss de M.empty ; return $ (Map v, m, ss)}
+eval m pm ss (ArithEqExpr Equals e1 e2)         = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 == v2), m'', ss'') }
+eval m pm ss (ArithEqExpr NotEquals e1 e2)      = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 /= v2), m'', ss'')} 
+eval m pm ss (ArithRelExpr Greater e1 e2)       = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 > v2), m'', ss'')}  
+eval m pm ss (ArithRelExpr GreaterEq e1 e2)     = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 >= v2), m'', ss'')}  
+eval m pm ss (ArithRelExpr Less e1 e2)          = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 < v2), m'', ss'')}   
+eval m pm ss (ArithRelExpr LessEq e1 e2)        = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 <= v2), m'', ss'')}    
 eval m pm ss (LogicalBinExpr And e1 e2)         = 
-                                                do      v1 <- eval m pm ss e1
-                                                        v2 <- eval m pm ss e2  
+                                                do      (v1, m', ss')   <- eval m pm ss e1
+                                                        (v2, m'', ss'') <- eval m' pm ss' e2  
                                                         case v1 of
                                                             Bool b1 -> case v2 of
-                                                                        Bool b2 -> return $ Bool ( b1 && b2)
+                                                                        Bool b2 -> return $ (Bool ( b1 && b2), m'', ss'')
                                                                         _ -> error "And operator rhs type error"
                                                             _ -> error "And operator lhs type error"
 eval m pm ss (LogicalBinExpr Or e1 e2)          = 
-                                                do      v1 <- eval m pm ss e1
-                                                        v2 <- eval m pm ss e2  
+                                                do      (v1, m', ss')   <- eval m pm ss e1
+                                                        (v2, m'', ss'') <- eval m' pm ss' e2  
                                                         case v1 of
                                                             Bool b1 -> case v2 of
-                                                                        Bool b2 -> return $ Bool ( b1 || b2)
+                                                                        Bool b2 -> return $ (Bool ( b1 || b2), m'', ss'')
                                                                         _ -> error "And operator rhs type error"
                                                             _ -> error "And operator lhs type error "
 eval m pm ss (LogicalBinExpr Xor e1 e2)         = 
-                                                do      v1 <- eval m pm ss e1
-                                                        v2 <- eval m pm ss e2  
+                                                do      (v1, m', ss')   <- eval m pm ss e1
+                                                        (v2, m'', ss'') <- eval m' pm ss' e2  
                                                         case v1 of
                                                             Bool b1 -> case v2 of
-                                                                        Bool b2 -> return $ Bool (((not b1) &&  b2 ) || (b1 && (not b2)))
+                                                                        Bool b2 -> return $ (Bool (((not b1) &&  b2 ) || (b1 && (not b2))), m', ss')
                                                                         _ -> error "And operator rhs type error"
                                                             _ -> error "And operator lhs type error "
 eval m pm ss (CastExpr e1 g)                    =
-                                                do      v1 <- eval m pm ss e1 
-                                                        return $ cast v1 g 
+                                                do      (v1, m', ss') <- eval m pm ss e1 
+                                                        return $ (cast v1 g, m', ss')
 
 
 eval m pm ss (ExprLiteral (TupleLit te))        = 
                                                 do
                                                     l <- evalTuple m pm ss te
-                                                    return $ if length l == 2 then Pair ((l !! 0), (l !! 1))
-                                                       else if length l == 3 then Triple ((l !! 0), (l !! 1), (l !! 2))
-                                                            else if length  l == 4 then Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3))
+                                                    return $ if length l == 2 then (Pair ((l !! 0), (l !! 1)), m, ss)
+                                                       else if length l == 3 then (Triple ((l !! 0), (l !! 1), (l !! 2)), m, ss)
+                                                            else if length  l == 4 then (Quadruple ((l !! 0), (l !! 1), (l !! 2), (l !! 3)), m, ss)
                                                              else error "Limit of Quadruples"
 
 eval m pm ss (GraphAccess e1 e2 )               =
                                                 do
-                                                    g <- eval m pm ss e1
-                                                    v <- eval m pm ss e2
+                                                    (g, m', ss')   <- eval m pm ss e1
+                                                    (v, m'', ss'') <- eval m' pm ss' e2
                                                     case g of
                                                         (V.Graph g@(G.Graph vertices edges)) ->
                                                             do  let (G.Vertex id v') = G.getVertexFromValue g v False
@@ -1099,19 +1119,19 @@ eval m pm ss (GraphAccess e1 e2 )               =
                                                                 else do
                                                                     let e = edges M.!? id
                                                                     case e of
-                                                                        Nothing  -> return $ List []
-                                                                        Just edg -> return $ List $ makeAdjList edg
+                                                                        Nothing  -> return $ (List [], m'', ss'')
+                                                                        Just edg -> return $ (List $ makeAdjList edg, m'', ss'')
                                                         _ -> error "Access Graph mismatch"
                                                     where
                                                         makeAdjList [] = []
                                                         makeAdjList ( G.Edge _ (G.Vertex _ v ) _ : xs) = v : makeAdjList xs 
 
 eval m pm ss (GraphEdgeAccess g (S.Edge edgetype v1 v2) ) = do
-                                                g'  <- eval m pm ss g
+                                                (g', m', ss')  <- eval m pm ss g
                                                 case g' of
                                                     (V.Graph g@(G.Graph vertices edges)) -> do
-                                                        v1' <- eval m pm ss v1
-                                                        v2' <- eval m pm ss v2
+                                                        (v1', m'', ss'') <- eval m' pm ss' v1
+                                                        (v2', m''', ss''') <- eval m'' pm ss'' v2
                                                         let vertex1@(G.Vertex id v1'') = G.getVertexFromValue g v1' False
                                                         if id == -1
                                                             then error $ "The Vertex " ++ (show v1'') ++ " does not exist"
@@ -1123,7 +1143,7 @@ eval m pm ss (GraphEdgeAccess g (S.Edge edgetype v1 v2) ) = do
                                                                     do let e = edges M.!? id
                                                                        case e of
                                                                             Nothing  -> error $ "There is no Edge between " ++ (show v1'') ++ " and " ++ (show v2'') ++ " does not exist"
-                                                                            Just edg -> return $ getWeightEdge vertex1 vertex2 edg
+                                                                            Just edg -> return $ (getWeightEdge vertex1 vertex2 edg, m''', ss''')
                                                     _ -> error "Access Graph mismatch"
 
                                                 where
@@ -1132,55 +1152,55 @@ eval m pm ss (GraphEdgeAccess g (S.Edge edgetype v1 v2) ) = do
 
 eval m pm ss (ListAccess e1 e2 )                = 
                                                 do
-                                                    v1 <- eval m pm ss e1
-                                                    v2 <- eval m pm ss e2
+                                                    (v1, m', ss')   <- eval m pm ss e1
+                                                    (v2, m'', ss'') <- eval m' pm ss' e2
                                                     case v1 of
                                                         (List l) -> case v2 of
-                                                                     Integer i ->  return $ l !! (fromIntegral i)
+                                                                     Integer i ->  return $ (l !! (fromIntegral i), m'', ss'')
                                                                      _ -> error "Access List mismatch"
                                                         (String s) -> case v2 of
-                                                                     Integer i -> return (Char $ s !! (fromIntegral i))
+                                                                     Integer i -> return (Char $ s !! (fromIntegral i), m'', ss'')
                                                                      _ -> error "Access string mismatch"
                                                         _ -> error "Access List mismatch"
 eval m pm ss (DictAccess e1 e2)                 = 
                                                 do
-                                                    v1 <- eval m pm ss e1
-                                                    k <- eval m pm ss e2
+                                                    (v1, m', ss')  <- eval m pm ss e1
+                                                    (k, m'', ss'') <- eval m' pm ss' e2
                                                     case v1 of
                                                         d@(Map ma) -> if getKeyType d == getType k then case  M.lookup k ma of
                                                                                                               Nothing -> error "No key on Dict "
-                                                                                                              Just k  -> return $ k
+                                                                                                              Just k  -> return $ (k, m'', ss'')
                                                                      else error "Access Dict with invalid key type"
                                                         _ -> error "Access on Dict type mismatch"
 eval m pm ss (TupleAccess e1 e2)                = 
                                                 do
-                                                    v1' <- eval m pm ss e1
-                                                    v2' <- eval m pm ss e2
+                                                    (v1', m', ss')   <- eval m pm ss e1
+                                                    (v2', m'', ss'') <- eval m' pm ss' e2
                                                     case v1' of
                                                         Pair (v1, v2)     -> case v2' of
-                                                                            Integer 0 -> return $ v1
-                                                                            Integer 1 -> return $ v2
+                                                                            Integer 0 -> return $ (v1, m'', ss'')
+                                                                            Integer 1 -> return $ (v2, m'', ss'')
                                                                             _         -> error "Acessing Pair"
                                                         Triple (v1,v2,v3)-> case v2' of
-                                                                            Integer 0 -> return $ v1
-                                                                            Integer 1 -> return $ v2
-                                                                            Integer 2 -> return $ v3
+                                                                            Integer 0 -> return $ (v1, m'', ss'')
+                                                                            Integer 1 -> return $ (v2, m'', ss'')
+                                                                            Integer 2 -> return $ (v3, m'', ss'')
                                                                             _         -> error "Acessing Pair"
                                                         Quadruple (v1,v2,v3,v4)-> case v2' of
-                                                                            Integer 0 -> return $ v1
-                                                                            Integer 1 -> return $ v2
-                                                                            Integer 2 -> return $ v3
-                                                                            Integer 3 -> return $ v4
+                                                                            Integer 0 -> return $ (v1, m'', ss'')
+                                                                            Integer 1 -> return $ (v2, m'', ss'')
+                                                                            Integer 2 -> return $ (v3, m'', ss'')
+                                                                            Integer 3 -> return $ (v4, m'', ss'')
                                                                             _         -> error "Acessing Pair"
                                                          
                                                         _ -> error "Tuple error " 
 eval m pm ss (StructAccess e1 (Ident i))        = 
                                                 do
-                                                    v1 <- eval m pm ss e1
+                                                    (v1, m', ss') <- eval m pm ss e1
                                                     case v1 of
                                                         setter@(Setter is msetter) -> 
                                                                     if M.notMember i msetter then error $ i ++ " not a field of this user type"
-                                                                    else return $ v'
+                                                                    else return $ (v', m', ss')
                                                                     where (t,v') = msetter M.! i
                                                         _ -> error "Trying to access a non-struct type with {}"
 
@@ -1190,14 +1210,14 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                     (v2,t2)  <- evalWithType m pm ss e2
                                                     case v1 of
                                                         l1@(List []) -> case v2 of 
-                                                                         l2@(List [])     -> if checkCompatType t1  t2  then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
-                                                                         l2@(List (x:xs)) -> if checkCompatType t1 t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List [])     -> if checkCompatType' t1 t2 then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                         l2@(List (x:xs)) -> if checkCompatType' t1 t2 then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
                                                                          _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 
                                                         l1@(List (x:xs)) -> case v2 of
-                                                                                l2@(List [])     -> if checkCompatType t1 t2 then return $ plusPlusBinList l1 l2 else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
-                                                                                l2@(List (y:ys)) -> if checkCompatType t1  t2 
-                                                                                                    then return $ plusPlusBinList l1 l2
+                                                                                l2@(List [])     -> if checkCompatType t1 t2  then return $ (plusPlusBinList l1 l2, m, ss) else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+                                                                                l2@(List (y:ys)) -> if checkCompatType t1 t2 
+                                                                                                    then return $ (plusPlusBinList l1 l2, m, ss)
                                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
                          
                                                                                 _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
@@ -1205,7 +1225,7 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                         _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 eval m pm ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
                                                 Left i -> error i
-                                                Right i -> return $ i
+                                                Right i -> return $ (i, m, ss)
 
 eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) = 
                                                 do  arguments <- processSubArgs as [] m pm ss
@@ -1220,21 +1240,21 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                                 do
                                                                                     case v of
                                                                                         Nothing -> error "No return from subprogram call"
-                                                                                        Just v -> return v
+                                                                                        Just v -> return (v, m', ss)
 
-eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return $ List r}
+eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return $ (List r, m, ss)}
 
 eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do 
     setter <- evalSetter m pm ss e
-    return $ applySetter pm (makeDefaultSetter pm t) setter t
+    return $ ((applySetter pm (makeDefaultSetter pm t) setter t), m, ss)
     where
         evalSetter m pm ss (StructInitExpr (StructInit (Ident t) ias)) = 
             do case ias of
                     [] -> return $ Setter t M.empty
                     ((IdentAssign [(Ident i)] e):ias') -> do
                                                     Setter is remain <- evalSetter m pm ss (StructInitExpr (StructInit (Ident t) ias'))
-                                                    v <- eval m pm ss e
-                                                    return $ Setter t (M.insert i (getType v, v) remain)
+                                                    (v, m', ss') <- eval m pm ss e
+                                                    return $ Setter t (M.insert i (getType v, v) remain) 
 
 eval m pm ss (ExprLiteral (GraphLit exp edges )) = do 
                 time <- getCurSeconds
@@ -1320,78 +1340,80 @@ not' _ = error "Type error Unary (not) operator "
 --------------------------------------------------------------
 -- |Graph Comprehension
 
-evalGraphComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> Maybe EdgeComp -> IO Value
+evalGraphComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> Maybe EdgeComp -> IO (Value, Memory, Scopes)
 evalGraphComp m pm ss list edges = case list of
                                     Nothing -> case edges of
                                                     Nothing -> return $ error "Empty list of vertices!"
                                                     Just e  -> evalEdgeComp m pm ss Nothing e
                                     Just l  -> case edges of
-                                                    Nothing -> do (List xs) <- eval m pm ss l                                                                
-                                                                  return $ V.Graph (G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs)
+                                                    Nothing -> do ((List xs), m', ss') <- eval m pm ss l                                                                
+                                                                  return $ (V.Graph (G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs), m', ss')
                                                     Just e  -> evalEdgeComp m pm ss (Just l) e
 
-evalEdgeComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> EdgeComp -> IO Value
+evalEdgeComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> EdgeComp -> IO (Value, Memory, Scopes)
 evalEdgeComp m pm ss list (EdgeComp weight edge forIt) = do
     (id, vs, when_exp) <- evalForIterator m pm ss forIt
     case vs of
         [] -> case list of
-                Nothing -> return $ V.Graph (G.Graph Se.empty M.empty)
-                Just l  -> do (List xs) <- eval m pm ss l 
+                Nothing -> return $ (V.Graph (G.Graph Se.empty M.empty), m, ss)
+                Just l  -> do ((List xs), m', ss') <- eval m pm ss l 
                               let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
-                              return $ V.Graph g
+                              return $ (V.Graph g, m', ss')
         vs'@(v:vs) -> do let (Right m') = elabVars m (getNameCell id v) (head ss)
                          case list of
                             Nothing -> evalEdgeComp' m' pm ss weight edge id vs' when_exp (G.Graph Se.empty M.empty) True
-                            Just l  -> do (List xs) <- eval m' pm ss l 
+                            Just l  -> do ((List xs), m'', ss'') <- eval m' pm ss l 
                                           let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
-                                          evalEdgeComp' m' pm ss weight edge id vs' when_exp g False                                        
+                                          evalEdgeComp' m'' pm ss'' weight edge id vs' when_exp g False                                        
 
-evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO Value
+evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO (Value, Memory, Scopes)
 evalEdgeComp' m pm ss weight edge id vs when_exp g new_vertices = case vs of
     [v] -> do (Right m') <- updateListIds m ss id v
               case when_exp of
                 Nothing -> do
                     generateGraph m' pm ss edge weight g new_vertices
                 Just when_exp -> do
-                    success <- (eval m' pm ss when_exp)
+                    (success, m'', ss'') <- (eval m' pm ss when_exp)
                     if success == (Bool True)
                     then do          
-                        generateGraph m' pm ss edge weight g new_vertices
+                        generateGraph m'' pm ss'' edge weight g new_vertices
                     else do 
-                        return $ V.Graph g
+                        return $ (V.Graph g, m'', ss'')
     (v:vs) -> do (Right m') <- updateListIds m ss id v
                  case when_exp of
                     Nothing -> do
-                        V.Graph g' <- generateGraph m' pm ss edge weight g new_vertices
-                        evalEdgeComp' m' pm ss weight edge id vs Nothing g' new_vertices
+                        (V.Graph g', m'', ss'') <- generateGraph m' pm ss edge weight g new_vertices
+                        evalEdgeComp' m'' pm ss'' weight edge id vs Nothing g' new_vertices
                     Just when_exp -> do
-                        success <- (eval m' pm ss when_exp)
+                        (success, m'', ss'') <- (eval m' pm ss when_exp)
                         if success == (Bool True)
                         then do          
-                            V.Graph g' <- generateGraph m' pm ss edge weight g new_vertices
-                            evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g' new_vertices
+                            (V.Graph g', m''', ss''') <- generateGraph m'' pm ss'' edge weight g new_vertices
+                            evalEdgeComp' m''' pm ss''' weight edge id vs (Just when_exp) g' new_vertices
                         else do 
-                            evalEdgeComp' m' pm ss weight edge id vs (Just when_exp) g new_vertices 
+                            evalEdgeComp' m'' pm ss'' weight edge id vs (Just when_exp) g new_vertices 
 
-generateGraph :: Memory -> ProgramMemory -> Scopes -> S.Edge -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO Value
+generateGraph :: Memory -> ProgramMemory -> Scopes -> S.Edge -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO (Value, Memory, Scopes)
 generateGraph m pm ss (S.Edge tp exp1 exp2) weight g new_vertices = do
-    e1 <- eval m pm ss exp1
-    e2 <- eval m pm ss exp2
+    (e1, m', ss')   <- eval m pm ss exp1
+    (e2, m'', ss'') <- eval m' pm ss' exp2
     let v1@(Vertex id1 _) = G.getVertexFromValue g e1 new_vertices
     if id1 == -1
-    then return $ V.Graph g
+    then return $ (V.Graph g, m'', ss'')
     else do
         let g' = G.insertVertex g v1
         let v2@(Vertex id2 _) = G.getVertexFromValue g' e2 new_vertices
         if id2 == -1
-        then return $ V.Graph g
+        then return $ (V.Graph g, m'', ss'')
         else do
             let g'' = G.insertVertex g' v2
             case weight of
                 Nothing -> do let w = (Integer 1)
-                              addEdge g'' tp v1 v2 w
-                Just weight -> do w <- eval m pm ss weight
-                                  addEdge g'' tp v1 v2 w
+                              r <- addEdge g'' tp v1 v2 w
+                              return (r, m'', ss'')
+                Just weight -> do (w, m''', ss''') <- eval m'' pm ss'' weight
+                                  r <- addEdge g'' tp v1 v2 w
+                                  return (r, m''', ss''')
 
 addEdge :: G.Graph Value Value -> EdgeType -> G.Vertex Value -> G.Vertex Value -> Value -> IO Value
 addEdge g@(G.Graph _ es) tp v1@(Vertex id1 _) v2@(Vertex id2 _) weight = do
@@ -1431,13 +1453,13 @@ forListComp' m pm ss exp id [v] when_exp = do
                                                 (Right m') <- updateListIds m ss id v
                                                 case when_exp of
                                                     Nothing -> do
-                                                        e <- eval m' pm ss exp 
+                                                        (e, m'', ss'') <- eval m' pm ss exp 
                                                         return [e]
                                                     Just when_exp -> do
-                                                        success <- (eval m' pm ss when_exp)
+                                                        (success, m'', ss'') <- (eval m' pm ss when_exp)
                                                         if success == (Bool True)
                                                         then do
-                                                            e <- eval m' pm ss exp 
+                                                            (e, m''', ss'')  <- eval m'' pm ss'' exp 
                                                             return [e]
                                                         else do 
                                                             return []
@@ -1446,18 +1468,18 @@ forListComp' m pm ss exp id (v:vs) when_exp = do
                                                 (Right m') <- updateListIds m ss id v
                                                 case when_exp of
                                                     Nothing -> do
-                                                        e <- eval m' pm ss exp
-                                                        r <- forListComp' m pm ss exp id vs when_exp
+                                                        (e, m'', ss'') <- eval m' pm ss exp
+                                                        r <- forListComp' m'' pm ss'' exp id vs when_exp
                                                         return (e : r)
                                                     Just when_exp -> do
-                                                        success <- (eval m' pm ss when_exp)
+                                                        (success, m'', ss'')  <- (eval m' pm ss when_exp)
                                                         if success == (Bool True)
                                                         then do
-                                                            e <- eval m' pm ss exp
-                                                            r <- forListComp' m pm ss exp id vs (Just when_exp)
+                                                            (e, m''', ss''') <- eval m'' pm ss'' exp
+                                                            r <- forListComp' m''' pm ss''' exp id vs (Just when_exp)
                                                             return (e : r)
                                                         else do 
-                                                            r <- forListComp' m pm ss exp id vs (Just when_exp)
+                                                            r <- forListComp' m'' pm ss'' exp id vs (Just when_exp)
                                                             return r
 
 evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (ArithExpr, [Identifier], [Value], Maybe ArithExpr)
@@ -1468,18 +1490,18 @@ evalListComp m pm ss (ListComp expression forIt ) = do
 evalForIterator :: Memory -> ProgramMemory -> Scopes -> ForIterator -> IO ([Identifier], [Value], Maybe ArithExpr)
 evalForIterator m pm ss (ForIterator is xs when_exp) = do
         let new_xs = replicateList ((length is) - (length xs)) xs
-        xss <- (getLists m pm ss [new_xs])
+        (xss, m', ss') <- (getLists m pm ss [new_xs])
         xss' <- (over xss)
         if when_exp == []
         then do
             return (is, xss', Nothing)
         else do
             return (is, xss', (Just (head when_exp)))            
-    where getLists m pm ss (xs:[])  = do xss <- (evalList m pm ss xs)
-                                         return xss
-          getLists m pm ss (xs:xss) = do xss' <- (evalList m pm ss xs) 
-                                         xss'' <- (getLists m pm ss xss)
-                                         return (xss' ++ xss'')
+    where getLists m pm ss (xs:[])  = do (xss, m', ss') <- (evalList m pm ss xs)
+                                         return (xss, m', ss')
+          getLists m pm ss (xs:xss) = do (xss', m', ss') <- (evalList m pm ss xs) 
+                                         (xss'', m'', ss'') <- (getLists m' pm ss' xss)
+                                         return ((xss' ++ xss''), m'', ss'')
           replicateList 0 xs = xs
           replicateList n xs | n < 0     = error "There aren't enough identifiers." 
                              | otherwise = replicateList (n-1) xs ++ [last xs]
@@ -1520,6 +1542,16 @@ updateListIds m ss ((Ident id):ids) (List (v:vs)) = do
                                                         return r
 
 
-uncapsulate :: GType -> GType
-uncapsulate (GDict t1 t2) = t2
-uncapsulate (GList t1)    = t1
+uncapsulate ::(Maybe Integer) -> GType -> GType
+uncapsulate Nothing (GDict t1 t2) = t2
+uncapsulate Nothing (GList t1)    = t1
+uncapsulate (Just 0) (GPair t1 _) = t1
+uncapsulate (Just 1) (GPair _ t2) = t2
+uncapsulate (Just 0) (GTriple t1 _ _) = t1
+uncapsulate (Just 1) (GTriple _ t2 _) = t2
+uncapsulate (Just 2) (GTriple _ _ t3) = t3
+uncapsulate (Just 0) (GQuadruple t1 _ _ _) = t1
+uncapsulate (Just 1) (GQuadruple _ t2 _ _) = t2
+uncapsulate (Just 2) (GQuadruple _ _ t3 _) = t3
+uncapsulate (Just 3) (GQuadruple _ _ _ t4) = t4
+uncapsulate  _ x             = x
