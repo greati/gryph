@@ -756,6 +756,9 @@ checkCompatType' t t' = if t == t' then True
                         --(GList l, GList l') -> checkCompatType (l) $ GList l'
                         (GUserType _, GAnonymousStruct) -> True
                         --(GAnonymousStruct, GUserType _) -> True
+                        (GPair p1 p2, GPair p1' p2') -> (checkCompatType' p1 p1') && (checkCompatType' p2 p2')
+                        (GTriple p1 p2 p3, GTriple p1' p2' p3') -> (checkCompatType' p1 p1') && (checkCompatType' p2 p2') && (checkCompatType' p3 p3')
+                        (GQuadruple p1 p2 p3 p4, GQuadruple p1' p2' p3' p4') -> (checkCompatType' p1 p1') && (checkCompatType' p2 p2') && (checkCompatType' p3 p3') && (checkCompatType' p4 p4')
                         _                   -> False
 
 
@@ -765,6 +768,13 @@ checkCompatType' t t' = if t == t' then True
 makeCompatibleAssignTypes :: ProgramMemory -> GType -> Value -> (GType, MemoryValue)
 makeCompatibleAssignTypes pm t@(GList _) v@(List []) = (t, Value v)
 makeCompatibleAssignTypes pm t@(GUserType u) v@(Setter is m) = (t, Value $ applySetter pm (makeDefaultSetter pm u) v u)
+makeCompatibleAssignTypes pm t@(GGraphEmpty) v =
+    let tv = getType v
+    in case tv of
+        GGraphEmpty          -> (t, Value v)
+        GGraphVertexEdge _ _ -> (tv, Value v)
+        v'                   -> error ("Incompatible types " ++ show t ++ " and " ++ show v')
+
 makeCompatibleAssignTypes pm t@(GGraphVertexEdge vertices edges) v = 
     let tv = getType v
     in case tv of
