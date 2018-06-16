@@ -8,7 +8,7 @@ if exists("b:current_syntax")
 endif
 
 " Keywords
-syn keyword gryphKeywords if else while for over where sub return when or and not add del from in print read
+syn keyword gryphKeywords if else while for over where sub return when or and not add del from in print read println break bfs dfs use
 syn keyword gryphTypes int string float char bool
 syn keyword gryphTodo contained TODO FIXME NOTE
 
