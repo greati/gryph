@@ -115,7 +115,7 @@ execStmt (PrintStmt e) m pm ss = do
                                 (v, m', ss') <- eval m pm ss e
                                 case v of
                                     (String str) -> putStr $ parseString str
-                                    v -> putStrLn $ show v
+                                    v -> putStr $ show v
                                 return $ (m', ss', Nothing)
 execStmt (PrintLnStmt e) m pm ss = do
                                 (v, m', ss') <- eval m pm ss e
