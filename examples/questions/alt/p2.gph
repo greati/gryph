@@ -1,19 +1,4 @@
-sub range(begin : int; end : int; step : int = 1) : [int] {
-	l : [int] = [];
-	count : int = begin;
-	
-	while(count < end){
-		l = l ++ [count];
-		count = count + 1;
-	}
-	return l;
-}
-
-sub range(end : int) : [int] {
-	return range(0, end);
-}
-
-##### END LIB #####
+use "../library/range.gph"
 
 sub read_float() : float {
 	str : string;
@@ -34,9 +19,9 @@ while (num >= 0.0) {
 	 	if (num >= limits[l-1]+1 and num <= limits[l])
 	 		in_interval[l-1] = in_interval[l-1] + 1;
 	}
-	print(in_interval);
+	println in_interval;
 
  	num = read_float();
 }
 
-print(in_interval);
+println in_interval;

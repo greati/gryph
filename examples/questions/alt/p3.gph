@@ -1,35 +1,5 @@
-sub split (original : string; split_char : char) : [string] {
-	results : [string] = [""];
-	i : int = 0;
-	for c over original {
-		if (c == split_char) {
-			add "" in results;
-			i = i + 1;
-		} else {
-			results[i] = results[i] + c@string;
-		}
-	}
-
-	return results;
-}
-
-sub range(begin : int; end : int; step : int = 1) : [int] {
-	l : [int] = [];
-	count : int = begin;
-	
-	while (count < end) {
-		add count in l;
-		count = count + 1;
-	}
-	
-	return l;
-}
-
-sub range(end : int) : [int] {
-	return range(0, end);
-}
-
-##### END LIB #####
+use "../library/split.gph"
+use "../library/range.gph"
 
 Matrix {
 	height, width : int = 0;
@@ -53,7 +23,7 @@ sub read_matrix() : Matrix {
 		}
 
 		if (row > 0 and column != last_width) {
-			print "Invalid matrix";
+			println "Invalid matrix";
 			empty : Matrix;
 			return empty;
 		}
@@ -70,7 +40,7 @@ sub read_matrix() : Matrix {
 sub multiply_matrices(m1, m2 : Matrix&) : Matrix {
 	result : Matrix;
 	if (m1{width} != m2{height}) {
-		print "Can't multiply matrices";
+		println "Can't multiply matrices\n";
 		return result;
 	}
 
@@ -94,7 +64,7 @@ sub multiply_matrices(m1, m2 : Matrix&) : Matrix {
 sub add_matrices(m1, m2 : Matrix&) : Matrix {
 	result : Matrix;
 	if (m1{height} != m2{height} or m1{width} != m2{width}) {
-		print "Can't add matrices";
+		println "Can't add matrices\n";
 		return result;
 	}
 
@@ -110,24 +80,24 @@ sub add_matrices(m1, m2 : Matrix&) : Matrix {
 }
 
 sub print_matrix(m : Matrix&) {
-	print m{height}@string + ", " + m{width}@string;
+	println m{height}@string + ", " + m{width}@string;
 	for l over m{data}
-		print l;
-	return 0;
+		println l;
+	println "";
 }
 
-print "Input first matrix:";
+println "Input first matrix:";
 m1 : Matrix = read_matrix();
 if (m1{height} > 0) print_matrix(m1);
 
-print "Input second matrix:";
+println "Input second matrix:";
 m2 : Matrix = read_matrix();
 if (m2{height} > 0) print_matrix(m2);
 
-print "Sum of matrices:";
+println "Sum of matrices:";
 r1 : Matrix = add_matrices(m1, m2);
 if (r1{height} > 0) print_matrix(r1);
 
-print "Product of matrices:";
+println "Product of matrices:";
 r2 : Matrix = multiply_matrices(m1, m2);
 if (r2{height} > 0) print_matrix(r2);
