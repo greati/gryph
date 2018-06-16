@@ -9,6 +9,6 @@ a, b, c : int = 200000, 3000, 0;
 
 mdc(a,b,c);
 
-print c;
+println c;
 
 

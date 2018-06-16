@@ -215,9 +215,16 @@ readStmt = do
 
 printStmt :: GenParser GphTokenPos st Stmt
 printStmt = do
-                (tok GTokPrint) 
-                e <- expression
-                return (PrintStmt e)
+                do
+                    (tok GTokPrint) 
+                    e <- expression
+                    return (PrintStmt e)
+                <|>
+                do
+                    (tok GTokPrintLn)
+                    e <- expression
+                    return (PrintLnStmt e)
+                
 
 startIdent :: GenParser GphTokenPos st ArithExpr 
 startIdent = do

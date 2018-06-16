@@ -10,6 +10,7 @@ import Syntactic.Types
 import qualified Data.Map.Strict as M
 import qualified Data.Set        as Se
 import Control.DeepSeq
+import Data.Char
 
 type Filename = String
 
@@ -112,7 +113,15 @@ execStmt a@(AttrStmt _ _) m pm ss = do
                             return $ (m', ss, Nothing)
 execStmt (PrintStmt e) m pm ss = do
                                 (v, m', ss') <- eval m pm ss e
-                                putStrLn (show v)
+                                case v of
+                                    (String str) -> putStr $ parseString str
+                                    v -> putStrLn $ show v
+                                return $ (m', ss', Nothing)
+execStmt (PrintLnStmt e) m pm ss = do
+                                (v, m', ss') <- eval m pm ss e
+                                case v of
+                                    (String str) -> putStrLn $ parseString str
+                                    v -> putStrLn $ show v
                                 return $ (m', ss', Nothing)
 execStmt (ReadStmt i) m pm ss = do
                                 value <- getLine
@@ -500,6 +509,14 @@ execStmt (DelEdgeStmt (S.Edge typeEdge e1 e2) g) m pm ss =
                                                     error $ "There isn't any Edge between " ++ (show e2') ++ " and " ++ (show e1')
                 else error $ "Incompatible types " ++ (show $ getType e1')  ++ " and " ++ (show $ getType e2')
             _ -> error "Wrong pattern" 
+
+-- | Parse a string with escaped chars
+parseString :: String -> String
+parseString [] = []
+parseString s = (c:cs)
+        where [(c,s')] = readLitChar s
+              cs = parseString s'
+
 
 -- | Produce a register value to store in memory from a struct declaration
 makeDefaultSetter :: ProgramMemory -> StructIdentifier -> Value
