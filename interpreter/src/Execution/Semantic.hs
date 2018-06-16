@@ -1300,7 +1300,10 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                                         Nothing -> error "No return from subprogram call"
                                                                                         Just v -> return (v, m', ss)
 
-eval m pm ss (ExprLiteral (ListCompLit lc)) = do {(r, m', ss') <- forListComp m pm ss lc ; return $ (List r, m', ss')}
+eval m pm ss (ExprLiteral (ListCompLit lc)) = 
+    do  
+        (r, m', (s:ss')) <- forListComp m pm ss lc
+        return $ (List r, m', ss')
 
 eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do 
     setter <- evalSetter m pm ss e
