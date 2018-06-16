@@ -12,7 +12,10 @@ print x;
 add (10,10) in x;
 print x;
 
-y : [[int]] = [];
+y : [[int]] = [[1,2,3],[3,4]];
 add [] in y;
+print y;
+
+del 1 from y;
 print y;
 
