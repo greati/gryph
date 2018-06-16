@@ -8,6 +8,7 @@ import Syntactic.GphTokens
 import Data.Char (isUpper)
 import Syntactic.Values
 import Syntactic.Syntax
+import Data.Char
 
 import Text.Parsec hiding (satisfy, string)
 
@@ -70,7 +71,9 @@ charLit :: Monad m => ParsecT [GphTokenPos] u m Literal
 charLit = satisfy' p <?> "char"
     where 
         p (t,_) = case t of
-                    GTokCharLit i -> Just (Lit (Char (read i)))
+                    GTokCharLit i -> case readLitChar (tail (init i)) of
+                                        [(c,[])] -> Just (Lit (Char c))
+                                        [(_,xs)] -> error "Not a valid char"
                     _ -> Nothing
 
 

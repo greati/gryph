@@ -16,7 +16,7 @@ tokens :-
     $white+                             ;                           
     "#".*                               ;
     ";"                                 {\p s -> (GTokSemicolon, p)}
-    \'.\'                               {\p s -> (GTokCharLit s, p)}
+    \'.+\'                              {\p s -> (GTokCharLit s, p)}
     \" [^\"]* \"                        {\p s -> (GTokStringLit s, p)}
     $digit+\.$digit+                    {\p s -> (GTokFloatLit s, p)}
     \.\.                                {\p s -> (GTokRangeOp, p)}
