@@ -2,10 +2,11 @@ sub range(begin : int; end : int; step : int = 1) : [int] {
 	l : [int] = [];
 	count : int = begin;
 	
-	while(count < end){
-		l = l ++ [count];
+	while (count < end) {
+		add count in l;
 		count = count + 1;
 	}
+	
 	return l;
 }
 

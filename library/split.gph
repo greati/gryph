@@ -3,7 +3,7 @@ sub split (original : string; split_char : char) : [string] {
 	i : int = 0;
 	for c over original {
 		if (c == split_char) {
-			results = results ++ [""];
+			add "" in results;
 			i = i + 1;
 		} else {
 			results[i] = results[i] + c@string;
@@ -12,3 +12,5 @@ sub split (original : string; split_char : char) : [string] {
 
 	return results;
 }
+
+print split("aaa bcbc a  n123j'`", ' ');
