@@ -51,6 +51,7 @@ data Edge = Edge EdgeType ArithExpr ArithExpr deriving (Show, Eq)
 
 data Stmt = ReadStmt Identifier | 
             PrintStmt ArithExpr | 
+            PrintLnStmt ArithExpr | 
             DeclStmt VarDeclaration | --[Identifier] GType [ArithExpr] | 
             AttrStmt [ArithExpr] [ArithExpr] |
             SubCallStmt SubprogCall |

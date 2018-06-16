@@ -49,6 +49,7 @@ tokens :-
     from                                {\p s -> (GTokFrom, p)}
     return                              {\p s -> (GTokReturn, p)}
     print                               {\p s -> (GTokPrint, p)}
+    println                             {\p s -> (GTokPrintLn, p)}
     read                                {\p s -> (GTokRead, p)}
     break                               {\p s -> (GTokBreak, p)}
     $alpha $varname*[\']+[^\'$white]+   {\p s -> (GTokError s, p)}           

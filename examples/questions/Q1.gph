@@ -3,4 +3,4 @@ c : int = 2;
 
 result : float = x^2 - y + c;
 
-print result@string;
+println result;
