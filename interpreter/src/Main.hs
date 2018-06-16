@@ -19,4 +19,5 @@ igryph :: Filename -> IO()
 igryph s = do
                 us <- parseFile s
                 exec memory programMemory scopes us
+                return $ ()
 

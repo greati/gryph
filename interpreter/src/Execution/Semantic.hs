@@ -11,6 +11,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set        as Se
 import Control.DeepSeq
 import Data.Char
+import Syntactic.Parser
 
 type Filename = String
 
@@ -27,8 +28,8 @@ scopes :: Scopes
 scopes = [GlobalScope]
 
 -- |Execute a program represented as a list of program units.
-exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO() 
-exec m pm ss [] = if m == m then return () else return ()
+exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> IO(Memory, ProgramMemory, Scopes) 
+exec m pm ss [] = if m == m then return (m,pm,ss) else return (m,pm,ss)
 exec m pm ss (u:us) = if m == m 
                       then do
                         (m', pm', ss') <- execUnit u m pm ss
@@ -50,6 +51,13 @@ execUnit (StructDecl struct) m pm ss =
 execUnit (Stmt stmt) m pm ss = do 
                                     (m', ss', v) <- execStmt stmt m pm ss
                                     return $ (m', pm, ss')
+execUnit (Use path) m pm ss = do
+                                    f <- parseFile path
+                                    let decls = filter (\x -> case x of    
+                                                                (Use _) -> False
+                                                                (Stmt _) -> False
+                                                                _ -> True) f
+                                    exec m pm ss decls
 
 -- |Executes a subprogram declaration.
 execSubDecl :: Subprogram -> Memory -> ProgramMemory -> Scopes -> IO (ProgramMemory)

@@ -12,6 +12,7 @@ data GphToken =
     GTokIn                          |
     GTokWhile                       |
     GTokReturn                      |
+    GTokUse                         |
     GTokRead                        |
     GTokPrint                       |
     GTokPrintLn                     |

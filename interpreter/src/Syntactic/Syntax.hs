@@ -11,7 +11,8 @@ data GParamType = GType GType | GRef GType deriving (Show, Eq, Ord)
 
 data ProgramUnit =  Stmt Stmt | 
                     SubprogramDecl Subprogram |
-                    StructDecl StructDecl
+                    StructDecl StructDecl |
+                    Use String 
                     deriving (Show, Eq)
 
 data StructDecl = Struct GType [VarDeclaration] deriving (Show, Eq)
