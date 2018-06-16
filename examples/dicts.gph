@@ -51,8 +51,13 @@ print ls;
 
 print gsss;
 
+if (gsss != <[]>)
+   print gsss;
 
-#if (gss != <[]>)
- #   print gss;
+d6 : |int,int| = |1 ? 1, 2 ? 2, 3 ? 3|;
+
+print d6;
+del 2 from d6;
+print d6;
 
 

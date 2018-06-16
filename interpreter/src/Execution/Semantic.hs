@@ -426,6 +426,19 @@ execStmt (DelStmt e1 e2) m pm ss =
                                                             do  m'' <- execAttrStmt' m' pm ss' [] e2 (List ((take (fromIntegral i) l) ++ (drop ((fromIntegral i)+1) l)), e2type)
                                                                 return (m'', ss', Nothing)
                                                     _         -> error $ "Incompatible type of index"
+                                            (V.Map d) -> do
+                                                case e2type of
+                                                    GDictEmpty -> error "Empty dictionary"
+                                                    GDict ks _ ->
+                                                        if checkCompatType ks (getType e1')
+                                                        then 
+                                                            if M.notMember e1' d
+                                                            then error $ "The key " ++ (show e1') ++ " isn't present in dictionary"
+                                                            else do
+                                                                m'' <- execAttrStmt' m' pm ss' [] e2 (Map (M.delete e1' d), e2type)
+                                                                return (m'', ss', Nothing)
+                                                        else error "Incompatible type of index"
+                                                    _          -> error "Unknown type" 
                                             _ -> error "Wrong pattern"
 
 execStmt (AddEdgeStmt weight (S.Edge typeEdge e1 e2) g) m pm ss = 
