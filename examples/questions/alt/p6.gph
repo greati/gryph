@@ -12,47 +12,66 @@ BST {
 	tree : <Node> = <[]>;
 }
 
-sub insert (t : BST&; value : int) {
-	println "call";
+sub insert (t : BST&; new_value : int) {
 	if (t{tree} == <[]>) {
-		println "rooting";
-		t{root} = Node{value=value};
-		println "w";
+		t{root} = Node{value=new_value};
 		add t{root} in t{tree};
-		println "h";
 		return;
-		println "a";
 	}
-	println "t";
 
 	curr : Node = t{root};
 	while(true) {
 		side : char;
-		if (value < curr{value})
+		if (new_value < curr{value})
 			side = left;
 		else
 			side = right;
-		side_child : [Nodes] = [n for n over t{tree}<curr> when (n{child}|side|)];
+		side_child : [Node] = [n for n over t{tree}<curr> when (n{child}|side|)];
 		if (side_child == []) {
-			new : Node = Node{value=value};
+			new : Node = Node{value=new_value};
 			new{child}|side| = true;
 			add new in t{tree};
 			add curr->new in t{tree};
 			break;
 		} else {
-			curr = l[0];
+			curr = side_child[0];
 		}
 	}
 }
 
-t : BST;
+sub print_inorder(t : BST&) {
+	stack : [Node] = [];
+	top : int = -1;
+	curr : [Node] = [t{root}];
 
-println t{tree}==<[]>;
-println "insert";
-insert(t, 0);
+	while (true) {
+		if (curr != []) {
+			add curr[0] in stack;
+			top = top + 1;
+			curr = [n for n over t{tree}<curr[0]> when (n{child}|left|)];
+		} else {
+			if (top >= 0) {
+				pop : Node = stack[top];
 
-println t{tree}==<[]>;
-println "insert";
-insert(t, -5);
+				print pop{value}@string+" ";
+				curr = [n for n over t{tree}<pop> when (n{child}|right|)];
 
-#println t{tree};
+				del top from stack;
+				top = top - 1;
+			} else {
+				println "";
+				break;
+			}
+		}
+	}
+}
+
+t1 : BST;
+
+insert(t1, 0);
+insert(t1, -10);
+insert(t1, 6);
+insert(t1, -20);
+insert(t1, 5);
+# println t1{tree};
+print_inorder(t1);
