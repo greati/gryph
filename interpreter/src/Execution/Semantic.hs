@@ -346,10 +346,18 @@ execStmt (SubCallStmt (SubprogCall (Ident i) as)) m pm ss = do
                                                                                 (m',ss',mv) <- execSubprogram m pm scopes sub arguments
                                                                                 return $ (m',ss,mv)
 
-execStmt (ReturnStmt e) m pm ss = do    (v, m'', ss'') <- eval m pm ss e
-                                        let (ss', m') = case clearScopesUntilSub m'' ss'' of
-                                                Nothing -> error "Return called outside subprogram scope"
-                                                Just v' -> v' in return $ (m',ss', Just v)
+execStmt (ReturnStmt e') m pm ss = 
+    case e' of
+        Just e -> 
+            do  (v, m'', ss'') <- eval m pm ss e
+                let (ss', m') = case clearScopesUntilSub m'' ss'' of
+                                    Nothing -> error "Return called outside subprogram scope"
+                                    Just v' -> v' in return $ (m',ss', Just v)
+        Nothing -> 
+            let (ss', m') = case clearScopesUntilSub m ss of
+                                Nothing -> error "Return called outside subprogram scope"
+                                Just v' -> v' in return $ (m',ss', Nothing)
+
 execStmt (BreakStmt) m pm ss = do
                                     return $ (m',ss'',Nothing)
                                     where (ss'', m') = case clearScopesUntilIter m ss of

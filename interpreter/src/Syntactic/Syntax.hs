@@ -55,7 +55,7 @@ data Stmt = ReadStmt Identifier |
             AttrStmt [ArithExpr] [ArithExpr] |
             SubCallStmt SubprogCall |
             IfStmt ArithExpr IfBody ElseBody |
-            ReturnStmt ArithExpr |
+            ReturnStmt (Maybe ArithExpr) |
             ForStmt [Identifier] [ArithExpr] Block |
             WhileStmt ArithExpr Block |
             BfsStmt [Identifier] ArithExpr (Maybe ArithExpr) Block |
