@@ -1297,7 +1297,7 @@ eval m pm ss (ArithTerm (SubcallTerm (SubprogCall (Ident i) as))) =
                                                                                         Nothing -> error "No return from subprogram call"
                                                                                         Just v -> return (v, m', ss)
 
-eval m pm ss (ExprLiteral (ListCompLit lc)) = do {r <- forListComp m pm ss lc ; return $ (List r, m, ss)}
+eval m pm ss (ExprLiteral (ListCompLit lc)) = do {(r, m', ss') <- forListComp m pm ss lc ; return $ (List r, m', ss')}
 
 eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do 
     setter <- evalSetter m pm ss e
@@ -1409,19 +1409,19 @@ evalGraphComp m pm ss list edges = case list of
 
 evalEdgeComp :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> EdgeComp -> IO (Value, Memory, Scopes)
 evalEdgeComp m pm ss list (EdgeComp weight edge forIt) = do
-    (id, vs, when_exp) <- evalForIterator m pm ss forIt
+    (m', ss', id, vs, when_exp) <- evalForIterator m pm ss forIt
     case vs of
         [] -> case list of
-                Nothing -> return $ (V.Graph (G.Graph Se.empty M.empty), m, ss)
-                Just l  -> do ((List xs), m', ss') <- eval m pm ss l 
+                Nothing -> return $ (V.Graph (G.Graph Se.empty M.empty), m', ss')
+                Just l  -> do ((List xs), m'', ss'') <- eval m' pm ss' l 
                               let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
-                              return $ (V.Graph g, m', ss')
-        vs'@(v:vs) -> do let (Right m') = elabVars m (getNameCell id v) (head ss)
+                              return $ (V.Graph g, m'', ss'')
+        vs'@(v:vs) -> do let (Right m'') = elabVars m' (getNameCell id v) (head ss')
                          case list of
-                            Nothing -> evalEdgeComp' m' pm ss weight edge id vs' when_exp (G.Graph Se.empty M.empty) True
-                            Just l  -> do ((List xs), m'', ss'') <- eval m' pm ss l 
+                            Nothing -> evalEdgeComp' m'' pm ss' weight edge id vs' when_exp (G.Graph Se.empty M.empty) True
+                            Just l  -> do ((List xs), m''', ss''') <- eval m'' pm ss' l 
                                           let g = G.fromVertices $ G.fromListToVertices $ zip [0..(length xs)] xs
-                                          evalEdgeComp' m'' pm ss'' weight edge id vs' when_exp g False                                        
+                                          evalEdgeComp' m''' pm ss''' weight edge id vs' when_exp g False                                        
 
 evalEdgeComp' :: Memory -> ProgramMemory -> Scopes -> Maybe ArithExpr -> S.Edge -> [Identifier] -> [Value] -> Maybe ArithExpr -> (G.Graph Value Value) -> Bool -> IO (Value, Memory, Scopes)
 evalEdgeComp' m pm ss weight edge id vs when_exp g new_vertices = case vs of
@@ -1493,67 +1493,66 @@ checkEdgeType w ( ( _ , ( G.Edge _ _ wx : _ ) ) : xs ) = (getType w == getType w
 --------------------------------------------------------------
 -- |List Comprehension
 
-forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO [Value]
+forListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO ([Value], Memory, Scopes)
 forListComp m pm ss lc = do 
                             time <- getCurSeconds
                             let     newScope = BlockScope time
                                     ss' = (newScope:ss) in
                                     do
-                                        (exp, id, vs, when_exp) <- evalListComp m pm ss' lc
+                                        (m', ss'', exp, id, vs, when_exp) <- evalListComp m pm ss' lc
                                         case vs of
-                                            []         -> return []
-                                            vs'@(v:vs) -> do let (Right m') = elabVars m (getNameCell id v) (head ss')
-                                                             forListComp' m' pm ss' exp id vs' when_exp
+                                            []         -> return ([], m', ss'')
+                                            vs'@(v:vs) -> do let (Right m'') = elabVars m' (getNameCell id v) (head ss')
+                                                             forListComp' m'' pm ss'' exp id vs' when_exp
 
-forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO [Value]
+forListComp' :: Memory -> ProgramMemory -> Scopes -> ArithExpr -> [Identifier] -> [Value] -> Maybe ArithExpr -> IO ([Value], Memory, Scopes)
 forListComp' m pm ss exp id [v] when_exp = do
                                                 (Right m') <- updateListIds m ss id v
                                                 case when_exp of
                                                     Nothing -> do
                                                         (e, m'', ss'') <- eval m' pm ss exp 
-                                                        return [e]
+                                                        return ([e], m'', ss'')
                                                     Just when_exp -> do
                                                         (success, m'', ss'') <- (eval m' pm ss when_exp)
                                                         if success == (Bool True)
                                                         then do
-                                                            (e, m''', ss'')  <- eval m'' pm ss'' exp 
-                                                            return [e]
+                                                            (e, m''', ss''')  <- eval m'' pm ss'' exp 
+                                                            return ([e], m''', ss''')
                                                         else do 
-                                                            return []
+                                                            return ([], m'', ss'')
 
 forListComp' m pm ss exp id (v:vs) when_exp = do
                                                 (Right m') <- updateListIds m ss id v
                                                 case when_exp of
                                                     Nothing -> do
                                                         (e, m'', ss'') <- eval m' pm ss exp
-                                                        r <- forListComp' m'' pm ss'' exp id vs when_exp
-                                                        return (e : r)
+                                                        (r, m''', ss''') <- forListComp' m'' pm ss'' exp id vs when_exp
+                                                        return (e : r, m''', ss''')
                                                     Just when_exp -> do
                                                         (success, m'', ss'')  <- (eval m' pm ss when_exp)
                                                         if success == (Bool True)
                                                         then do
                                                             (e, m''', ss''') <- eval m'' pm ss'' exp
-                                                            r <- forListComp' m''' pm ss''' exp id vs (Just when_exp)
-                                                            return (e : r)
+                                                            (r, m'''', ss'''') <- forListComp' m''' pm ss''' exp id vs (Just when_exp)
+                                                            return (e : r, m'''', ss'''')
                                                         else do 
-                                                            r <- forListComp' m'' pm ss'' exp id vs (Just when_exp)
-                                                            return r
+                                                            forListComp' m'' pm ss'' exp id vs (Just when_exp)
 
-evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (ArithExpr, [Identifier], [Value], Maybe ArithExpr)
+evalListComp :: Memory -> ProgramMemory -> Scopes -> ListComp -> IO (Memory, Scopes, ArithExpr, [Identifier], [Value], Maybe ArithExpr)
 evalListComp m pm ss (ListComp expression forIt ) = do
-        (is, xss, when_exp) <- evalForIterator m pm ss forIt
-        return (expression, is, xss, when_exp)
+        (m', ss', is, xss, when_exp) <- evalForIterator m pm ss forIt
+        return (m', ss', expression, is, xss, when_exp)
 
-evalForIterator :: Memory -> ProgramMemory -> Scopes -> ForIterator -> IO ([Identifier], [Value], Maybe ArithExpr)
+evalForIterator :: Memory -> ProgramMemory -> Scopes -> ForIterator -> IO (Memory, Scopes, [Identifier], [Value], Maybe ArithExpr)
 evalForIterator m pm ss (ForIterator is xs when_exp) = do
         let new_xs = replicateList ((length is) - (length xs)) xs
         (xss, m', ss') <- (getLists m pm ss [new_xs])
         xss' <- (over xss)
         if when_exp == []
         then do
-            return (is, xss', Nothing)
+            return (m', ss', is, xss', Nothing)
         else do
-            return (is, xss', (Just (head when_exp)))            
+            return (m', ss', is, xss', (Just (head when_exp)))            
     where getLists m pm ss (xs:[])  = do (xss, m', ss') <- (evalList m pm ss xs)
                                          return (xss, m', ss')
           getLists m pm ss (xs:xss) = do (xss', m', ss') <- (evalList m pm ss xs) 
