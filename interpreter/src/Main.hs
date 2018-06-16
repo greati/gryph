@@ -14,9 +14,11 @@ import Control.DeepSeq
 main :: IO ()
 main = do
             args <- getArgs
-            print args
-            igryph "../examples/structs.gph"
-            return ()
+            case args of
+                [] -> error "Please, provide a gryph file (.gph)"
+                [x] -> do
+                        igryph x
+                        return ()
 
 igryph :: Filename -> IO()
 igryph s = do
