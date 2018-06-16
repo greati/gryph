@@ -1,5 +1,6 @@
 module Main where
 
+import System.Environment
 import Syntactic.Parser
 import Syntactic.Syntax
 import Syntactic.Values
@@ -12,8 +13,12 @@ import Control.DeepSeq
 
 main :: IO ()
 main = do
-            igryph "../examples/structs.gph"
-            return ()
+            args <- getArgs
+            case args of
+                [] -> error "Please, provide a gryph file (.gph)"
+                [x] -> do
+                        igryph x
+                        return ()
 
 igryph :: Filename -> IO()
 igryph s = do
