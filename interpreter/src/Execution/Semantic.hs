@@ -400,6 +400,15 @@ execStmt (DelStmt e1 e2) m pm ss =
                                                     let g' = G.deleteVertex v g
                                                     m'' <- execAttrStmt' m' pm ss' [] e2 (V.Graph g', e2type)
                                                     return (m'', ss', Nothing)                                                                                               
+                                            (List l) -> do
+                                                case e1' of
+                                                    Integer i ->
+                                                        if i < 0 || i >= fromIntegral(length l)
+                                                        then error $ "Index " ++ (show e1') ++ " out of bounds"
+                                                        else
+                                                            do  m'' <- execAttrStmt' m' pm ss' [] e2 (List ((take (fromIntegral i) l) ++ (drop ((fromIntegral i)+1) l)), e2type)
+                                                                return (m'', ss', Nothing)
+                                                    _         -> error $ "Incompatible type of index"
                                             _ -> error "Wrong pattern"
 
 execStmt (AddEdgeStmt weight (S.Edge typeEdge e1 e2) g) m pm ss = 
