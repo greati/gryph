@@ -1,3 +1,10 @@
 i : int = 0;
+j : int = 2;
 
-print i;
+use "../examples/subprograms.gph"
+println sum(i,j);
+
+
+
+
+println i;

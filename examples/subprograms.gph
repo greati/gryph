@@ -82,3 +82,14 @@ sub fromList(l : [int]) : [(int,int)]{
 #print fromList([1,2,3,4,5]);
 #print h(20,15);
 
+print "ola";
+
+sub sum(a, b : int) : int {
+    return a + b;
+}
+
+
+
+
+
+

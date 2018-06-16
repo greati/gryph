@@ -5,7 +5,7 @@ import Text.ParserCombinators.Parsec
 import Syntactic.GTok
 import Syntactic.GphTokens
 import Execution.Memory
-import Execution.Semantic
+--import Execution.Semantic
 import Syntactic.Values
 import Syntactic.Syntax
 import Syntactic.Types
@@ -32,9 +32,20 @@ programUnit = do
                         s <- subprogDecl
                         return (SubprogramDecl s)
                     <|>
+                    do
+                        s <- useCommand
+                        return (Use s)
+                    <|>
                     do 
                         s <- stmt
                         return (Stmt s)
+
+useCommand :: GenParser GphTokenPos st String
+useCommand = do 
+                (tok GTokUse) 
+                (Lit (String s)) <- stringLit
+                return $ s
+
 {- Structs.
  -
  --}

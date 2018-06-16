@@ -35,6 +35,7 @@ tokens :-
     add                                 {\p s -> (GTokAdd, p)}
     del                                 {\p s -> (GTokDel, p)}
     put                                 {\p s -> (GTokPut, p)}
+    use                                 {\p s -> (GTokUse, p)}
     if                                  {\p s -> (GTokIf, p)}
     else                                {\p s -> (GTokElse, p)}
     for                                 {\p s -> (GTokFor, p)}
