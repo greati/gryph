@@ -286,8 +286,8 @@ execStmt (ForStmt ids vs body) m pm ss =
                                                case xss of
                                                     xss'@( (List list) : _ ) -> do return (xss', m',ss')
                                                     xss'@((String s) : _ )   -> do return $ (makeListChars xss', m', ss')
-                                                    [(Map map)]              -> do return ([(List ( makeMap (M.toList map) ))], m',ss')
-                                                    [(V.Graph g)]            -> do return ([ List $ removeVerticesId $ G.getVertices g ], m', ss')
+                                                    maps@((Map map) : _ )    -> do return ([(List(makeMap(M.toList x))) | Map x <- maps], m',ss')
+                                                    gs@((V.Graph _) : _)     -> do return ([ List $ removeVerticesId $ G.getVertices g | V.Graph g <- gs], m', ss')
                                                     _                        -> error "Wrong pattern!"
                 getLists m pm ss (xs:xss) = do (xss', m',ss')   <- (evalList m pm ss xs)
                                                (xss'', m'', ss'') <- (getLists m' pm ss' xss)

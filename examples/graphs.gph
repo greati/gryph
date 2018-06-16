@@ -12,7 +12,7 @@
 #print g<1<-2>;
 #print g<1--2>;
 #print g;
-
+#
 g : <int> = <a * 10 where a--b for a,b over [0, 1, 2]>;
 
 add 5 in g;
@@ -44,6 +44,10 @@ g2 : <int> = <[5,4,3,2,1]>;
 
 println g1 == g2;
 println g1 != g2;
+
+for a,b over g1,g2{
+	println a@string + ";" + b@string;
+}
 
 println "Check equality";
 
