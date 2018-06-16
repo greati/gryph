@@ -121,8 +121,12 @@ breakStmt = do {(tok GTokBreak) >> return BreakStmt}
 returnStmt :: GenParser GphTokenPos st Stmt
 returnStmt = do
                 (tok GTokReturn)
-                e <- expression
-                return (ReturnStmt e)
+                do
+                    do
+                        e <- expression
+                        return (ReturnStmt (Just e))
+                    <|> return (ReturnStmt Nothing)
+                    
 
 --startIdentListStmt :: GenParser GphTokenPos st Stmt
 --startIdentListStmt = do

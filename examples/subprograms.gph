@@ -20,6 +20,22 @@
 #    print a+b;
 #}
 
+a : int = 4;
+
+sub myproc(b : int) {
+    a : int = 2;
+    while (false) {
+        a : int = 4;
+        print a;
+    }
+    print "ola" + a@string;
+}
+
+print a;
+
+myproc(1);
+
+
 sub fromList(l : [int]) : [(int,int)]{
     count : int = 0;
     
@@ -63,6 +79,6 @@ sub fromList(l : [int]) : [(int,int)]{
     return [];
 }
 
-print fromList([1,2,3,4,5]);
+#print fromList([1,2,3,4,5]);
 #print h(20,15);
 
