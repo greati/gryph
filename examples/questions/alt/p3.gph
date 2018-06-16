@@ -23,9 +23,8 @@ sub read_matrix() : Matrix {
 		}
 
 		if (row > 0 and column != last_width) {
-			println "Invalid matrix";
-			empty : Matrix;
-			return empty;
+			println "Invalid matrix\n";
+			return Matrix{};
 		}
 		last_width = column;
 		row = row + 1;
