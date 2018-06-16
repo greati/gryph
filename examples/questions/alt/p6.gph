@@ -91,31 +91,31 @@ sub print_levels(t : BST&) {
 	}
 }
 
-sub side_most(t : BST&; side : char) : int {
+sub side_most(t : BST&; side : char) : (int, int) {
 	last : Node;
 	curr : [Node] = [t{root}];
+	level : int = 0;
+
 	while (curr != []) {
+		level = level + 1;
 		last = curr[0];
 		curr = [n for n over t{tree}<last> when (n{child}|side|)];
 	}
-	return last{value};
+	return (last{value}, level);
 }
 
-sub min(t : BST&) : int {
+sub minimum(t : BST&) : (int, int) {
 	return side_most(t, left);
 }
 
-sub max(t : BST&) : int {
+sub maximum(t : BST&) : (int, int) {
 	return side_most(t, right);
 }
 
 t1 : BST;
 
-insert(t1, 0);
-insert(t1, -10);
-insert(t1, 6);
-insert(t1, -20);
-insert(t1, 5);
+for n over [0, -10, 6, -20, 5]
+	insert(t1, n);
 
 println "inorder traversal: ";
 print_inorder(t1);
@@ -123,5 +123,10 @@ print_inorder(t1);
 println "breadth first traversal: ";
 print_levels(t1);
 
-println "min: "+min(t1)@string;
-println "max: "+max(t1)@string;
+min, max : (int, int) = minimum(t1), maximum(t1);
+
+print "min: " + min\0\@string;
+println " (level " + min\1\@string + ")";
+
+print "max: " + max\0\@string;
+println " (level " + max\1\@string + ")";
