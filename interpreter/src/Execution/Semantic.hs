@@ -127,6 +127,7 @@ execStmt (PrintStmt e) m pm ss = do
                                 return $ (m', ss', Nothing)
 execStmt (PrintLnStmt e) m pm ss = do
                                 (v, m', ss') <- eval m pm ss e
+                                print $ ss'
                                 case v of
                                     (String str) -> putStrLn $ parseString str
                                     v -> putStrLn $ show v
@@ -1146,7 +1147,7 @@ eval m pm ss (LogicalBinExpr Xor e1 e2)         =
                                                         (v2, m'', ss'') <- eval m' pm ss' e2  
                                                         case v1 of
                                                             Bool b1 -> case v2 of
-                                                                        Bool b2 -> return $ (Bool (((not b1) &&  b2 ) || (b1 && (not b2))), m', ss')
+                                                                        Bool b2 -> return $ (Bool (((not b1) &&  b2 ) || (b1 && (not b2))), m'', ss'')
                                                                         _ -> error "And operator rhs type error"
                                                             _ -> error "And operator lhs type error "
 eval m pm ss (CastExpr e1 g)                    =
@@ -1312,10 +1313,13 @@ eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do
                                                     return $ Setter t (M.insert i (getType v, v) remain) 
 
 eval m pm ss (ExprLiteral (GraphLit exp edges )) = do 
+                print ss
                 time <- getCurSeconds
                 let     newScope = BlockScope time
                         ss' = (newScope:ss) in
-                    evalGraphComp m pm ss' exp edges
+                    do
+                        (v',m'',(s:ss'')) <- evalGraphComp m pm ss' exp edges
+                        return (v',m'',ss'') 
 
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List []) (List l1) = List l1;
