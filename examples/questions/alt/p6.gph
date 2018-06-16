@@ -1,0 +1,58 @@
+left : char = 'l';
+right : char = 'r';
+
+Node {
+	value : int;
+	child : |char, bool| =
+		|left ? false, right ? false|;
+}
+
+BST {
+	root : Node;
+	tree : <Node> = <[]>;
+}
+
+sub insert (t : BST&; value : int) {
+	println "call";
+	if (t{tree} == <[]>) {
+		println "rooting";
+		t{root} = Node{value=value};
+		println "w";
+		add t{root} in t{tree};
+		println "h";
+		return;
+		println "a";
+	}
+	println "t";
+
+	curr : Node = t{root};
+	while(true) {
+		side : char;
+		if (value < curr{value})
+			side = left;
+		else
+			side = right;
+		side_child : [Nodes] = [n for n over t{tree}<curr> when (n{child}|side|)];
+		if (side_child == []) {
+			new : Node = Node{value=value};
+			new{child}|side| = true;
+			add new in t{tree};
+			add curr->new in t{tree};
+			break;
+		} else {
+			curr = l[0];
+		}
+	}
+}
+
+t : BST;
+
+println t{tree}==<[]>;
+println "insert";
+insert(t, 0);
+
+println t{tree}==<[]>;
+println "insert";
+insert(t, -5);
+
+#println t{tree};
