@@ -55,6 +55,7 @@ tokens :-
     break                               {\p s -> (GTokBreak, p)}
     $alpha $varname*[\']+[^\'$white]+   {\p s -> (GTokError s, p)}           
     $alpha $varname*[\']*               {\p s -> (GTokIdentifier s, p)}
+    \\                                  {\p s -> (GTokBackslash, p)}
     \@                                  {\p s -> (GTokAt, p)}
     \^                                  {\p s -> (GTokHat, p)}
     \%                                  {\p s -> (GTokModulus, p)}

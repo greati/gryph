@@ -4,6 +4,7 @@ module Syntactic.GphTokens where
 data GphToken =
     GTokIdentifier String           |
     GTokSemicolon                   |
+    GTokBackslash                   |
     GTokSub                         |
     GTokIf                          |
     GTokElse                        |

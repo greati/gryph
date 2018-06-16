@@ -1008,8 +1008,9 @@ accessOperator i = do
                             return (StructAccess i e)
                         <|>
                         do
-                            (tok GTokDot) 
+                            (tok GTokBackslash) 
                             e <- expression
+                            (tok GTokBackslash) 
                             return (TupleAccess i e)
 
 accessOperatorSequence :: ArithExpr -> GenParser GphTokenPos st ArithExpr
