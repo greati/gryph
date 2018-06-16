@@ -38,3 +38,20 @@ print g;
 
 g = <[]>;
 print g;
+
+g1 : <int> = <[1,2,3,4,5]>;
+g2 : <int> = <[5,4,3,2,1]>;
+
+println g1 == g2;
+println g1 != g2;
+
+println "Check equality";
+
+t1 : <int> = <[0]>;
+t2 : <int> = <[]>;
+add 0 in t2;
+
+println t1;
+println t2;
+println t1 == t2;
+println t1 != t2;

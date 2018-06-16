@@ -36,7 +36,10 @@ instance Eq Value where
     (==) (Quadruple q1) (Quadruple q2)  = q1 == q2 
     (==) (Map m1) (Map m2)              = m1 == m2
     (==) (EmptyMap) (EmptyMap)          = True 
-    (==) (Graph g1) (Graph g2)          = g1 == g2
+    (==) (Graph (G.Graph v1 e1)) (Graph (G.Graph v2 e2)) = 
+        ( (getSetOfValues (S.toList v1) S.empty) == (getSetOfValues (S.toList v2) S.empty) ) &&
+        ( (createMapValueValue (createMapVertex (S.toList v1)) e1 M.empty) == (createMapValueValue (createMapVertex (S.toList v2)) e2 M.empty) )
+
     (==) (Setter t1 s1) (Setter t2 s2)  = t1 == t2 && s1 == s2
 
     (/=) (Integer i) (Integer i2)       = i /= i2 
@@ -53,7 +56,7 @@ instance Eq Value where
     (/=) (Quadruple q1) (Quadruple q2)  = q1 /= q2 
     (/=) (Map m1) (Map m2)              = m1 /= m2
     (/=) (EmptyMap) (EmptyMap)          = False 
-    (/=) (Graph g1) (Graph g2)          = g1 /= g2
+    (/=) g1@(Graph _) g2@(Graph _)      = not (g1 == g2)
     (/=) (Setter t1 s1) (Setter t2 s2)  = t1 /= t2 && s1 /= s2
 
 instance Ord Value where
@@ -137,4 +140,23 @@ showGraph (Graph g@(G.Graph vs es)) = if S.null vs then "<>" else "<\n" ++ f (S.
                                               h []                      = ""
                                               h [(G.Edge _ v@(G.Vertex _ x) b)]         = show x ++ " (" ++ show b ++ ")"
                                               h ((G.Edge _ v@(G.Vertex _ x) b):xs)      = show x ++ " (" ++ show b ++ "), " ++ h xs   
-                                              
+
+getSetOfValues :: [G.Vertex Value] -> S.Set Value -> S.Set Value
+getSetOfValues [] s                  = s
+getSetOfValues ((G.Vertex _ x):xs) s = getSetOfValues xs (S.insert x s)
+
+createMapVertex :: [G.Vertex Value] -> [(Value, Int)]
+createMapVertex []                   = []
+createMapVertex ((G.Vertex id x):xs) = (x,id) : (createMapVertex xs) 
+
+createMapValueValue :: [(Value, Int)] -> M.Map Int [G.Edge Value Value] -> M.Map Value (S.Set (Value, Value)) -> M.Map Value (S.Set (Value, Value))
+createMapValueValue [] _ r = r
+createMapValueValue ((v,id):xs) m1 m2 = createMapValueValue xs m1 (createMapValueValue' v (m1 M.!? id) m2)
+    where
+        createMapValueValue' v xs m2 =
+            case xs of
+                Nothing  -> m2
+                Just xs' -> M.insert v (createMapValueValue'' xs' S.empty) m2
+
+        createMapValueValue'' [] s                              = s
+        createMapValueValue'' ( G.Edge _ (G.Vertex _ v) w : xs) s = createMapValueValue'' xs (S.insert (v,w) s)
