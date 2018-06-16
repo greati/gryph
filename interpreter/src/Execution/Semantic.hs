@@ -123,12 +123,14 @@ execStmt (PrintStmt e) m pm ss = do
                                 (v, m', ss') <- eval m pm ss e
                                 case v of
                                     (String str) -> putStr $ parseString str
+                                    (Char c) -> putChar $ c
                                     v -> putStr $ show v
                                 return $ (m', ss', Nothing)
 execStmt (PrintLnStmt e) m pm ss = do
                                 (v, m', ss') <- eval m pm ss e
                                 case v of
                                     (String str) -> putStrLn $ parseString str
+                                    (Char c) -> do {putChar c; putStrLn ""}
                                     v -> putStrLn $ show v
                                 return $ (m', ss', Nothing)
 execStmt (ReadStmt i) m pm ss = do
