@@ -1,20 +1,21 @@
-d : |(float,float), int| = 
+intervals : |(float,float), int| = 
     | (0.0,25.0) ? 0, (26.0, 50.0) ? 0, (51.0, 75.0) ? 0, (76.0, 100.0) ? 0 |; 
 
-s : string;
-n : float;  
+input : string;
+num : float = 0;
 
-while (n >= 0) {
-
-    read s;
-
-    n = s@float;
+while (num >= 0) {
+    read input;
+    num = input@float;
     
-    for entry over d 
-        if (n >= entry\0\\0\ and n <= entry\0\\1\) {
-            d|entry\0\| = d|entry\0\| + 1;
-            break;
-        }
-}
+    for entry over intervals {
+    	range : (float, float) = entry\0\;
+    	value : int = entry\1\;
 
-println d;
+    	if (num >= range\0\ and num <= range\1\) {
+    		intervals|range| = value + 1;
+    		break;
+    	}
+    }
+    println intervals;
+}
