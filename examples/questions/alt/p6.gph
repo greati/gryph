@@ -54,15 +54,38 @@ sub print_inorder(t : BST&) {
 		} else {
 			if (top >= 0) {
 				pop : Node = stack[top];
+				del top from stack;
+				top = top - 1;
 
 				print pop{value}@string+" ";
 				curr = [n for n over t{tree}<pop> when (n{child}|right|)];
-
-				del top from stack;
-				top = top - 1;
 			} else {
 				println "";
 				break;
+			}
+		}
+	}
+}
+
+sub print_levels(t : BST&) {
+	newline : Node = Node{child=|left?true, right?true|};
+	queue : [Node] = [t{root}, newline];
+
+	while(queue != []) {
+		dq : Node = queue[0];
+		del 0 from queue;
+
+		if (dq == newline) {
+			println "";
+			if (queue != [])
+				add newline in queue;
+		} else {
+			print dq{value}@string+" ";
+			l : [Node] = [n for n over t{tree}<dq> when (n{child}|left|)];
+			r : [Node] = [n for n over t{tree}<dq> when (n{child}|right|)];
+			for n over [l, r] {
+				if (n != [])
+					add n[0] in queue;
 			}
 		}
 	}
@@ -93,7 +116,12 @@ insert(t1, -10);
 insert(t1, 6);
 insert(t1, -20);
 insert(t1, 5);
-# println t1{tree};
+
+println "inorder traversal: ";
 print_inorder(t1);
+
+println "breadth first traversal: ";
+print_levels(t1);
+
 println "min: "+min(t1)@string;
 println "max: "+max(t1)@string;
