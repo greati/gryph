@@ -48,6 +48,7 @@ fetchSubprograms n ts pm = map obtainSubprogram (M.toAscList (M.filterWithKey te
         obtainSubprogram (SubIdentifier si, SubContent sc) = (si, sc)
         obtainSubprogram _ = error "Not a valid subprogram"
 
+-- | Selects a subprogram for call, based on actual and formal parameters
 selectSubForCall :: Name -> ProcessedActualParams -> ProgramMemory -> Maybe (SubIdentifier, SubContent)
 selectSubForCall n ts pm = case v of 
                                 Just _ -> Just (possibilities !! i)
@@ -72,7 +73,7 @@ scoreSubForCall params@((p,t):ps) pos nameds contents@(si,(fs, _, _)) = case p o
                                                 Just score -> if f' /= [] then 
                                                                 if (getParamGType t') == t then Just (1 + score) 
                                                                     else 
-                                                                        if compatType (getParamGType t') t then
+                                                                        if checkCompatType (getParamGType t') t then
                                                                             Just (score) 
                                                                         else Nothing
                                                               else Nothing
@@ -85,7 +86,7 @@ scoreSubForCall params@((p,t):ps) pos nameds contents@(si,(fs, _, _)) = case p o
                                                     Just score -> if getParamGType t' == t then
                                                                         Just (1 + score)
                                                                   else
-                                                                        if compatType (getParamGType t') t then
+                                                                        if checkCompatType (getParamGType t') t then
                                                                             Just score
                                                                         else Nothing
                                                     Nothing -> Nothing
