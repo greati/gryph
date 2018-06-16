@@ -12,7 +12,7 @@ BST {
 	tree : <Node> = <[]>;
 }
 
-sub insert (t : BST&; new_value : int) {
+sub insert(t : BST&; new_value : int) {
 	if (t{tree} == <[]>) {
 		t{root} = Node{value=new_value};
 		add t{root} in t{tree};
@@ -38,6 +38,8 @@ sub insert (t : BST&; new_value : int) {
 		}
 	}
 }
+
+
 
 sub print_inorder(t : BST&) {
 	stack : [Node] = [];
@@ -66,6 +68,24 @@ sub print_inorder(t : BST&) {
 	}
 }
 
+sub side_most(t : BST&; side : char) : int {
+	last : Node;
+	curr : [Node] = [t{root}];
+	while (curr != []) {
+		last = curr[0];
+		curr = [n for n over t{tree}<last> when (n{child}|side|)];
+	}
+	return last{value};
+}
+
+sub min(t : BST&) : int {
+	return side_most(t, left);
+}
+
+sub max(t : BST&) : int {
+	return side_most(t, right);
+}
+
 t1 : BST;
 
 insert(t1, 0);
@@ -75,3 +95,5 @@ insert(t1, -20);
 insert(t1, 5);
 # println t1{tree};
 print_inorder(t1);
+println "min: "+min(t1)@string;
+println "max: "+max(t1)@string;
