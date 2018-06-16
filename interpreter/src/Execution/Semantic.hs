@@ -127,7 +127,6 @@ execStmt (PrintStmt e) m pm ss = do
                                 return $ (m', ss', Nothing)
 execStmt (PrintLnStmt e) m pm ss = do
                                 (v, m', ss') <- eval m pm ss e
-                                print $ ss'
                                 case v of
                                     (String str) -> putStrLn $ parseString str
                                     v -> putStrLn $ show v
@@ -1313,7 +1312,6 @@ eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do
                                                     return $ Setter t (M.insert i (getType v, v) remain) 
 
 eval m pm ss (ExprLiteral (GraphLit exp edges )) = do 
-                print ss
                 time <- getCurSeconds
                 let     newScope = BlockScope time
                         ss' = (newScope:ss) in
