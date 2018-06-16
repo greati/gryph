@@ -1,5 +1,6 @@
 module Main where
 
+import System.Environment
 import Syntactic.Parser
 import Syntactic.Syntax
 import Syntactic.Values
@@ -12,6 +13,8 @@ import Control.DeepSeq
 
 main :: IO ()
 main = do
+            args <- getArgs
+            print args
             igryph "../examples/structs.gph"
             return ()
 
