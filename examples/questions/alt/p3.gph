@@ -80,18 +80,27 @@ sub add_matrices(m1, m2 : Matrix&) : Matrix {
 
 sub print_matrix(m : Matrix&) {
 	println m{height}@string + ", " + m{width}@string;
-	for l over m{data}
-		println l;
+	for row over m{data} {
+		for cell over row
+			print cell@string+" ";
+		println "";
+	}
 	println "";
 }
 
-println "Input first matrix:";
-m1 : Matrix = read_matrix();
-if (m1{height} > 0) print_matrix(m1);
+m1, m2 : Matrix;
 
-println "Input second matrix:";
-m2 : Matrix = read_matrix();
-if (m2{height} > 0) print_matrix(m2);
+while (m1{height} == 0) {
+	println "Input first matrix:";
+	m1 = read_matrix();
+}
+print_matrix(m1);
+
+while (m2{height} == 0) {
+	println "Input second matrix:";
+	m2 = read_matrix();
+}
+print_matrix(m2);
 
 println "Sum of matrices:";
 r1 : Matrix = add_matrices(m1, m2);
