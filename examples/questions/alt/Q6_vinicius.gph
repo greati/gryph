@@ -1,0 +1,147 @@
+sub length(l:[int]) : int{
+	sum : int = 0;
+	for i over l{
+		sum = sum + 1;
+	}
+
+	return sum; 
+}
+
+# Function to insert values in BST
+sub insertNode(node : int; g : <int,char>) : <int,char> {
+	if (g == <[]>){
+		return <[node]>;
+	}else{
+		add node in g;
+
+		s : int;
+		sum : int = 0;
+		for a over g{
+			if (sum == 0){
+				s = a;
+				sum = sum + 1;
+			}
+		}	
+
+		new_g : <int,char> = g;
+
+		inserted : bool = false;
+		while(inserted == false){
+			if (node == s){
+				inserted = true;
+			}else{
+				children : [int] = g<s>;
+				if (length(children) == 0){
+					if (node < s){
+						add 'l' where s->node in new_g;
+					}
+					else{
+						add 'r' where s->node in new_g;
+					}
+					inserted = true;
+				}else if (length(children) == 1){
+					if (node < s){
+						if (g<s->children[0]> == 'l'){
+							s = children[0];
+						}else{
+							add 'l' where s->node in new_g;
+							inserted = true;
+						}
+					}else{
+						if (g<s->children[0]> == 'r'){
+							s = children[0];
+						}else{
+							add 'r' where s->node in new_g;
+							inserted = true;
+						}
+					}
+				}else{
+					if(node < s){
+						if(g<s->children[0]> == 'l'){
+							s = children[0];
+						}
+						else{
+							s = children[1];
+						}
+					}else{
+						if(g<s->children[0]> == 'r'){
+							s = children[0];
+						}
+						else{
+							s = children[1];
+						}
+					}
+				}
+			}
+		}
+
+		return new_g;
+	}
+}
+
+# Get min key
+sub minKey(g : <int,char> ) : (int, int){
+	min_key, level : int;
+	first_v : bool = true;
+	bfs a,b,c in g{
+		if(first_v == true){
+			min_key = a;
+			level = c;
+			first_v = false;
+		}else{
+			if(min_key > a){
+				min_key = a;
+				level = c;
+			}
+		}
+	}
+
+	return (min_key, level);
+}
+
+# Get max key
+sub maxKey(g : <int,char> ) : (int, int){
+	max_key, level : int;
+	first_v : bool = true;
+
+	bfs a,b,c in g{
+		if(first_v == true){
+			max_key = a;
+			level = c;
+			first_v = false;
+		}else{
+			if(max_key < a){
+				max_key = a;
+				level = c;
+			}
+		}
+	}
+
+	return (max_key, level);
+}
+
+# Print each node by level
+sub printNodes(g : <int,char> ){
+	level : int = 1;
+	bfs a,b,c in g{
+		if(c != level){
+			println "";
+			level = c;
+		}
+		print a@string + " ";
+	}
+	println "";
+}
+
+bb : <int, char>;
+
+l : [int] = [10,20,1,5,3,7];
+for i over l{
+	bb = insertNode(i, bb);	
+}
+
+println bb@string;
+println minKey(bb);
+println maxKey(bb);
+
+printNodes(bb);
