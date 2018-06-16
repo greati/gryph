@@ -3,7 +3,7 @@ sub split (original : string; split_char : char) : [string] {
 	i : int = 0;
 	for c over original {
 		if (c == split_char) {
-			results = results ++ [""];
+			add "" in results;
 			i = i + 1;
 		} else {
 			results[i] = results[i] + c@string;
@@ -17,10 +17,11 @@ sub range(begin : int; end : int; step : int = 1) : [int] {
 	l : [int] = [];
 	count : int = begin;
 	
-	while(count < end){
-		l = l ++ [count];
+	while (count < end) {
+		add count in l;
 		count = count + 1;
 	}
+	
 	return l;
 }
 
@@ -28,7 +29,7 @@ sub range(end : int) : [int] {
 	return range(0, end);
 }
 
-#### END LIB ####
+##### END LIB #####
 
 Matrix {
 	height, width : int = 0;
@@ -43,11 +44,11 @@ sub read_matrix() : Matrix {
 
 	read input;
 	while (input != "") {
-		mat{data} = mat{data} ++ [[]];
+		add [] in mat{data};
 		nums : [string] = split(input, ' ');
 		column = 0;
 		for n over nums {
-			(mat{data})[row] = (mat{data})[row] ++ [n@int];
+			add n@int in mat{data}[row];
 			column = column + 1;
 		}
 
@@ -76,13 +77,13 @@ sub multiply_matrices(m1, m2 : Matrix&) : Matrix {
 	for i over range(m1{height}) {
 		result_row : [int] = [];
 		for j over range(m2{width}) {
-			result_row = result_row ++ [0];
+			add 0 in result_row;
 			for k over range(m1{width}) {
 				result_row[j] = result_row[j] +
 					(m1{data}[i][k] * m2{data}[k][j]);
 			}
 		}
-		result{data} = result{data} ++ [result_row];
+		add result_row in result{data};
 	}
 
 	result{height} = m1{height};
@@ -98,9 +99,9 @@ sub add_matrices(m1, m2 : Matrix&) : Matrix {
 	}
 
 	for i over range(m1{height}) {
-		result{data} = result{data} ++ [
+		add
 			[m1{data}[i][j] + m2{data}[i][j] for j over range(m1{width})]
-		];
+		in result{data};
 	}
 
 	result{height} = m1{height};
@@ -112,20 +113,21 @@ sub print_matrix(m : Matrix&) {
 	print m{height}@string + ", " + m{width}@string;
 	for l over m{data}
 		print l;
+	return 0;
 }
 
 print "Input first matrix:";
 m1 : Matrix = read_matrix();
-print_matrix(m1);
+if (m1{height} > 0) print_matrix(m1);
 
 print "Input second matrix:";
 m2 : Matrix = read_matrix();
-print_matrix(m2);
+if (m2{height} > 0) print_matrix(m2);
 
 print "Sum of matrices:";
 r1 : Matrix = add_matrices(m1, m2);
-print_matrix(r1);
+if (r1{height} > 0) print_matrix(r1);
 
 print "Product of matrices:";
 r2 : Matrix = multiply_matrices(m1, m2);
-print_matrix(r2);
+if (r2{height} > 0) print_matrix(r2);
