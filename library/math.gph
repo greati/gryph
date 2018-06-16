@@ -1,0 +1,26 @@
+# Produce the absolute value of a float
+sub abs(n : float) : float {
+    if (n < 0) return -n;
+    else return n;
+}
+
+# Produce the absolute value of an integer
+sub abs(n : int) : int {
+    return abs(n@float)@int;
+}
+
+# Takes the mdc between two positive integers,
+# using their absolute values.
+sub mdc (n, m : int; r : int&) {
+    n, m = abs(n), abs(m);
+    recursive_mdc(n,m,r);
+}
+
+# Recursive algorithm to compute mdc.
+# Assumes positive numbers.
+sub recursive_mdc (n, m : int; r : int&) {
+    if (n != 0 and m % n == 0) r = n;
+    else if (m != 0 and n % m == 0) r = m;
+    else if (m > n) mdc(n, m % n, r); 
+    else mdc(n % m, m, r); 
+}

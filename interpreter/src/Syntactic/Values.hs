@@ -120,8 +120,14 @@ instance Show Value where
    show (Quadruple x) = show x
    show (Map x)       = showDict (Map x)
    show (Graph x)     = showGraph (Graph x)
-   show (Setter t x)  = t ++ " " ++ show x
+   show (Setter t x)  = t ++ " { " ++ showStruct (M.toList x) ++ " } "
    show EmptyList     = "[]"
+
+showStruct :: (Show a, Show b, Show c) => [(a,(b,c))] -> String
+showStruct [] = ""
+showStruct [(k,(_,v))] = show k ++ " = " ++ show v
+showStruct fs = concat (map (\(k,(_,v)) -> show k ++ " = " ++ show v ++ ",") (init fs))
+                ++ (showStruct $ [last fs])
 
 showDict :: Value -> String
 showDict (Map x)     = if M.null x then "||" else "|" ++ f ( M.toList x) ++ "|"

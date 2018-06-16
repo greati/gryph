@@ -1,14 +1,12 @@
+# Import math functions from standard library
+use "../library/math.gph"
+
+# Type to represent a rational
 Rational_t {
     numerador, denominador : int = 1;
 }
 
-sub mdc (n, m : int; r : int&) {
-    if (n != 0 and m % n == 0) r = n;
-    else if (m != 0 and n % m == 0) r = m;
-    else if (m > n) mdc(n, m % n, r); 
-    else mdc(n % m, m, r); 
-}
-
+# Uses mdc to make a rational irreducible
 sub reduce (a : Rational_t&) {
    mdcc : int = 1;
    mdc(a{numerador},a{denominador},mdcc);
@@ -16,19 +14,23 @@ sub reduce (a : Rational_t&) {
    a{denominador} = a{denominador} / mdcc;
 }
 
+# Check rationals for equality
 sub is_same_rational (a, b : Rational_t) : bool {
     return a{numerador} * b{denominador} == a{denominador} * b{numerador};
 }
 
+# Make a valid rational (do not reduce)
 sub make_rational (a, b : int) : Rational_t {
     if (b != 0) {
         r : Rational_t = Rational_t {numerador = a, denominador = b}; 
         return r;
     } else {
         print "erro: b não pode valer 0";
+        return;
     }
 }
 
+# Sum two rationals, producing the reduced version
 sub sum (a, b : Rational_t) : Rational_t {
     new_den : int = a{denominador} * b{denominador};
     new_num : int = b{denominador}*a{numerador} + b{numerador}*a{denominador};
@@ -37,14 +39,17 @@ sub sum (a, b : Rational_t) : Rational_t {
     return s; 
 }
 
+# Negate one rational (do not reduce)
 sub neg (a : Rational_t) : Rational_t {
     return Rational_t {numerador=-a{numerador},denominador=a{denominador}};
 }
 
+# Subtract two rationals, producing the reduced version
 sub subt (a, b : Rational_t) : Rational_t {
     return sum(a, neg(b));
 }
 
+# Multiply two rationals, producing the reduced version
 sub mult (a, b : Rational_t) : Rational_t {
     new_den : int = a{denominador} * b{denominador};
     new_num : int = a{numerador} * b{numerador};
@@ -53,6 +58,7 @@ sub mult (a, b : Rational_t) : Rational_t {
     return s;
 }
 
+# Produce the inverse of a rational (do not reduce)
 sub inv (a : Rational_t) : Rational_t {
     if (a{numerador} != 0) {
        return make_rational(a{denominador}, a{numerador});
@@ -61,15 +67,15 @@ sub inv (a : Rational_t) : Rational_t {
     }
 }
 
+# Divides two rationals (do not reduce)
 sub div (a, b : Rational_t) : Rational_t {
     return mult(a, inv(b));
 }
 
-rs : [Rational_t] = [Rational_t{numerador=1, denominador=1}, Rational_t{numerador=1,denominador=1}];
+rs : [Rational_t] = [Rational_t{}, Rational_t{}];
 
-
-s : string;
-a, b : int;
+s : string;     # Receive the input string
+a, b : int;     # Input ints
 
 while (true) {
 
@@ -85,7 +91,7 @@ while (true) {
             if (b != 0) {
                 rs[i] = make_rational(a, b);
                 inputs[2*i] = a@string;
-                inputs[2*i+1] = b@string;
+                inputs[2*i + 1] = b@string;
             }
         }
         b = 0;
@@ -93,13 +99,13 @@ while (true) {
 
     println inputs[0] + "/" + inputs[1] + ";" + inputs[2] + "/" + inputs[3];
 
-    println is_same_rational(rs[0],rs[1]);
-    println sum(rs[0],rs[1]);
-    println subt(rs[0],rs[1]);
-    println mult(rs[0],rs[1]);
-    println neg(rs[0]);
-    println inv(rs[0]);
-    println div(rs[0],rs[1]);
+    println "(==)    " + is_same_rational(rs[0],rs[1])@string;
+    println "(+)     " + sum(rs[0],rs[1])@string;
+    println "(-)     " + subt(rs[0],rs[1])@string;
+    println "(*)     " + mult(rs[0],rs[1])@string;
+    println "(neg)   " + neg(rs[0])@string;
+    println "(inv)   " + inv(rs[0])@string;
+    println "(/)     " + div(rs[0],rs[1])@string;
 
     print "De novo? (S/N): ";
     read s;
