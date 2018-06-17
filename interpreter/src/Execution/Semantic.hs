@@ -5,6 +5,7 @@ import Syntactic.Values   as V
 import Syntactic.Syntax   as S
 import Execution.Memory
 import Data.Time.Clock
+import Data.List
 import Execution.Graph    as G
 import Syntactic.Types
 import qualified Data.Map.Strict as M
@@ -561,9 +562,12 @@ makeDefaultSetter pm si = Setter si (M.fromList (makeSetList pm sc))
 
 -- | Interpret struct declaration
 interpretStructDecl :: Memory -> ProgramMemory -> Scopes -> StructDecl -> IO (StructIdentifier, StructContent)
-interpretStructDecl m pm ss decl@(Struct (GUserType  i) _) = do 
-                                                            sc <- interpretStructDecl' m pm ss decl
-                                                            return $ (i, sc)
+interpretStructDecl m pm ss decl@(Struct (GUserType  i) _) = 
+        do 
+            sc <- interpretStructDecl' m pm ss decl
+            let sc' = sc \\ (nubBy (\(i1,_,_) (i2,_,_) -> i1 == i2) sc)
+            if sc' /= [] then error $ "Duplicity of field(s) " ++ (concat (map (\(i,_,_)->(i ++ " ")) sc')) ++ " in definition of struct " ++ i
+            else return $ (i, sc)
     where
         interpretStructDecl' m pm ss (Struct t []) = return $ []
         interpretStructDecl' m pm ss (Struct t (d:ds)) = do
@@ -917,9 +921,12 @@ varDeclStmt (DeclStmt (VarDeclaration (x:xs) t (e:es))) m pm ss = do
 
 -- | Interpret subprogram declaration
 interpretSubDeclaration :: Subprogram -> Memory -> ProgramMemory -> Scopes -> IO (SubIdentifier, SubContent)
-interpretSubDeclaration (Subprogram (Ident i) ps t b) m pm ss = do 
-                                                                    formals <- formalParams ps
-                                                                    return $ ((i, paramTypes ps), (formals, t, b)) 
+interpretSubDeclaration (Subprogram (Ident i) ps t b) m pm ss = 
+    do 
+        formals <- formalParams ps
+        let formals' = formals \\ (nubBy (\(i1,_,_) (i2,_,_) -> i1 == i2) formals)
+        if formals' /= [] then error $ "Duplicity of formal parameter(s) " ++ (concat (map (\(i,_,_)->(i ++ " ")) formals')) ++ " in subprogram " ++ i
+        else return $ ((i, paramTypes ps), (formals, t, b)) 
     where   
             paramTypes [] = []
             paramTypes ((ParamDeclaration ids gt _):ps) = replicate (length ids) gt ++ paramTypes ps
@@ -927,14 +934,17 @@ interpretSubDeclaration (Subprogram (Ident i) ps t b) m pm ss = do
             formalParams :: [ParamDeclaration] -> IO [(String, GParamType, Maybe Value)]
             formalParams [] = return []
             formalParams (p:ps) = do interp <- (interpretParamDeclaration p m pm ss) 
+
                                      remain <- formalParams ps
                                      return $ interp ++ remain
+
 
 -- | Interpret formal parameters
 interpretParamDeclaration :: ParamDeclaration -> Memory -> ProgramMemory -> Scopes -> IO [(String, GParamType, Maybe Value)]
 interpretParamDeclaration pd@(ParamDeclaration is _ es) m pm ss 
     | length es > length is = error "Too many default values"
     | otherwise = interpretParamDeclaration' pd m pm ss
+                    
     where
         interpretParamDeclaration' (ParamDeclaration [] _ []) _ _ _ = return []
         interpretParamDeclaration' (ParamDeclaration [(Ident i)] gt [e]) m pm ss = 
@@ -1331,8 +1341,10 @@ eval m pm ss e@(StructInitExpr (StructInit (Ident t) ias)) =  do
                     [] -> return $ Setter t M.empty
                     ((IdentAssign [(Ident i)] e):ias') -> do
                                                     Setter is remain <- evalSetter m pm ss (StructInitExpr (StructInit (Ident t) ias'))
-                                                    (v, m', ss') <- eval m pm ss e
-                                                    return $ Setter t (M.insert i (getType v, v) remain) 
+                                                    if M.member i remain then error $ "Duplicity of field " ++ i ++ " in struct initialization"
+                                                    else do
+                                                            (v, m', ss') <- eval m pm ss e
+                                                            return $ Setter t (M.insert i (getType v, v) remain) 
 
 eval m pm ss (ExprLiteral (GraphLit exp edges )) = do 
                 time <- getCurSeconds
