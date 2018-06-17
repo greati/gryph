@@ -8,6 +8,7 @@
 \usepackage{xcolor}
 \usepackage{calc} % AgeofEuler
 \usepackage{textcomp} % lst upquote
+\usepackage{titlesec} % paragraph section
 
 \newcommand{\gryphcommentstyle}{\color{gray}\ttfamily} % gryph comment style
 \newcommand{\id}[1]{\texttt{#1}} % gryph identifier
@@ -16,10 +17,9 @@
 
 \lstdefinelanguage{Gryph}{
 	sensitive = true,
-	morekeywords={read, print, println, for,
-		over, in, use, while, sub, return,
-		string, char, int, float, bool,
-		true, false},
+	morekeywords={use, read, print, println, for, in,
+		break, over, while, if, else, sub, return,
+		string, char, int, float, bool, true, false},
 	keywordstyle=\color{purple},
 	morecomment=[l]{\#},
 	commentstyle=\gryphcommentstyle,
@@ -34,6 +34,13 @@
 	showstringspaces=false
 }
 
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{4}
+
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 
 \title{The Gryph Programming Language}
 \author{Vinícius Campos \and Artur Curinga \and Vitor Greati \and Carlos Vieira}
@@ -43,6 +50,8 @@
 \maketitle
 
 \tableofcontents
+
+\newpage
 
 \input{sections/intro}
 

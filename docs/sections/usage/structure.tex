@@ -1,5 +1,5 @@
 \subsection{Structure}
-Being a scripting language, a Gryph program is nothing but a collection of statements, which are executed sequentially. The following is a valid Gryph program (the \key{println} statement is defined in \ref{}).
+Being a scripting language, a Gryph program is nothing but a collection of statements, which are executed sequentially. The following is a valid Gryph program (the \key{println} statement is defined in \ref{sec:io}).
 
 \begin{lstlisting}[language=Gryph]
 # print hello world to standard output
@@ -23,8 +23,8 @@ sub my_print(s : string = "") {
 	println s;
 }
 \end{lstlisting}
-In the above code, we define two subprograms. The first, \id{hello}, receives no argument, and returns a ``\type{string}'' (further information on types in \ref{sec:types}). Note the \key{return} keyword in line 2, which signals the function to return the expression following it. The second, \id{my\_print}, receives `\id{s}' as an argument, a \type{string}, and returns nothing. 
-The parameter list is nothing more than a sequence of variable declarations (variable declaration and assignment are described in \ref{}) separated by semicolons, the initialization syntax being used to define a default value, making the parameter optional: in \id{my\_print}, the parameter \id{s} has the empty string as its default value.
+In the above code, we define two subprograms. The first, \id{hello}, receives no argument, and returns a ``\type{string}'' (further information on types in \ref{sec:types}). Note the \key{return} keyword in line 2, which signals the function to return the expression following it (see \ref{sec:return}). The second, \id{my\_print}, receives `\id{s}' as an argument, a \type{string}, and returns nothing. 
+The parameter list is nothing more than a sequence of variable declarations (see \ref{sec:variables}) separated by semicolons, the initialization syntax being used to define a default value, making the parameter optional: in \id{my\_print}, the parameter \id{s} has the empty string as its default value.
 
 Arguments are generally passed to subprograms by copy, except if the parameter in question is marked by the ampersand character, in which case it is passed by reference. This is the only thing that differs a parameter declaration from a variable declaration, as variables cannot be marked in such way. In the following code, the function \id{add} adds to the argument passed to \id{lhs} the value of the \id{rhs} argument.
 \begin{lstlisting}[language=Gryph]

@@ -1,9 +1,13 @@
 \subsection{Statements}
 \label{sec:statements}
-A statement is the basic building block of a Gryph program. It comes in two forms: simple statements (\ref{sec:simple-stmts}), or compound statements (\ref{sec:compound-stmts}), which may contain other statements, compound or simple.
+A statement is the basic building block of a Gryph program. It comes in two forms: simple statements (\ref{sec:simple-stmts}); or compound statements (\ref{sec:compound-stmts}), which may contain other statements, compound or simple.
+
 \subsubsection{Simple statements}
 \label{sec:simple-stmts}
-A simple statement can be: a variable declaration or assignment, an I/O statement, an insertion or removal operation over a composite type, or a \key{return} statement. 
+A simple statement can be: a variable declaration or assignment (\ref{sec:variables}), an I/O statement (\ref{sec:io}), an insertion or removal operation over a composite type (\ref{sec:add-del}), or a return (\ref{sec:return}) or escape (\ref{sec:escape}) statement. The end of a simple statement is always marked by a semicolon.
+
+\paragraph{Variable declaration and assignment}
+\label{sec:variables}
 
 A variable declaration statement consists of an identifier, or a list of comma-separated identifiers, followed by a colon and a valid type. This declares a variable of the given type for each of the identifiers used. Optionally, the declared variables can be initialized, with an equals sign followed by an expression or a list of comma-separated expressions, after the declared type. 
 
@@ -11,13 +15,64 @@ If a list of identifiers is initialized with a single expression, that expressio
 
 A variable assignment consists of an expression, or list of comma-separated expressions, where each expression must evaluate to a variable, followed by an equals sign and a single expression or a list of expressions. Assignment to multiple variables works in the same way as initialization of multiple variables.
 
-As for I/O output statements, there is \key{read} for input and \key{print} or \key{println} for output. For input, the \key{read} keyword is used, followed by a variable of the type \type{string}, where \key{read} will store the one line it reads from standard input. And for output, the \key{print} statement, followed by any expression, will print a string representing the value of that expression to standard output. The \key{println} alternative works in the same way as \key{print}, put also prints a line break after the printed value.
+The following code declares and initializes three integers, and reassigns values to two of them. The printed values are shown as comments.
+\begin{lstlisting}[language=Gryph]
+a, b, c : int = 0;
+a, c = -1, 1;
+println a; # -1
+println b; # 0
+println c; # 1
+\end{lstlisting}
 
+\paragraph{I/O statements}
+\label{sec:io}
+
+As for I/O output statements, there is \key{read} for input and \key{print} or \key{println} for output. For input, the \key{read} keyword is used, followed by a variable of the type \type{string}, where \key{read} will store the one line it reads from standard input. Numeric values can be ``read'' by attempting to cast the read string to the desired numeric type (see \ref{sec:casting}).
+
+And for output, the \key{print} statement, followed by any expression, will print a string representing the value of that expression to standard output. The \key{println} alternative works in the same way as \key{print}, put also prints a line break after the printed value.
+
+The following code simply reads a line from standard input an prints it back.
+\begin{lstlisting}[language=Gryph]
+s : string;
+read s;
+println s;
+\end{lstlisting}
+
+\paragraph{Insertion and removal statements}
+\label{sec:add-del}
 Now, in regards to insertion and removal, the two relevant keywords to be used are \key{add} and \key{del}, respectively. Lists support both insertion and removal: to insert a new element \id{x} to a list \id{y}, the correct syntax is \key{add} \id{x} \key{in} \id{y}, which appends \id{x} to the end of \id{y}, increasing the list's size by one. To remove an element from a list, one might write \key{del} \id{p} \key{from} \id{y}, where \id{p} is an integer indicating the position in the list of the element to be removed.
 
 The \type{tuple}, by contrast, supports neither insertion nor removal, being immutable; while the \type{dictionary} type supports removal, but insertion only through assignment to a key not yet in it. For removal of an entry with key \id{k} from a dictionary \id{d}, the expected syntax is \key{del} \id{k} \key{from} \id{d}. Note that just as a list will not allow an element to be removed from an invalid position, a dictionary will not allow removal of an entry with a certain key if it contains no such entry.
 
 % graphs
+
+\paragraph{Return statement}
+\label{sec:return}
+The return statement is one that may only be used inside subprograms, it ends the function immediately, executing none of the statements that would follow it, and returns a value if necessary. For functions, in particular, the \key{return} keyword is always followed by an expression, which must be evaluated to the same type as that function's return type. For procedures (subprograms with no return value), the return statement consists of only the \key{return} keyword.
+
+\paragraph{Escape statement}
+\label{sec:escape}
+An escape statement is used to exit an iteration structure (see \ref{sec:iteration}) independently to its regular exit conditions, continuing execution from the first statement following the end of the iteration structure wherein it was called. As such, it may only be used inside an iteration structure, be it a \key{for} or a \key{while}. Note that this escape statement is not ``multi-level'', that is, when called from within a nested loop, it exits only the innermost loop.
+
 \subsubsection{Compound statements}
 \label{sec:compound-stmts}
+A compound statement can also be defined as a control structure, in that they alter the sequential flow of control based on certain conditions. They are divided in conditional structures (\ref{sec:conditional}) and iteration structures (\ref{sec:iteration}).
+
+\paragraph{Conditional structures}
+\label{sec:conditional}
+Conditional structures are constructed with the keywords \key{if} and \key{else}. These work in much the same way as in other programming languages, such as Java. The former, \key{if}, is always followed by an expression enclosed in parentheses, which must evaluate to a boolean value. If it is true, the code in the braces-enclosed block that follows it is executed. The latter, \key{else}, is always preceded by an \key{if}-block. The block that follows \key{else} is executed if and only if the preceding block wasn't. The blocks that follow \key{if} or \key{else} may actually be a single statement, alternatively to one or many statements enclosed by braces.
+
+The following code will print a different message depending on the value of variable \id{a} (which must be of type \type{int} or \type{float}).
+\begin{lstlisting}[language=Gryph]
+if (a > 0) {
+	println "greater";
+} else if (a == 0) {
+	println "equal";
+} else {
+	println "lesser";
+}
+\end{lstlisting}
+
+\paragraph{Iteration}
+\label{sec:iteration}
 pass
