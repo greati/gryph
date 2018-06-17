@@ -1169,6 +1169,8 @@ relOp = do (tok GTokGreater) >> return Greater
         do (tok GTokLessEq) >> return LessEq
         <|> 
         do (tok GTokGreaterEq) >> return GreaterEq
+        <|> 
+        do (tok GTokExclam) >> return In
 
 eqOp :: GenParser GphTokenPos st EqOp
 eqOp =  do (tok GTokEq) >> return Equals

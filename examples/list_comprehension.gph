@@ -22,5 +22,9 @@ println y;
 ll : [int] = [2*a for a over [1,2,3] when (a == 2)];
 println ll;
 
+ls : [string] = ["vinicius"];
+
+println "vinicius" ! ls;
+
 
 

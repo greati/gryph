@@ -98,7 +98,8 @@ data RelOp =
             Greater |
             Less |
             GreaterEq|    
-            LessEq 
+            LessEq |
+            In
             deriving (Show, Eq)
 
 data EqOp =
@@ -112,7 +113,7 @@ data BoolUnOp = Not deriving (Show, Eq)
 data BoolBinOp = 
             And |
             Or |
-            Xor 
+            Xor
             deriving (Show, Eq)
 
 data BoolExpr = BoolBinExpr BoolBinOp BoolExpr BoolExpr |

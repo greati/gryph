@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-missing-signatures #-}
 {-# LANGUAGE CPP #-}
-{-# LINE 1 "src/Syntactic/Lexer.x" #-}
+{-# LINE 1 "Lexer.x" #-}
 
 module Syntactic.Lexer (main, GphTokenPos(..), AlexPosn(..), alexScanTokens) where
 
@@ -698,9 +698,9 @@ alex_base = listArray (0 :: Int, 189)
   , 100
   , 0
   , 0
+  , 114
   , 0
-  , 129
-  , 118
+  , 132
   , 0
   , 12191
   , 12437
@@ -742,7 +742,7 @@ alex_table = listArray (0 :: Int, 12692)
   , 187
   , 187
   , 49
-  , 186
+  , 184
   , 189
   , 50
   , 187
@@ -755,7 +755,7 @@ alex_table = listArray (0 :: Int, 12692)
   , 167
   , 182
   , 168
-  , 185
+  , 186
   , 170
   , 56
   , 56
@@ -833,7 +833,7 @@ alex_table = listArray (0 :: Int, 12692)
   , 125
   , 125
   , 173
-  , 184
+  , 185
   , 174
   , 187
   , 187
@@ -883,11 +883,11 @@ alex_table = listArray (0 :: Int, 12692)
   , 56
   , 56
   , 57
-  , 55
+  , 164
   , 178
   , 0
+  , 55
   , 0
-  , 164
   , 0
   , 0
   , 0
@@ -13580,11 +13580,11 @@ alex_check = listArray (0 :: Int, 12692)
   , 56
   , 57
   , 62
+  , 61
+  , 61
+  , -1
   , 46
-  , 61
   , -1
-  , -1
-  , 61
   , -1
   , -1
   , -1
@@ -26624,12 +26624,12 @@ alex_actions = array (0 :: Int, 139)
   , (5,alex_action_68)
   , (4,alex_action_69)
   , (3,alex_action_70)
-  , (2,alex_action_70)
-  , (1,alex_action_70)
-  , (0,alex_action_70)
+  , (2,alex_action_71)
+  , (1,alex_action_71)
+  , (0,alex_action_71)
   ]
 
-{-# LINE 87 "src/Syntactic/Lexer.x" #-}
+{-# LINE 88 "Lexer.x" #-}
 
 
 type GphTokenPos = (GphToken, AlexPosn)
@@ -26704,9 +26704,10 @@ alex_action_64 = \p s -> (GTokGreaterEq, p)
 alex_action_65 = \p s -> (GTokGreater, p)
 alex_action_66 = \p s -> (GTokComma, p)
 alex_action_67 = \p s -> (GTokQuestion, p)
-alex_action_68 = \p s -> (GTokPipe, p)
-alex_action_69 = \p s -> (GTokDot, p)
-alex_action_70 = \p s -> (GTokUndefined s, p)
+alex_action_68 = \p s -> (GTokExclam, p)
+alex_action_69 = \p s -> (GTokPipe, p)
+alex_action_70 = \p s -> (GTokDot, p)
+alex_action_71 = \p s -> (GTokUndefined s, p)
 {-# LINE 1 "templates/GenericTemplate.hs" #-}
 -- -----------------------------------------------------------------------------
 -- ALEX TEMPLATE
