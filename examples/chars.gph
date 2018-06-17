@@ -1,6 +1,0 @@
-a : char = '\t';
-println a;
-
-s : string = "\tasuasiudh\n";
-
-print s;
