@@ -145,3 +145,148 @@ of the language and change the machine state for performing
 computation. 
 
 \subsection{Program execution}
+
+\subsubsection{Auxiliary structures}
+
+Some data structures were used to simulate the data and
+program memory, as well as the current scope stack
+during a program execution. 
+
+\paragraph{Memory}
+
+The memory structure intends to store the variables
+attributes during program execution. It is represented
+by a Data.Map in Haskell, which is an effecient implementation
+of a dictionary, having the following definition:
+
+\begin{lstlisting}[language=Gryph, basicstyle=\footnotesize]
+type Memory = M.Map CellIdentifier Cell
+\end{lstlisting}
+
+A {\texttt CellIdentifier} is a pair containg
+the name and scope of a variable, and the Cell
+is another pair, storing a type and a memory value.
+There is a difference between memory values and
+common values of the language, since
+the memory can also contain reference (a CellIdentifier)
+to other variables in memory.
+
+\paragraph{Program Memory}
+
+The program memory stores subprogram and struct definitions.
+So, it is intented to keep a parsed Gryph code. The
+following type definitions clarify how this was
+implemented:
+
+\begin{lstlisting}[language=Gryph, basicstyle=\footnotesize]
+type ProgramMemory = M.Map UnitIdentifier UnitContent
+data UnitIdentifier =   SubIdentifier SubIdentifier | 
+                        StructIdentifier StructIdentifier deriving (Eq, Show, Ord)
+data UnitContent =  SubContent SubContent | 
+                    StructContent StructContent deriving (Eq, Show)
+\end{lstlisting}
+
+
+\paragraph{Scope stack}
+
+The scope stack is intented to point to the current
+context of the program execution. It is important
+since it defines the referencing environments during
+execution. Values inside this stack are of type 
+{\texttt Scope}, whose definition is:
+
+\begin{lstlisting}[language=Gryph, basicstyle=\footnotesize]
+data Scope =    GlobalScope | 
+                SubScope Integer | 
+                IterationScope Integer | 
+                BlockScope Integer deriving (Eq, Show, Ord)
+\end{lstlisting}
+
+Differentiating the types of scopes is important to allow the correct execution of 
+return and break statements. For example, a return statement searches for the
+last SubScope, to move the execution flow outside the last called subprogram.
+
+\subsubsection{Execution}
+
+The input of the execution phase is a list of program units. The {\texttt exec}
+function is responsible for processing it, as indicated by its
+signature:
+
+\begin{lstlisting}[language=Haskell, basicstyle=\footnotesize]
+exec :: Memory -> ProgramMemory -> Scopes -> [ProgramUnit] -> 
+                                IO(Memory, ProgramMemory, Scopes) 
+\end{lstlisting}
+
+Each unit is processed by the function {\texttt execUnit}, whose signature is:
+
+\begin{lstlisting}[language=Haskell, basicstyle=\footnotesize]
+execUnit :: ProgramUnit -> Memory -> ProgramMemory -> 
+                    Scopes -> IO (Memory, ProgramMemory, Scopes)
+\end{lstlisting}
+
+The processing is based in pattern matching based on the value constructors
+of the types presented in the previous subsection. The definition of the
+{\texttt execUnit} function demonstrates how this works:
+
+\begin{lstlisting}[language=Haskell, basicstyle=\footnotesize]
+execUnit (SubprogramDecl sub) m pm ss = 
+                do 
+                    pm' <- execSubDecl sub m pm ss
+                    return $ (m, pm', ss)
+execUnit (StructDecl struct) m pm ss = 
+                do
+                    pm' <- execStructDecl m pm ss struct
+                    return $ (m, pm', ss)
+
+execUnit (Stmt stmt) m pm ss = 
+                do 
+                    (m', ss', v) <- execStmt stmt m pm ss
+                    return $ (m', pm, ss')
+execUnit (Use path) m pm ss = 
+                do
+                    f <- parseFile path
+                    let decls = filter (\x -> case x of    
+                                                (Use _) -> False
+                                                (Stmt _) -> False
+                                                _ -> True) f
+                    exec m pm ss decls
+\end{lstlisting}
+
+Similar definitions occur throughout the {\texttt Execution.Semantic} module, 
+which is responsible for the execution step. It is important to notice
+that the (data) memory, the program memory and the stack of scopes
+are always transmitted function to function, allowing the communication
+of the effects of the statements over the machine state and the
+program execution flow. The following sections details some other important aspects of 
+the implementation.
+
+\paragraph{Condition for statement execution in blocks}
+
+Before each execution of a statement inside a block, it is checked if
+the scope introduced in the block entrance is the same as the
+current scope (the top of the scope stack). This is done to
+allow returns and breaks to work properly: such statements
+causes the scope stack to change, which, by the mentioned condition, makes
+the execution of the subsequent statements doesn't occur.
+
+\paragraph{Graph representation}
+
+A custom type was defined for the representation of graphs in Gryph. 
+This was done to allow graphs holding loads of any types in its vertices and
+edges, enhancing the power of this data structure in the contexts of
+the language domain. Below is the Haskell definition:
+
+\begin{lstlisting}[language=Haskell, basicstyle=\footnotesize]
+data Vertex a = Vertex Int a
+data Edge a b = Edge (Vertex a) (Vertex a) b
+data Graph a b = Graph (S.Set (Vertex a)) (M.Map Int [Edge a b]) 
+                    deriving (Eq, Ord)
+\end{lstlisting}
+
+A graph is then a set of vertex internally identified by integers holding some type $a$, together with
+a map of vertexes identifiers to edges connecting vertexes of type $a$ and holding data (weight)
+of type $b$. This map is actually a representation of the graph adjacency list. 
+In this way, any type of the language can be put inside vertexes and
+edges, increasing the range of possible applications.
+
+
