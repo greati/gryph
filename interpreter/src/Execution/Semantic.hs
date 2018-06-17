@@ -1279,10 +1279,27 @@ eval m pm ss (ArithBinExpr PlusPlusBinOp e1 e2) =
                                                                                 l2@(List (y:ys)) -> if checkCompatType t1 t2 
                                                                                                     then return $ (plusPlusBinList l1 l2, m'', ss'')
                                                                                                     else error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2) 
-                         
                                                                                 _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
 
-                                                        _                -> error $ "Type mismatch " ++ (show t1) ++ " ++ " ++ (show t2)
+eval m pm ss (ArithBinExpr TimesTimesBinOp e1 e2) = 
+                                                do
+                                                    (v1,t1,m',ss')  <- evalWithType m pm ss e1
+                                                    (v2,t2,m'',ss'')  <- evalWithType m' pm ss' e2
+                                                    case v1 of
+                                                       i@(Integer n) -> case v2 of 
+                                                                         l2@(String s)    -> return $ (timesTimesBin i l2, m'', ss'') 
+                                                                         l2@(List l  )    -> return $ (timesTimesBin i l2, m'', ss'')
+                                                                         _                -> error $ "Type mismatch " ++ (show t1) ++ " ** " ++ (show t2)
+                                                       l1@(String s ) -> case v2 of
+                                                                                i@(Integer n)     -> return $ (timesTimesBin i l1, m'', ss'')
+                                                                                _                 -> error $ "Type mismatch " ++ (show t1) ++ " ** " ++ (show t2)
+
+ 
+                                                       l1@(List l) -> case v2 of
+                                                                                i@(Integer n)     -> return $ (timesTimesBin i l1, m'', ss'')
+                                                                                _               -> error $ "Type mismatch " ++ (show t1) ++ " ** " ++ (show t2)
+
+                                                       _                -> error $ "Type mismatch " ++ (show t1) ++ " ** " ++ (show t2)
 eval m pm ss (ArithTerm (IdTerm (Ident i))) = case fetchVarValue m i ss of
                                                 Left i -> error i
                                                 Right i -> return $ (i, m, ss)
@@ -1326,6 +1343,10 @@ eval m pm ss (ExprLiteral (GraphLit exp edges )) = do
                     do
                         (v',m'',(s:ss'')) <- evalGraphComp m pm ss' exp edges
                         return (v',m'',ss'') 
+
+timesTimesBin :: Value -> Value -> Value
+timesTimesBin (Integer i) (List l)   = List   (concat (replicate (fromInteger i) l) ) 
+timesTimesBin (Integer i) (String s) = String (concat (replicate (fromInteger i) s) )
 
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List []) (List l1) = List l1;
