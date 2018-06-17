@@ -1144,7 +1144,16 @@ eval m pm ss (ArithRelExpr Greater e1 e2)       = do {(v1, m', ss') <- eval m pm
 eval m pm ss (ArithRelExpr GreaterEq e1 e2)     = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 >= v2), m'', ss'')}  
 eval m pm ss (ArithRelExpr Less e1 e2)          = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 < v2), m'', ss'')}   
 eval m pm ss (ArithRelExpr LessEq e1 e2)        = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 <= v2), m'', ss'')}    
-eval m pm ss (ArithRelExpr In e1 e2)            = do undefined 
+eval m pm ss (ArithRelExpr In e1 e2)            = do 
+                                                    (e1', m', ss')   <- eval m  pm ss  e1
+                                                    (e2', m'', ss'') <- eval m' pm ss' e2
+                                                    case e2' of
+                                                        V.Map dict -> case getType e2' of
+                                                                         GDict ks _ -> if getType e1' == ks 
+                                                                                       then return $ (Bool (M.member e1' dict), m'', ss'')
+                                                                                       else error $ "Incompatible key type between " ++ (show $ getType e1') ++ " and " ++ (show ks) 
+                                                                         _          -> error "Type error"
+                                                        _          -> error $ "Operation not supported for " ++ (show $ getType e2')
 eval m pm ss (LogicalBinExpr And e1 e2)         = 
                                                 do      (v1, m', ss')   <- eval m pm ss e1
                                                         (v2, m'', ss'') <- eval m' pm ss' e2  
