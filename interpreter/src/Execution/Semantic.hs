@@ -1153,6 +1153,12 @@ eval m pm ss (ArithRelExpr In e1 e2)            = do
                                                                                        then return $ (Bool (M.member e1' dict), m'', ss'')
                                                                                        else error $ "Incompatible key type between " ++ (show $ getType e1') ++ " and " ++ (show ks) 
                                                                          _          -> error "Type error"
+                                                        V.Graph g@(G.Graph vs _) -> case Se.toList vs of
+                                                                                        [] -> do error $ "Empty Graph"
+                                                                                        (Vertex _ v : _) -> if getType e1' == getType v
+                                                                                                            then do let G.Vertex id _ = G.getVertexFromValue g e1' False
+                                                                                                                    return $ ( Bool $ not (id == (-1)), m'', ss'')
+                                                                                                            else error $ "Incompatible key type between " ++ (show $ getType e1') ++ " and " ++ (show $ getType v) 
                                                         _          -> error $ "Operation not supported for " ++ (show $ getType e2')
 eval m pm ss (LogicalBinExpr And e1 e2)         = 
                                                 do      (v1, m', ss')   <- eval m pm ss e1

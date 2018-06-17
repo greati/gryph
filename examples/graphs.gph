@@ -59,3 +59,5 @@ println t1;
 println t2;
 println t1 == t2;
 println t1 != t2;
+
+println 0 ! t1;
