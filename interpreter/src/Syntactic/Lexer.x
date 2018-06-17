@@ -81,6 +81,7 @@ tokens :-
     \>                                  {\p s -> (GTokGreater, p)}
     \,                                  {\p s -> (GTokComma, p)}
     \?                                  {\p s -> (GTokQuestion, p)}
+    \!                                  {\p s -> (GTokExclam, p)}
     \|                                  {\p s -> (GTokPipe, p)}
     \.                                  {\p s -> (GTokDot, p)}
     .                                   {\p s -> (GTokUndefined s, p)}
