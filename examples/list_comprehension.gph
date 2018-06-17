@@ -17,5 +17,10 @@ add [] in y;
 print y;
 
 del 1 from y;
-print y;
+println y;
+
+ll : [int] = [2*a for a over [1,2,3] when (a == 2)];
+println ll;
+
+
 

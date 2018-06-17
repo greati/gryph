@@ -542,9 +542,10 @@ forIterator = do
                     do
                         (tok GTokWhen)
                         (tok GTokLParen)
-                        bs <- expressionList
+                        --bs <- expressionList
+                        bs <- expression
                         (tok GTokRParen)
-                        return (ForIterator is es bs)
+                        return (ForIterator is es [bs])
                     <|>
                     do
                         return (ForIterator is es [])
