@@ -5,7 +5,7 @@ import Syntactic.Values   as V
 import Syntactic.Syntax   as S
 import Execution.Memory
 import Data.Time.Clock
-import Data.List
+import Data.List as L
 import Execution.Graph    as G
 import Syntactic.Types
 import qualified Data.Map.Strict as M
@@ -1144,6 +1144,27 @@ eval m pm ss (ArithRelExpr Greater e1 e2)       = do {(v1, m', ss') <- eval m pm
 eval m pm ss (ArithRelExpr GreaterEq e1 e2)     = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 >= v2), m'', ss'')}  
 eval m pm ss (ArithRelExpr Less e1 e2)          = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 < v2), m'', ss'')}   
 eval m pm ss (ArithRelExpr LessEq e1 e2)        = do {(v1, m', ss') <- eval m pm ss e1;( v2, m'', ss'') <- eval m' pm ss' e2; return $ (Bool (v1 <= v2), m'', ss'')}    
+eval m pm ss (ArithRelExpr In e1 e2)            = do 
+                                                    (e1', m', ss')   <- eval m  pm ss  e1
+                                                    (e2', m'', ss'') <- eval m' pm ss' e2
+                                                    case e2' of
+                                                        V.Map dict -> case getType e2' of
+                                                                         GDict ks _ -> if getType e1' == ks 
+                                                                                       then return $ (Bool (M.member e1' dict), m'', ss'')
+                                                                                       else error $ "Incompatible key type between " ++ (show $ getType e1') ++ " and " ++ (show ks) 
+                                                                         _          -> error "Type error"
+                                                        V.Graph g@(G.Graph vs _) -> case Se.toList vs of
+                                                                                        [] -> error "Empty Graph"
+                                                                                        (Vertex _ v : _) -> if getType e1' == getType v
+                                                                                                            then do let G.Vertex id _ = G.getVertexFromValue g e1' False
+                                                                                                                    return $ ( Bool $ not (id == (-1)), m'', ss'')
+                                                                                                            else error $ "Incompatible key type between " ++ (show $ getType e1') ++ " and " ++ (show $ getType v) 
+                                                        List l -> case l of
+                                                                    []      -> error "Empty List"
+                                                                    (x : _) -> if getType x == getType e1'
+                                                                               then return $ (Bool $ L.elem e1' l, m'', ss'')
+                                                                               else error $ "Incompatible key type between " ++ (show $ getType e1') ++ " and " ++ (show $ getType x) 
+                                                        _          -> error $ "Operation not supported for " ++ (show $ getType e2')
 eval m pm ss (LogicalBinExpr And e1 e2)         = 
                                                 do      (v1, m', ss')   <- eval m pm ss e1
                                                         (v2, m'', ss'') <- eval m' pm ss' e2  

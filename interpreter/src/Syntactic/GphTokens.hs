@@ -64,6 +64,7 @@ data GphToken =
     GTokLSquare                     |
     GTokRSquare                     |
     GTokQuestion                    |
+    GTokExclam                      |
     GTokPipe                        |
     GTokBreak                       |
     GTokAdd                         |
