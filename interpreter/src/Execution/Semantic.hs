@@ -1043,18 +1043,22 @@ evalDict m pm ss ((k,v):xs) m1           =
                                                 return $ M.insert k' v' d
 
 -- | Binary operation evaluator
-evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value )-> IO (Value, Memory, Scopes)
-evalBinOp m pm ss (ArithBinExpr _  e1 e2) f = 
+evalBinOp ::Memory -> ProgramMemory -> Scopes -> ArithExpr ->( Value -> Value -> Value ) -> String -> IO (Value, Memory, Scopes)
+evalBinOp m pm ss (ArithBinExpr _  e1 e2) f op = 
                                             do
                                                 (v1, m', ss')    <- eval m pm ss e1
                                                 (v2, m'', ss'')  <- eval m' pm ss' e2
                                                 (k, m''', ss''') <- eval m'' pm ss'' e2
                                                 case v1 of
-                                                     l1@(List (x:xs)) -> if (getType k == getType x) then return $ (f l1 k, m''', ss''')
-                                                                         else error "Type mismatch operation"
+                                                     l1@(List (x:xs)) -> if (t1 == t2) then return $ (f l1 k, m''', ss''')
+                                                                         else error $ "Type mismatch " ++ show t1 ++ op ++ show t2 ++ " operation"
+                                                                          where t1 = getType k
+                                                                                t2 = getType x 
                                                      k -> case v2 of 
-                                                           l2@(List (x:xs) ) -> if (getType k == getType x) then return $ (f l2 k, m''', ss''')
-                                                                         else error "Type mismatch  operation"
+                                                           l2@(List (x:xs) ) -> if (t1 == t2) then return $ (f l2 k, m''', ss''')
+                                                                         else error $ "Type mismatch " ++ show t1 ++ op ++ show t2 ++ " operation"
+                                                                          where t1 = getType k
+                                                                                t2 = getType x
                                                            x -> return ( f k x, m''', ss''') 
                                                            --x -> if (getType k == getType x) then return $ f k  x
                                                              --            else error "Type mismatch  operation"
@@ -1115,12 +1119,12 @@ eval m pm ss (ArithTerm (LitTerm (Lit v)))      = return (v, m, ss)
 eval m pm ss (ArithUnExpr MinusUnOp e)          = do {(v, m', ss') <- eval m pm ss e ; return $ (minusUn v, m', ss')}
 eval m pm ss (ArithUnExpr PlusUnOp e)           = do {(v, m', ss') <- eval m pm ss e; return $ (plusUn v, m', ss')}
 eval m pm ss (ArithUnExpr NotUnOp e)            = do {(v, m', ss') <- eval m pm ss e; return $ (not' v, m', ss')}
-eval m pm ss (ArithBinExpr MinusBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr MinusBinOp e1 e2) minusBin
-eval m pm ss (ArithBinExpr PlusBinOp  e1 e2)    = evalBinOp m pm ss (ArithBinExpr PlusBinOp e1 e2) plusBin
-eval m pm ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr TimesBinOp e1 e2) timesBin
-eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr DivBinOp e1 e2) divBin
-eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ExpBinOp e1 e2) expBin
-eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ModBinOp e1 e2) modBin
+eval m pm ss (ArithBinExpr MinusBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr MinusBinOp e1 e2)   minusBin  (" - ")
+eval m pm ss (ArithBinExpr PlusBinOp  e1 e2)    = evalBinOp m pm ss (ArithBinExpr PlusBinOp e1 e2)   plusBin    (" + ")
+eval m pm ss (ArithBinExpr TimesBinOp  e1 e2)   = evalBinOp m pm ss (ArithBinExpr TimesBinOp e1 e2)  timesBin   (" * ")
+eval m pm ss (ArithBinExpr DivBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr DivBinOp e1 e2)    divBin     (" / ")
+eval m pm ss (ArithBinExpr ExpBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ExpBinOp e1 e2)    expBin     (" ^ ")
+eval m pm ss (ArithBinExpr ModBinOp  e1 e2)     = evalBinOp m pm ss (ArithBinExpr ModBinOp e1 e2)    modBin     (" % ")
 eval m pm ss (ExprLiteral (ListLit [] ))        = return $ (List [], m, ss)
 eval m pm ss (ExprLiteral (ListLit es ))        = do {(v, m', ss') <- evalList m pm ss es; if getListType v == GFloat then return $(List (map coerce v), m', ss')  else  return $ (List v, m', ss')}
 eval m pm ss (ExprLiteral (DictLit de))         = do {v <- evalDict m pm ss de M.empty ; return $ (Map v, m, ss)}
@@ -1287,14 +1291,8 @@ eval m pm ss (ArithBinExpr TimesTimesBinOp e1 e2) =
                                                     (v2,t2,m'',ss'')  <- evalWithType m' pm ss' e2
                                                     case v1 of
                                                        i@(Integer n) -> case v2 of 
-                                                                         l2@(String s)    -> return $ (timesTimesBin i l2, m'', ss'') 
                                                                          l2@(List l  )    -> return $ (timesTimesBin i l2, m'', ss'')
                                                                          _                -> error $ "Type mismatch " ++ (show t1) ++ " ** " ++ (show t2)
-                                                       l1@(String s ) -> case v2 of
-                                                                                i@(Integer n)     -> return $ (timesTimesBin i l1, m'', ss'')
-                                                                                _                 -> error $ "Type mismatch " ++ (show t1) ++ " ** " ++ (show t2)
-
- 
                                                        l1@(List l) -> case v2 of
                                                                                 i@(Integer n)     -> return $ (timesTimesBin i l1, m'', ss'')
                                                                                 _               -> error $ "Type mismatch " ++ (show t1) ++ " ** " ++ (show t2)
@@ -1346,7 +1344,6 @@ eval m pm ss (ExprLiteral (GraphLit exp edges )) = do
 
 timesTimesBin :: Value -> Value -> Value
 timesTimesBin (Integer i) (List l)   = List   (concat (replicate (fromInteger i) l) ) 
-timesTimesBin (Integer i) (String s) = String (concat (replicate (fromInteger i) s) )
 
 plusPlusBinList :: Value -> Value -> Value
 plusPlusBinList (List []) (List l1) = List l1;
@@ -1389,8 +1386,12 @@ timesBin (Integer i) (Integer j) = (Integer (i*j))
 timesBin (Float f) (Integer i )  = ( Float (f * (fromInteger i)))
 timesBin (Integer i) ( Float f)  = ( Float ((fromInteger i) * f))  
 timesBin (Float f1) (Float f2)   = ( Float (f1 * f2))
-timesBin (List l)  i             =   List ( map (timesBin i) l)
-timesBin  i (List l)             =   List ( map (timesBin i) l)
+timesBin (List l)  i             = List ( map (timesBin i) l)
+timesBin  i (List l)             = List ( map (timesBin i) l)
+timesBin (Integer i) (String s)  = String (concat (replicate (fromInteger i) s) )
+timesBin (String s) (Integer i)  = String (concat (replicate (fromInteger i) s) )
+timesBin (String s) i            = error $ "Type mismatch GString * " ++ show (getType i) 
+timesBin i (String s)            = error $ "Type mismatch " ++ show (getType i) ++ " * GString"  
 
 plusBin ::  Value -> Value -> Value
 plusBin (Integer i) (Integer j)  = Integer (i+j) 
