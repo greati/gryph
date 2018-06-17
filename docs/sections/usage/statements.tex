@@ -3,7 +3,21 @@
 A statement is the basic building block of a Gryph program. It comes in two forms: simple statements (\ref{sec:simple-stmts}), or compound statements (\ref{sec:compound-stmts}), which may contain other statements, compound or simple.
 \subsubsection{Simple statements}
 \label{sec:simple-stmts}
-pass
+A simple statement can be: a variable declaration or assignment, an I/O statement, an insertion or removal operation over a composite type, or a \key{return} statement. 
+
+A variable declaration statement consists of an identifier, or a list of comma-separated identifiers, followed by a colon and a valid type. This declares a variable of the given type for each of the identifiers used. Optionally, the declared variables can be initialized, with an equals sign followed by an expression or a list of comma-separated expressions, after the declared type. 
+
+If a list of identifiers is initialized with a single expression, that expression is assigned to all the declared variables, but if they are initialized with a list of expressions, each expression is assigned respectively to each variable corresponding to that identifier. A declaration with a list of identifiers and a list of initializing expressions of different sizes is not meaningful, and is in fact invalid.
+
+A variable assignment consists of an expression, or list of comma-separated expressions, where each expression must evaluate to a variable, followed by an equals sign and a single expression or a list of expressions. Assignment to multiple variables works in the same way as initialization of multiple variables.
+
+As for I/O output statements, there is \key{read} for input and \key{print} or \key{println} for output. For input, the \key{read} keyword is used, followed by a variable of the type \type{string}, where \key{read} will store the one line it reads from standard input. And for output, the \key{print} statement, followed by any expression, will print a string representing the value of that expression to standard output. The \key{println} alternative works in the same way as \key{print}, put also prints a line break after the printed value.
+
+Now, in regards to insertion and removal, the two relevant keywords to be used are \key{add} and \key{del}, respectively. Lists support both insertion and removal: to insert a new element \id{x} to a list \id{y}, the correct syntax is \key{add} \id{x} \key{in} \id{y}, which appends \id{x} to the end of \id{y}, increasing the list's size by one. To remove an element from a list, one might write \key{del} \id{p} \key{from} \id{y}, where \id{p} is an integer indicating the position in the list of the element to be removed.
+
+The \type{tuple}, by contrast, supports neither insertion nor removal, being immutable; while the \type{dictionary} type supports removal, but insertion only through assignment to a key not yet in it. For removal of an entry with key \id{k} from a dictionary \id{d}, the expected syntax is \key{del} \id{k} \key{from} \id{d}. Note that just as a list will not allow an element to be removed from an invalid position, a dictionary will not allow removal of an entry with a certain key if it contains no such entry.
+
+% graphs
 \subsubsection{Compound statements}
 \label{sec:compound-stmts}
 pass

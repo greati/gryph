@@ -45,7 +45,7 @@ println d|'a'|; # 0
 \end{lstlisting}
 \subsubsection{User-defined types}
 \label{sec:usertypes}
-A user-defined type, or \type{record}, must firstly be declared, as described in \ref{sec:typedecl}, before any variable of that type can be declared. A variable of a user-defined type is declared as one of any other type, and an expression of a user-defined type consists of that type's identifier, followed by a list of comma-separated attributions for any of that type's fields, delimited by braces. Braces are also used to access a particular field in a \type{record} variable, as demonstrated in the following code:
+A user-defined type, or \type{record}, must firstly be declared, as described in \ref{sec:typedecl}, before any variable of that type can be declared. A variable of a user-defined type is declared as one of any other type, and an expression of a user-defined type consists of that type's identifier, followed by a list of comma-separated assignments for any subset of that type's fields, delimited by braces. Braces are also used to access a particular field in a \type{record} variable, as demonstrated in the following code:
 \newcounter{AgeofEuler}
 \setcounter{AgeofEuler}{\year-1707}
 \begin{lstlisting}[language=Gryph,escapeinside={(*}{*)}]
