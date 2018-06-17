@@ -46,6 +46,19 @@ The \type{tuple}, by contrast, supports neither insertion nor removal, being imm
 
 % graphs
 
+In the following code we exemplify all the statements discussed in this section.
+\begin{lstlisting}[language=Gryph]
+l : [int] = [-5, 0];
+add 5 in l;
+del 1 from l;
+println l; # [-5, 5]
+
+d : |string, bool| = |"white" ? false|;
+d|"black"| = true;
+del "white" from d;
+println d; # |"black" ? true|
+\end{lstlisting}
+
 \paragraph{Return statement}
 \label{sec:return}
 The return statement is one that may only be used inside subprograms, it ends the function immediately, executing none of the statements that would follow it, and returns a value if necessary. For functions, in particular, the \key{return} keyword is always followed by an expression, which must be evaluated to the same type as that function's return type. For procedures (subprograms with no return value), the return statement consists of only the \key{return} keyword.
@@ -75,4 +88,51 @@ if (a > 0) {
 
 \paragraph{Iteration}
 \label{sec:iteration}
-pass
+Another important part of control flow statements are the iteration constructs. Gryph has types of these: a `while' loop, which repeats code while a certain condition is true; a `for' loop, which iterate over a composite type, such as a list; and loops for specific traversal of a graph, which can be a BFS loop or a DFS loop.
+
+A while loop is constructed with the keyword \key{while}, followed by an expression enclosed in parentheses which must evaluate to a boolean value, and then followed by a block of statements enclosed in braces: the code that will be repeated in each iteration of the loop. The block is repeated every time it reaches its end and the condition after \key{while} is still true. If the condition is false when execution first reaches the \key{while} statement, the block is never executed.
+
+In the code below, we use a while loop to print multiple values of \id{n}, shown as comments below the loop.
+\begin{lstlisting}[language=Gryph]
+n : int = 3;
+while (n > 0) {
+	println n;
+	n = n - 1;
+}
+# 3
+# 2
+# 1
+println n; # 0
+\end{lstlisting}
+
+A for loop, commonly called in this case a foreach loop, since it iterates over elements in a data structure, is composed of the keyword \key{for}, followed by an identifier or list of identifiers, the \key{over} keyword, and the expression or list of expressions that will evaluate to values of composite type over which you will iterate. Then comes the block that will be executed in each iteration.
+
+In the case of lists, you might have one identifier in the left of \key{over} and one list in the right: in this case, a variable with the identifier given may be used inside the \key{for}-block, with its value assuming at each iteration the value of the next element in the list on the right side of \key{over}, starting with the first. In the case of multiple identifiers and lists on either side of \key{over}, the iteration works much like a nested loop: for each value of the first list assumed by the first identifier's variable, all values of the second list are assumed in order by the second identifier's variable, and so on.
+
+We exemplify both of these cases in the code below. The first loop should have the same output as the while loop shown above, and the output of the second is shown as comments below it.
+\begin{lstlisting}[language=Gryph]
+for i over [3, 2, 1] {
+	println i;
+}
+
+for i, j over [0, 1], [2, 4] {
+	println i + j;
+}
+# 2 
+# 4 
+# 3 
+# 5 
+\end{lstlisting}
+
+Iteration over a dictionary works in a similar way to a list, but the type of the iteration variable is that of a (key, value) tuple, for the key and value types of the dictionary being iterated over, to which the values for each of the dictionary's entry is assigned in turn. In the code below, we iterate over a dictionary \id{d}, printing ``true'' for each of its entries.
+
+\begin{lstlisting}[language=Gryph]
+d : |int, char| = |2 ? 'x', 1 ? 'y'|;
+for entry over d {
+	println d|entry\0\| == entry\1\;
+}
+\end{lstlisting}
+
+As for graph iteration, the for syntax works in the same way as a list, iterating over the graph's vertices in no particular order. To specify an order, a graph-traversal keyword such as \key{bfs} or \key{dfs} may be used.
+
+% BFS/DFS
