@@ -6,7 +6,8 @@
 \usepackage{hyperref}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{calc}
+\usepackage{calc} % AgeofEuler
+\usepackage{textcomp} % lst upquote
 
 \newcommand{\gryphcommentstyle}{\color{gray}\ttfamily} % gryph comment style
 \newcommand{\id}[1]{\texttt{#1}} % gryph identifier
@@ -22,7 +23,9 @@
 	keywordstyle=\color{purple},
 	morecomment=[l]{\#},
 	commentstyle=\gryphcommentstyle,
+	upquote=true,
 	morestring=[b]",
+	morestring=[b]',
 	stringstyle=\color{red}\ttfamily,
 	numbers=left,
 	numberstyle=\scriptsize,
@@ -42,7 +45,14 @@
 \tableofcontents
 
 \input{sections/intro}
-\input{sections/manual}
+
+\section{Usage}
+\label{sec:usage}
+\input{sections/usage/structure}
+\input{sections/usage/types}
+\input{sections/usage/expressions}
+\input{sections/usage/statements}
+
 \input{sections/implement}
 
 % add bnf

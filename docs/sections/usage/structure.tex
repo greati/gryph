@@ -1,0 +1,73 @@
+\subsection{Structure}
+Being a scripting language, a Gryph program is nothing but a collection of statements, which are executed sequentially. The following is a valid Gryph program (the \key{println} statement is defined in \ref{}).
+
+\begin{lstlisting}[language=Gryph]
+# print hello world to standard output
+println "Hello World";
+\end{lstlisting}
+
+We delineate in this section particular constructs which form the general structure of a Gryph program, besides regular statements such as \key{println}.
+
+\subsubsection{Comments}
+The previously listed code already demonstrates the first of such constructs in its first line: comments, text in the source code ignored by the interpreter. The beginning of a comment is marked by the \# character, and it ends on a line break. A comment does not have to begin at the beginning of a line; it can follow a valid statement, for instance. Also, since the \# character inside a comment is not even parsed by the interpreter, multiple \# characters written sequentially have no effect different from any other comment.
+
+\subsubsection{Subprogram declarations}
+\label{sec:subprogram}
+Another important part of a Gryph program are subprograms, essential tools for process abstraction. To declare a subprogram, the \key{sub} keyword is used, followed by a valid identifier (see \ref{sec:idsandscope}) for that subprogram. That is followed, in turn, by a list of parameters enclosed in parentheses, the return type (if there is one), and then finally the body of the subprogram, enclosed in braces.
+\begin{lstlisting}[language=Gryph]
+sub hello() : string {
+	return "hello";
+}
+
+sub my_print(s : string = "") {
+	println s;
+}
+\end{lstlisting}
+In the above code, we define two subprograms. The first, \id{hello}, receives no argument, and returns a ``\type{string}'' (further information on types in \ref{sec:types}). Note the \key{return} keyword in line 2, which signals the function to return the expression following it. The second, \id{my\_print}, receives `\id{s}' as an argument, a \type{string}, and returns nothing. 
+The parameter list is nothing more than a sequence of variable declarations (variable declaration and attribution are described in \ref{}) separated by semicolons, the initialization syntax being used to define a default value, making the parameter optional: in \id{my\_print}, the parameter \id{s} has the empty string as its default value.
+
+Arguments are generally passed to subprograms by copy, except if the parameter in question is marked by the ampersand character, in which case it is passed by reference. This is the only thing that differs a parameter declaration from a variable declaration, as variables cannot be marked in such way. In the following code, the function \id{add} adds to the argument passed to \id{lhs} the value of the \id{rhs} argument.
+\begin{lstlisting}[language=Gryph]
+sub add(lhs : int&; rhs: int) {
+	lhs = lhs + rhs;
+}
+\end{lstlisting}
+
+The expression used to call a subprogram consists of the subprogram identifier, followed by parentheses containing the arguments being passed to the subprogram. Such an expression can be used as a statement in itself or as part of another statement. In the following code, we call the \id{my\_print} procedure, passing the return value of the \id{hello} function as an argument.
+\begin{lstlisting}[language=Gryph]
+my_print(hello());
+\end{lstlisting}
+
+\subsubsection{Data type declarations}
+\label{sec:typedecl}
+Another part of a Gryph program, is the declaration of user-defined data types: records, more specifically. The declaration of a record starts with a type identifier, which follows rules similar to other identifiers (see \ref{sec:idsandscope}), except that it must begin with an \emph{uppercase} alphabetic character, for code clarity. 
+
+Following the identifier, we have, enclosed in braces, a sequence of field declarations, defining the contents of a variable of that type. A field declaration is much like a variable declaration, and the initialization syntax is used in much the same way as in a subprogram parameter, as it defines a default value for a new variable of the type being defined.
+
+In the code below, we define the type ``\type{Person}'', which contains an age (of type \type{int}), and a name (of type \type{string}). We give 0 as a default age for a new variable of the type \type{Person}. The declaration and use of variables of user-defined types is explained in \ref{sec:usertypes}.
+\begin{lstlisting}[language=Gryph]
+Person {
+	name : string;
+	age : int = 0;
+}
+\end{lstlisting}
+
+\subsubsection{Identifiers and scope}
+\label{sec:idsandscope}
+We have mentioned, in the previous section, the concept of an identifier. An identifier is, simply, a name given to a subprogram or a variable. An identifier can be any combination of alphanumeric characters and the underscore character, as long as it starts with an alphabetic character.
+% Scope
+% subprograms and data types must be declared globally ?
+
+\subsubsection{Importing files}
+A Gryph program can be separated into multiple files through the use of the keyword \key{use}. It essentially indicates the insertion of source code from another file into that part of the code. For that, \key{use} must be followed by the path (relative to the interpreter) to the file one wishes to include, enclosed in quotes. Say we define the following function in a file named ``\texttt{file1.gph}'':
+\begin{lstlisting}[language=Gryph]
+sub f() : string {
+	return "hello from file1";
+}
+\end{lstlisting}
+We can use this function in another file as follows, considering for instance that \texttt{file1.gph} is in the same directory as the interpreter used to run the following code:
+\begin{lstlisting}[language=Gryph]
+use "file1.gph"
+
+println f();
+\end{lstlisting}

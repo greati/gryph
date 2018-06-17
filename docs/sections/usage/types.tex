@@ -1,0 +1,61 @@
+\subsection{Types}
+\label{sec:types}
+The Gryph language is statically typed, meaning the type of all variables is know at ``compile time'', before beginning the execution. Also, most variables, all subprogram parameters, and all fields in user-defined data types are explicitly typed. In this section, we discuss all possible types in the Gryph language, their use, and their form: built-in types, both primitive (\ref{sec:primitive}), and composite (\ref{sec:composite}); as well as user-defined types (\ref{sec:usertypes}).
+\subsubsection{Primitive types}
+\label{sec:primitive}
+Primitive types in Gryph are much the same as in most other programming languages. There are two numeric types: \type{int}, which stores an integer, and \type{float}, which stores a floating-point real number. Bounds for the possible values for variables of these types are implementation-dependent, as well as the precision for \type{float} variables. Literals of these types are recognized as being a sequence of digits, and a sequence of digits containing a period, respectively.
+
+A variable of the \type{char} type contains up to a single character, whereas one of the \type{string} type contains any number of characters, of an encoding defined by the implementation. A \type{char} literal is delimited by single quotes, and a \type{string} by double quotes. 
+
+Last but not least, is the type \type{bool}, which represents a boolean value: \key{true} or \key{false}. In the following code, we declare and initialize a variable of each of the primitive types.
+\begin{lstlisting}[language=Gryph]
+i : int = -9;
+f : float = 0.1;
+c : char = '$';
+s : string = "hwyl";
+b : bool = true;
+\end{lstlisting}
+
+\subsubsection{Composite types}
+\label{sec:composite}
+Composite types are built-in types of the Gryph language which are composed of other types. As we will see, each composite type has its own characterizing delimiter, used to write variables of that type and to access them.
+
+The first and most simple of these is a \type{tuple}, delimited by parentheses. It consists of a fixed sequence of immutable values of different types, separated by commas, enclosed in parentheses. The syntax for accessing a particular (0-indexed) position in a tuple is an exception in that it does not use the type delimiter (parentheses, in this case), but the backslash.
+
+We also have the \type{list}, a list of mutable values, all of the same type, delimited by square brackets, which are also used to access a particular (again, 0-indexed) position in the list. Lists can grow and shrink in size in execution time, as elements are appended to or removed from them.
+
+The \type{dictionary} or \type{map} is used for associating ``keys'' of a certain type to ``value'' of another (or the same) type. It can also grow and shrink dynamically. It consists of comma-separated key/value pairs separated by a question mark, and is delimited by the pipe (or vertical bar), which is also used to access the value associated with a particular key.
+
+% graphs
+
+In the code below, we declare and initialize variables of each of these types, and access values contained in them, the printed values being indicated by an accompanying comment. Statements for insertion and removal of elements from certain composite types is covered in \ref{} and operations (besides access) with them in \ref{}.
+\begin{lstlisting}[language=Gryph]
+t : (int, char, int) = (-1, 'x', 1);
+println t\1\; # 'x'
+
+l : [int] = [-2, 0, 1];
+l[1] = l[0] + 1;
+println l[1]; # -1
+
+d : |char, int| = |'a' ? 1, 'c' ? 3|;
+d|'a'| = 0;
+println d|'a'|; # 0
+
+
+\end{lstlisting}
+\subsubsection{User-defined types}
+\label{sec:usertypes}
+A user-defined type, or \type{record}, must firstly be declared, as described in \ref{sec:typedecl}, before any variable of that type can be declared. A variable of a user-defined type is declared as one of any other type, and an expression of a user-defined type consists of that type's identifier, followed by a list of comma-separated attributions for any of that type's fields, delimited by braces. Braces are also used to access a particular field in a \type{record} variable, as demonstrated in the following code:
+\newcounter{AgeofEuler}
+\setcounter{AgeofEuler}{\year-1707}
+\begin{lstlisting}[language=Gryph,escapeinside={(*}{*)}]
+Person {
+	name : string;
+	age : int = 0;
+}
+
+p : Person = Person {name = "Leonhard"};
+p{age} = (*\theAgeofEuler*);
+println p{name}; # "Leonhard"
+println p{age}; # (*\gryphcommentstyle\theAgeofEuler*)
+\end{lstlisting}
