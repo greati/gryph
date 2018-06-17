@@ -1,3 +1,36 @@
 \section{Implementation}
 \label{sec:implement}
-Done
+
+The interpreter for the Gryph Programming Language,
+implemented in Haskell language during this semester, comprises three
+main steps: \textbf{lexical analysis}, for tokens discovery;
+\textbf{syntactic analysis}, for language constructs
+identification; and \textbf{program execution}, for
+performing machine state changes according to the
+meaning of the parsed entities, given by the semantic
+rules of the language (see Section \ref{sec:usage}). The following subsections
+present them with rich detail.
+
+\subsection{Lexical analysis}
+
+Lexical analysis is the part of the task of analysing syntax
+which deals with small-scale constructs. Dealing with it
+separately is justified by gains in terms of simplicity, since
+it uses simple techniques (pattern matching, essentially); efficiency, since it is
+more suitable for optimization than the general syntactic parser; 
+and portability, since lexical analysers can be platform dependent, in contrast
+with syntax analysers, which can be made independent.
+
+In order to simplify the development, \textbf{Alex}, a lexical
+analyzer generator for Haskell, was used. It is basically built
+upon a sequence of regular expressions which describes the 
+language tokens. The implemented lexical analyzer takes a program as input and produces
+a list of the identified tokens, which is then transmitted to the
+syntactic parser, described in the next subsection. Alex also furnishes
+the position (line and column) of each token, for further richier error reporting, but
+this version of the interpreter does not take it into account.
+
+\subsection{Syntactic analysis}
+
+
+\subsection{Program execution}
