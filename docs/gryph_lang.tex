@@ -1,0 +1,50 @@
+\documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=4cm]{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{calc}
+
+\newcommand{\gryphcommentstyle}{\color{gray}\ttfamily} % gryph comment style
+\newcommand{\id}[1]{\texttt{#1}} % gryph identifier
+\newcommand{\key}[1]{\texttt{#1}} % gryph keyword
+\newcommand{\type}[1]{\texttt{#1}} % gryph type
+
+\lstdefinelanguage{Gryph}{
+	sensitive = true,
+	morekeywords={read, print, println, for,
+		over, in, use, while, sub, return,
+		string, char, int, float, bool,
+		true, false},
+	keywordstyle=\color{purple},
+	morecomment=[l]{\#},
+	commentstyle=\gryphcommentstyle,
+	morestring=[b]",
+	stringstyle=\color{red}\ttfamily,
+	numbers=left,
+	numberstyle=\scriptsize,
+	stepnumber=1,
+	tabsize=4,
+	showstringspaces=false
+}
+
+
+\title{The Gryph Programming Language}
+\author{Vinícius Campos \and Artur Curinga \and Vitor Greati \and Carlos Vieira}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\input{sections/intro}
+\input{sections/manual}
+\input{sections/implement}
+
+% add bnf
+
+\end{document}
