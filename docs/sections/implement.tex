@@ -21,7 +21,7 @@ more suitable for optimization than the general syntactic parser;
 and portability, since lexical analysers can be platform dependent, in contrast
 with syntax analysers, which can be made independent.
 
-In order to simplify the development, \textbf{Alex}, a lexical
+In order to simplify the development, \textbf{Alex}\footnote{https://www.haskell.org/alex/}, a lexical
 analyzer generator for Haskell, was used. It is basically built
 upon a sequence of regular expressions which describes the 
 language tokens. The implemented lexical analyzer takes a program as input and produces
@@ -32,5 +32,116 @@ this version of the interpreter does not take it into account.
 
 \subsection{Syntactic analysis}
 
+The syntactic analyzer deals with the large-scale constructs, 
+such as expressions, statements and subprogram definitions.
+It takes the list of tokens produced in the lexical
+analysis and the language grammar (generally in Bakus-Naur Form) and performs
+the syntactic parsing according to its productions.
+Some adjustments may be necessary in order
+to adequate the grammar rules to the some restrictions imposed by
+the adopted parsing algorithm.
+
+Syntactic analysis, in the implemented interpreter, is performed
+with the aid of the \textbf{Parsec}\footnote{http://hackage.haskell.org/package/parsec} 
+parser library for Haskell.
+Parsec is based on \emph{monadic parser combinators}, and is
+fast, safe, well-documented and highly customizable. Basically,
+developing a parser with this tool is a matter of writing and combining small parsers
+for each grammar construct, taking care with left-recursive
+productions, since the underlying algorithm doesn't 
+accept them.
+
+The output of the syntactic parser in this implementation is a syntactic tree
+represented by Haskell user-defined types. The most general constructs are called
+\textbf{program units}, which are abstractions for import commands, subprogram definitions,
+struct definitions and statements. The Haskell type defined to represent such
+concept was:
+
+\begin{lstlisting}[language=Haskell,basicstyle=\footnotesize]
+data ProgramUnit =  Stmt Stmt | 
+                    SubprogramDecl Subprogram |
+                    StructDecl StructDecl |
+                    Use String 
+deriving (Show, Eq)
+\end{lstlisting}
+
+Therefore, a program is just a sequence of program units. Statements, in turn,
+are the basic execution units in a program, and can assume various forms,
+like control structures, arithmetic expressions, variable declaration and
+assignment commands. The type defined for representing statements was:
+
+\begin{lstlisting}[language=Haskell,basicstyle=\footnotesize]
+data Stmt = ReadStmt Identifier | 
+            PrintStmt ArithExpr | 
+            PrintLnStmt ArithExpr | 
+            DeclStmt VarDeclaration | 
+            AttrStmt [ArithExpr] [ArithExpr] |
+            SubCallStmt SubprogCall |
+            IfStmt ArithExpr IfBody ElseBody |
+            ReturnStmt (Maybe ArithExpr) |
+            ForStmt [Identifier] [ArithExpr] Block |
+            WhileStmt ArithExpr Block |
+            BfsStmt [Identifier] ArithExpr (Maybe ArithExpr) Block |
+            DfsStmt [Identifier] ArithExpr (Maybe ArithExpr) Block |
+            AddStmt ArithExpr ArithExpr |
+            AddEdgeStmt (Maybe ArithExpr) Edge ArithExpr |
+            DelStmt ArithExpr ArithExpr |
+            DelEdgeStmt Edge ArithExpr |
+            BreakStmt 
+deriving (Show, Eq) 
+\end{lstlisting}
+
+The listing above shows the general approach of representing each
+language construct with values of custom Haskell types.
+It's worth noting that the type {\texttt ArithExpr}
+appears frequently, since it represents any valid expression, as 
+showed by its type definition:
+
+\begin{lstlisting}[language=Haskell,basicstyle=\footnotesize]
+data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr | 
+                    ArithBinExpr ArithBinOp ArithExpr ArithExpr | 
+                    ArithTerm Term |
+                    ExprLiteral ExprLiteral |
+                    GraphAccess ArithExpr ArithExpr |
+                    GraphEdgeAccess ArithExpr Edge |
+                    DictAccess ArithExpr ArithExpr |
+                    ListAccess ArithExpr ArithExpr |
+                    StructAccess ArithExpr Identifier |
+                    TupleAccess ArithExpr ArithExpr |
+                    CastExpr ArithExpr GType |
+                    ArithRelExpr RelOp ArithExpr ArithExpr |
+                    ArithEqExpr EqOp ArithExpr ArithExpr |
+                    LogicalBinExpr BoolBinOp ArithExpr ArithExpr |
+                    StructInitExpr StructInit
+deriving (Show, Eq)
+\end{lstlisting}
+
+In this way, every syntactically correct program becomes a list
+of program units, which, in turn, are values defined over other
+Haskell types. For example, consider the following Gryph valid program,
+which prints the sum of two declared and initialized variables:
+
+\begin{lstlisting}[language=Gryph]
+a : int = 10;
+b : int = 30;
+println a+b;
+\end{lstlisting}
+
+The corresponding output of the syntactic analysis is:
+
+\begin{lstlisting}[language=Haskell,basicstyle=\scriptsize]
+[Stmt (DeclStmt (VarDeclaration [Ident "a"] GInteger [ArithTerm 
+(LitTerm (Lit 10))])), Stmt (DeclStmt (VarDeclaration [Ident "b"] 
+GInteger [ArithTerm (LitTerm (Lit 30))])), Stmt (PrintLnStmt 
+(ArithBinExpr PlusBinOp (ArithTerm (IdTerm (Ident "a"))) 
+(ArithTerm (IdTerm (Ident "b")))))]
+\end{lstlisting}
+
+The complete list of types defined for representing syntactic
+entities can be found in the module {\texttt Syntactic.Syntax}
+of the interpreter. Finally, after the syntactic analysis, the list of program units
+is processed, in order to execute the semantic rules
+of the language and change the machine state for performing
+computation. 
 
 \subsection{Program execution}
