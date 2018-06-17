@@ -22,6 +22,24 @@
 
 a : int = 4;
 
+Type {
+    a : int;
+}
+
+TypeI {
+    a : int;
+    a : int;
+    b : int;
+    b : int;
+    r : int;
+}
+
+tt : TypeI = TypeI{a=2,a=2,b=1};
+
+sub rep() {
+    return b;
+}
+
 sub myproc(b : int) {
     a : int = 2;
     while (false) {
