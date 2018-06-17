@@ -956,7 +956,7 @@ getListType :: [Value] -> GType
 getListType [x]      = getType x
 getListType (x:y:xs) = if checkCompatType' (getType x) ( getType y)
                        then getListType (y:xs)
-                       else error "Heterogeneous List Type"   
+                       else error "Invalid List Type"   
                
 -- | Return the type of a given Gryph value.
 getType :: Value -> GType
