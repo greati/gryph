@@ -22,7 +22,12 @@ sub is_same_rational (a, b : Rational_t) : bool {
 # Make a valid rational (do not reduce)
 sub make_rational (a, b : int) : Rational_t {
     if (b != 0) {
-        r : Rational_t = Rational_t {numerador = a, denominador = b}; 
+        if (b < 0){
+            a = a * (-1);
+            b = b * (-1);
+        }
+        r : Rational_t = Rational_t {numerador = a, denominador = b};
+        reduce (r);
         return r;
     } else {
         print "erro: b não pode valer 0";
@@ -79,11 +84,13 @@ a, b : int;     # Input ints
 
 while (true) {
 
-    inputs : [string] = ["_","_","_","_"];
+    inputs : [string] = ["_"] ** 4;
     
     for i over [0,1] {
         while (b == 0) {
-            println inputs[0] + "/" + inputs[1] + ";" + inputs[2] + "/" + inputs[3];
+            println "Raw: " + inputs[0] + "/" + inputs[1] + " ; " + inputs[2] + "/" + inputs[3];
+            println "Reduced: " + rs[0]@string + " ; " + rs[1]@string;
+            
             read s;
             a = s@int;
             read s;
@@ -97,7 +104,8 @@ while (true) {
         b = 0;
     } 
 
-    println inputs[0] + "/" + inputs[1] + ";" + inputs[2] + "/" + inputs[3];
+    println "Raw: " + inputs[0] + "/" + inputs[1] + " ; " + inputs[2] + "/" + inputs[3];
+    println "Reduced: " + rs[0]@string + " ; " + rs[1]@string;
 
     println "(==)    " + is_same_rational(rs[0],rs[1])@string;
     println "(+)     " + sum(rs[0],rs[1])@string;
@@ -107,7 +115,7 @@ while (true) {
     println "(inv)   " + inv(rs[0])@string;
     println "(/)     " + div(rs[0],rs[1])@string;
 
-    print "De novo? (S/N): ";
+    println "De novo? (S/N): ";
     read s;
     if (s != "S") break; 
     

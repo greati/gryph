@@ -1,3 +1,6 @@
+use "../../library/split.gph"
+use "../../library/range.gph"
+
 sub dist(a : (int,int); b : (int,int); reach : int) : bool{
 	if (((a\0\ - b\0\) ^ 2 + (a\1\ - b\1\) ^ 2 ) <= reach ^ 2)
 		return true;
@@ -5,10 +8,21 @@ sub dist(a : (int,int); b : (int,int); reach : int) : bool{
 		return false; 
 }
 
-#nodes : [(int,int)] = [(1,1),(6,1),(6,6),(11,6)];
-nodes : [(int,int)] = [(1,1),(6,6),(11,6),(13,8)];
-trees : int = 4;
-reach : int = 5;
+input : string;
+
+read input;
+values : [string] = split(input, ' ');
+
+trees : int = values[0]@int;
+reach : int = values[1]@int;
+nodes : [(int,int)];
+
+for i over range(trees){
+	read input;
+	values : [string] = split(input, ' ');
+	add (values[0]@int, values[1]@int) in nodes;
+}
+
 count : int = 0;
 
 g : <(int,int)> = <a--b for a,b over nodes when (dist(a,b,reach))>;
