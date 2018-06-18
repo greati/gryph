@@ -1,5 +1,0 @@
-x, y : float = 1.3, 4.4;
-c : int = 3;
-
-r : float = x^2 - y + c;
-println r;
