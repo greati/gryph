@@ -26,9 +26,13 @@ We also have the \type{list}, a list of mutable values, all of the same type, de
 
 The \type{dictionary} or \type{map} is used for associating ``keys'' of a certain type to ``values'' of another (or the same) type. It can also grow and shrink dynamically. It consists of comma-separated key/value pairs separated by a question mark, and is delimited by the pipe (or vertical bar), which is also used to access the value associated with a particular key. The dictionary type's syntax is two types, separated by a comma, representing the type of the keys and of the values in that dictionary, respectively, both delimited by a pair of pipes.
 
-% graphs
+Graphs are essentially a set of vertices, and a set of edges connecting pairs of vertices. This same concept applies to the \type{graph} type in Gryph. The \type{graph} type itself is written as the type of its vertices, an optionally, followed by a comma, the type of its edges, all enclosed by the `\texttt{<}' and `\texttt{>}' characters. When no type is given to edges of a graph, it means its edges hold no data.
 
-In the code below, we declare and initialize variables of each of these types, and access values contained in them, the printed values being indicated by an accompanying comment. Statements for insertion and removal of elements from certain composite types is covered in \ref{} and operations (besides access) with them in \ref{}.
+Graphs themselves are delimited by these same characters, inside which there is a vertex set and an edge set, separated by commas, each one being optional to the construction of graph. A vertex set is an expression which must evaluate to a list whose elements are of the same type as that graph's vertices' type, while an edge set must be a graph comprehension expression, defined in \ref{sec:comprehension}. An edge itself is generally represented by two expressions (representing vertices) separated by `\texttt{-{}-}', for an undirected edge, or by `\texttt{->}' or `\texttt{<-}', for a directed edge.
+
+Access to a certain vertex on a graph, through its characteristic delimiters, gives that vertex's adjacency list, while access to an edge gives that edge's data, or ``weight'', which can be modified through attribution. Adding and removing edges from a graph can be done using the regular appropriate statements, defined in \ref{sec:add-del}.
+
+In the code below, we declare and initialize variables of each of these types, and access values contained in them, the printed values being indicated by an accompanying comment. Statements for insertion and removal of elements from certain composite types is covered in \ref{sec:add-del} and operations (besides access) with them in \ref{sec:operations}.
 \begin{lstlisting}[language=Gryph]
 t : (int, char, int) = (-1, 'x', 1);
 println t\1\; # 'x'
@@ -41,7 +45,11 @@ d : |char, int| = |'a' ? 1, 'c' ? 3|;
 d|'a'| = 0;
 println d|'a'|; # 0
 
-
+g : <int, float> = <[1, 2, 4]>;
+add 0.5 where 1->2 in g;
+add 0.25 where 1->4 in g;
+println g<1>; # [4, 2]
+println g<1->4>; # 0.25
 \end{lstlisting}
 \subsubsection{User-defined types}
 \label{sec:usertypes}
