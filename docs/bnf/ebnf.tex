@@ -1,0 +1,193 @@
+\section{Syntax in EBNF}
+
+\subsection{Program}
+\begin{bnf*}
+    \bnfprod{program}{\bnfpn{program-unit} \{\bnfpn{program-unit}\}}\\
+    \bnfprod{program-unit}{\bnfpn{stmt} \bnfor \bnfpn{subprog-def} \bnfor \bnfpn{type-def} \bnfor \bnfpn{include}}\\
+    \bnfprod{include}{\bnfts{use} \bnfsp \bnfpn{string-lit}}\\
+\end{bnf*}
+
+\subsection{Identifiers}
+\begin{bnf*}
+    \bnfprod{id-list}{\bnfpn{identifier}\{\bnfts{,}\bnfpn{identifier}\}}\\
+    \bnfprod{identifier}{\bnfpn{alpha}\bnfpn{id-tail}}\\
+    \bnfprod{user-type-id}{\bnfpn{upper-alpha}\bnfpn{id-tail}}\\
+    \bnfprod{id-tail}{\{\bnfpn{alpha-num}\} \{\bnfts{'}\}}\\
+    \bnfprod{alpha-num}{\bnfpn{alpha} \bnfor \bnfpn{digit} \bnfor \bnfts{\_}}\\
+    \bnfprod{digit}{\bnfts{0} \bnfor \bnfsk \bnfor \bnfts{9}}\\
+    \bnfprod{alpha}{\bnfpn{upper-alpha} \bnfor(\bnfts{a} \bnfor \bnfsk \bnfor \bnfts{z})}\\
+    \bnfprod{upper-alpha}{\bnfts{A} \bnfor \bnfsk \bnfor \bnfts{Z}}\\
+\end{bnf*}
+
+\subsection{Statements}
+\begin{bnf*}
+    \bnfprod{stmt-list}{\bnfpn{stmt} \{\bnfpn{stmt}\}}\\
+    \bnfprod{stmt-block}{\bnfts{\{} \bnfsp \bnfpn{stmt-list} \bnfsp \bnfts{\}}}\\
+    \bnfprod{stmt}{\bnfpn{matched-stmt} \bnfor \bnfpn{unmatched-stmt}}\\
+    \bnfprod{block-or-matched}{\bnfpn{stmt-block} \bnfor \bnfpn{matched-stmt}}\\
+    \bnfprod{matched-stmt}{\bnfpn{matched-if-else} \bnfor \bnfpn{iteration-stmt} \bnfor \bnfpn{simple-stmt}}\\
+    \bnfprod{unmatched-stmt}{\bnfpn{if-stmt} \bnfor \bnfpn{unmatched-if-else}}\\
+    \bnfprod{simple-stmt}{
+    \begin{bnfsplit}[0.4\textwidth]
+        (\bnfpn{io-stmt} \bnfor \bnfpn{var-stmt} \bnfor\\
+        \bnfpn{add-del-stmt} \bnfor \bnfpn{subprog-call} \bnfor\\
+        \bnfpn{return-stmt} \bnfor \bnfpn{break-stmt})\bnfts{;}
+    \end{bnfsplit}}\\
+\end{bnf*}
+
+    \subsubsection{IO}
+    \begin{bnf*}
+        \bnfprod{io-stmt}{\bnfpn{read-stmt} \bnfor \bnfpn{write-stmt}}\\
+        \bnfprod{read-stmt}{\bnfts{read} \bnfsp \bnfpn{identifier}}\\
+        \bnfprod{write-stmt}{\bnfts{print} \bnfsp \bnfpn{expression}}\\
+    \end{bnf*}
+
+    \subsubsection{Variables}
+    \begin{bnf*}
+        \bnfprod{var-stmt}{\bnfpn{var-decl-stmt}\bnfor\bnfpn{var-attr-stmt}}\\
+        \bnfprod{var-decl-list}{\bnfpn{var-decl-stmt}\{\bnfts{;}\bnfpn{var-decl-stmt}\}\bnfts{;}}\\
+        \bnfprod{var-decl-stmt}{\bnfpn{id-list}\bnfts{:}\bnfpn{type}[\bnfpn{var-attr}]}\\
+        \bnfprod{var-attr-stmt}{\bnfpn{lhs-expr-list}\bnfpn{var-attr}}\\
+        \bnfprod{id-attr}{\bnfpn{identifier}\bnfts{$\bm{=}$}\bnfpn{expression}}\\
+        \bnfprod{id-attr-list}{\bnfpn{id-attr} \{,\bnfpn{id-attr}\}}\\
+        \bnfprod{var-attr}{\bnfts{$\bm{=}$}\bnfpn{expr-list}}\\
+    \end{bnf*}
+
+    \subsubsection{Insertion and removal}
+    \begin{bnf*}
+        \bnfprod{add-del-stmt}{\bnfpn{add-stmt} \bnfor \bnfpn{del-stmt}}\\
+        \bnfprod{add-stmt}{\bnfts{add} \bnfsp\bnfpn{expression} \bnfsp\bnfts{in} \bnfsp\bnfpn{lhs-expr}}\\
+        \bnfprod{del-stmt}{\bnfts{del} \bnfsp\bnfpn{expression} \bnfsp\bnfts{from} \bnfsp\bnfpn{lhs-expr}}\\
+    \end{bnf*}
+
+\subsection{Control Structures}
+    \subsubsection{Conditionals}
+    \begin{bnf*}
+        \bnfprod{if-expr}{\bnfts{if} \bnfsp \bnfts{(}\bnfpn{expression}\bnfts{)}}\\
+        \bnfprod{if-stmt}{\bnfpn{if-expr} \bnfsp \bnfpn{stmt}}\\
+        \bnfprod{unmatched-if-else}{\bnfpn{if-expr} \bnfsp \bnfpn{matched-stmt} \bnfsp \bnfts{else} \bnfsp \bnfpn{unmatched-stmt}}\\
+        \bnfprod{matched-if-else}{
+        \begin{bnfsplit}[0.65\textwidth]
+            \bnfpn{if-expr} \bnfsp \bnfpn{block-or-matched} \bnfsp \bnfts{else} \bnfsp \bnfpn{block-or-matched} \bnfor\\
+            \bnfpn{if-expr} \bnfsp \bnfpn{stmt-block}
+        \end{bnfsplit}}\\
+    \end{bnf*}
+
+    \subsubsection{Iteration}
+    \begin{bnf*}
+        \bnfprod{iteration-stmt}{\bnfpn{for-stmt} \bnfor \bnfpn{while-stmt} \bnfor \bnfpn{bfs-dfs-stmt}}\\
+        \bnfprod{while-stmt}{\bnfts{while}\bnfsp\bnfpn{expression}\bnfsp\bnfpn{block-or-matched}}\\
+        \bnfprod{for-loop}{\bnfts{for}\bnfsp\bnfpn{id-list}\bnfsp\bnfts{over}\bnfsp\bnfpn{expr-list}}\\
+        \bnfprod{for-stmt}{\bnfpn{for-loop}\bnfpn{block-or-matched}}\\
+        \bnfprod{bfs-dfs-loop}{(\bnfts{bfs} \bnfor \bnfts{dfs})\bnfsp\bnfpn{id-list}\bnfsp\bnfts{over}\bnfsp\bnfpn{expr-list}}\\
+        \bnfprod{bfs-dfs-stmt}{\bnfpn{dfs-dfs-loop}\bnfpn{block-or-matched}}\\
+        \bnfprod{break-stmt}{\bnfts{break}}\\
+    \end{bnf*}
+    
+\subsection{Subprograms}
+\begin{bnf*}
+    \bnfprod{subprog-def}{\bnfts{sub}\bnfpn{identifier}\bnfts{(} \bnfpn{parameters} \bnfts{)}[\bnfts{:}\bnfpn{type}]\bnfpn{stmt-block}}\\
+    \bnfprod{parameters}{\bnfpn{var-stmt} \{\bnfts{;}\bnfpn{var-stmt}\}}\\
+    \bnfprod{subprog-call}{\bnfpn{identifier}\bnfts{(}[\bnfpn{arguments}]\bnfts{)}}\\
+    \bnfprod{arguments}{\bnfpn{id-attr-list} \bnfor \bnfpn{expr-list}}\\
+    \bnfprod{return-stmt}{\bnfts{return}}\\
+\end{bnf*}
+
+\subsection{Types}
+\begin{bnf*}
+    \bnfprod{type-list}{\bnfpn{type}\{\bnfts{,}\bnfpn{type}\}}\\
+    \bnfprod{type}{\bnfpn{native-type} \bnfor \bnfpn{user-type-id}}\\
+    \bnfprod{native-type}{\bnfpn{primitive-type} \bnfor \bnfpn{composite-type}}\\
+    \bnfprod{primitive-type}{\bnfts{int} \bnfor \bnfts{float} \bnfor \bnfts{char} \bnfor \bnfts{string}}\\
+    \bnfprod{composite-type}{\bnfts{[} \bnfpn{type} \bnfts{]} \bnfor \bnfts{$\bm{|}$} \bnfpn{type} \bnfts{$\bm{|}$} 
+    \bnfor \bnfts{(} \bnfpn{type} \bnfts{,} \bnfpn{type-list} \bnfts{)} \bnfor \bnfpn{graph-type}}\\
+    \bnfprod{graph-type}{\bnfts{$\bm{<}$} \bnfpn{type} \bnfts{$\bm{>}$} \bnfor \bnfts{$\bm{<}$} \bnfpn{type} \bnfts{,} \bnfpn{type} \bnfts{$\bm{>}$}}\\
+    \bnfprod{type-def}{\bnfpn{user-type-id}\bnfts{\{}\bnfpn{var-decl-list}\bnfts{\}}}\\
+\end{bnf*}
+
+\subparagraph{Observation} Although there is no maximum size for tuples in the definition above, there may be one for specific language implementations.
+
+\subsection{Expressions}
+\begin{bnf*}
+    \bnfprod{expr-list}{\bnfpn{expression}\{\bnfts{,}\bnfpn{expression}\}}\\
+    \bnfprod{expression}{\bnfpn{logical-xor-expr}}\\
+    \bnfprod{logical-xor-expr}{\bnfpn{logical-or-expr}\{\bnfts{xor}\bnfsp\bnfpn{logical-or-expr}\}}\\
+    \bnfprod{logical-or-expr}{\bnfpn{logical-and-expr} \{\bnfts{or}\bnfsp\bnfpn{logical-and-expr}\}}\\
+    \bnfprod{logical-and-expr}{\bnfpn{equality-expr} \{\bnfts{and}\bnfsp\bnfpn{equality-expr}\}}\\
+    \bnfprod{equality-expr}{\bnfpn{rel-expr} \{\bnfpn{equality-op}\bnfsp\bnfpn{rel-expr}\}}\\
+    \bnfprod{rel-expr}{\bnfpn{add-expr}\{\bnfpn{rel-op}\bnfpn{add-expr}\}}\\
+    \bnfprod{add-expr}{\bnfpn{mult-expr} \{\bnfpn{add-op}\bnfpn{mult-expr}\}}\\
+    \bnfprod{mult-expr}{\bnfpn{exp-expr} \{\bnfpn{mult-op}\bnfpn{exp-expr}\}}\\
+    \bnfprod{exp-expr}{\bnfpn{cast-expr}[\bnfpn{exp-op}\bnfpn{exp-expr}]}\\
+    \bnfprod{cast-expr}{\bnfpn{unary-expr} \{\bnfts{@}\bnfpn{type}\}}\\
+    \bnfprod{unary-expr}{\bnfpn{unary-op}\bnfpn{cast-expr} \bnfor \bnfpn{postfix-expr}}\\
+    \bnfprod{postfix-expr}{\bnfpn{primary-expr}\{\bnfpn{access-expr}\}}\\
+    \bnfprod{lhs-expr}{\bnfpn{identifier}\{\bnfpn{access-expr}\}}\\
+    \bnfprod{lhs-expr-list}{\bnfpn{lhs-expr}\{\bnfts{,}\bnfpn{lhs-expr}\}}\\
+    \bnfprod{access-expr}{
+    \begin{bnfsplit}[0.6\textwidth]
+        \bnfts{|}\bnfpn{expression}\bnfts{|} \bnfor
+        \bnfts{$\bm{<}$}\bnfpn{expression}\bnfts{$\bm{>}$} \bnfor
+        \bnfts{[}\bnfpn{expression}\bnfts{]} \bnfor\\
+        \bnfts{\{}\bnfpn{identifier}\bnfts{\}} \bnfor
+        \bnfts{\textbackslash}\bnfpn{expression}\bnfts{\textbackslash}
+    \end{bnfsplit}}\\
+    \bnfprod{primary-expr}{
+    \begin{bnfsplit}[0.6\textwidth]
+        \bnfts{(}\bnfpn{expression}\bnfts{)} \bnfor \bnfpn{identifier} \bnfor \bnfpn{subprog-call} \bnfor\\
+        \bnfpn{literal} \bnfor \bnfpn{structure}
+    \end{bnfsplit}}\\
+\end{bnf*}
+
+\subsubsection{Literals}
+\begin{bnf*}
+    \bnfprod{literal}{
+    \begin{bnfsplit}[0.45\textwidth]
+        \bnfpn{int-lit} \bnfor \bnfpn{float-lit} \bnfor \bnfpn{string-lit} \bnfor\\
+         \bnfpn{bool-lit} \bnfor \bnfpn{char-lit}
+    \end{bnfsplit}}\\
+    \bnfprod{bool-lit}{\bnfts{true} \bnfor \bnfts{false}}\\
+    \bnfprod{string-lit}{\bnfts{"} \{\bnfpn{char}\} \bnfts{"}}\\
+    \bnfprod{char-lit}{\bnfts{\textquotesingle} \bnfpn{char} \bnfts{\textquotesingle}}\\
+    \bnfprod{char}{\texttt{implementation dependent}}\\
+    \bnfprod{int-lit}{[\bnfts{-}]\bnfpn{digit-seq}}\\
+    \bnfprod{float-lit}{[\bnfts{-}]\bnfpn{digit-seq}\bnfts{.}\bnfpn{digit-seq}}\\
+    \bnfprod{digit-seq}{\bnfpn{digit}\{\bnfpn{digit}\}}\\
+\end{bnf*}
+
+\subparagraph{Observation} A char must be one character, of an enconding defined by the implementation.
+
+\subsubsection{Structures}
+\begin{bnf*}
+    \bnfprod{structure}{
+    \begin{bnfsplit}
+        \bnfpn{tuple} \bnfor \bnfpn{list} \bnfor \bnfpn{dict} \bnfor\\
+        \bnfpn{graph} \bnfor \bnfpn{user-type} \bnfor \bnfpn{edge}
+    \end{bnfsplit}}\\
+    \bnfprod{tuple}{\bnfts{(}\bnfpn{expr-list}\bnfts{)}}\\
+    \bnfprod{dict}{\bnfts{$\bm{|}$} [\bnfpn{dict-entry-list}] \bnfts{$\bm{|}$}}\\
+    \bnfprod{dict-entry}{\bnfpn{expression} \bnfts{?} \bnfpn{expression}}\\
+    \bnfprod{dict-entry-list}{\bnfpn{dict-entry} \{\bnfts{,}\bnfpn{dict-entry}\}}\\
+    \bnfprod{user-type}{\bnfpn{user-type-id}\bnfts{\{} [\bnfpn{id-attr-list}] \bnfts{\}}}\\
+    \bnfprod{list}{\bnfts{[}[\bnfpn{list-expr}]\bnfts{]}}\\
+    \bnfprod{list-expr}{\bnfpn{expr-list} \bnfor \bnfpn{list-comprehension}}\\
+    \bnfprod{list-comprehension}{\bnfpn{expression}\bnfpn{for-loop}[\bnfpn{comp-condition}]}\\
+    \bnfprod{graph-comprehension}{\bnfpn{edge}\bnfpn{for-loop}[\bnfpn{comp-condition}]}\\
+    \bnfprod{comp-condition}{\bnfts{when}\bnfsp\bnfts{(}\bnfpn{expression}\bnfts{)}}\\
+    \bnfprod{graph}{\bnfts{$\bm{<}$} (\bnfpn{vertex-set},\bnfpn{edge-set} \bnfor \bnfpn{vertex-set} \bnfor \bnfpn{edge-set}) \bnfts{$\bm{>}$}}\\
+    \bnfprod{vertex-set}{\bnfpn{expression}}\\
+    \bnfprod{edge-set}{[\bnfpn{edge-weight}]\bnfpn{graph-comprehension}}\\
+    \bnfprod{edge-weight}{\bnfpn{expression} \bnfsp\bnfts{where}}\\
+    \bnfprod{edge}{\bnfpn{expression}\bnfpn{edge-symbol}\bnfpn{expression}}\\
+    \bnfprod{edge-symbol}{\bnfts{$\bm{--}$} \bnfor \bnfts{$\bm{->}$} \bnfor \bnfts{$\bm{<-}$}}\\
+\end{bnf*}
+
+\subsubsection{Operators}
+\begin{bnf*}
+    \bnfprod{rel-op}{\bnfts{$\bm{>}$} \bnfor \bnfts{$\bm{<}$} \bnfor \bnfts{$\bm{<=}$} \bnfor \bnfts{$\bm{>=}$}}\\
+    \bnfprod{equality-op}{\bnfts{$\bm{==}$} \bnfor \bnfts{$\bm{!=}$}}\\
+    \bnfprod{unary-op}{\bnfts{$\bm{+}$} \bnfor \bnfts{$\bm{-}$}}\\
+    \bnfprod{add-op}{\bnfts{$\bm{+}$} \bnfor \bnfts{$\bm{-}$}}\\
+    \bnfprod{mult-op}{\bnfts{*} \bnfor \bnfts{$\bm{/}$} \bnfor \bnfts{\%} \bnfor \bnfts{$\bm{++}$} \bnfor \bnfts{**}}\\
+    \bnfprod{exp-op}{\bnfts{\^}}\\
+\end{bnf*}
