@@ -14,7 +14,7 @@ l2 : [int] = [i*2 for i over l1 when (i % 2 == 0)];
 println l2; # [4, 8]
 \end{lstlisting}
 
-Graph comprehension is used to generate a graph's edges and vertices simultaneously. This is is done with a syntax similiar to list comprehension, only the first expression is not a value to be inserted in a list, but and edge to be inserted in a graph, along with the vertices it connects. This edge expression can be preceded by a `weight' specifier: an expression representing the value to be stored in the edge being inserted at each iteration, followed by the keyword \key{where}.
+Graph comprehension is used to generate a graph's edges and vertices simultaneously. This is is done with a syntax similar to list comprehension, only the first expression is not a value to be inserted in a list, but and edge to be inserted in a graph, along with the vertices it connects. This edge expression can be preceded by a `weight' specifier: an expression representing the value to be stored in the edge being inserted at each iteration, followed by the keyword \key{where}.
 
 In the code below, we construct a fully connected directed graph over vertex set \id{v}, giving each edge a weight equal to the product of its vertices. Printing the graph shows the adjacency list of each vertex, as well as the weight of each edge, in parentheses. This output is shown here as comments below the \key{println} statement.
 \begin{lstlisting}[language=Gryph]
@@ -42,7 +42,7 @@ As for structure-specific operations, in the case of strings, \key{+} can be use
 
 \paragraph{Casting}
 \label{sec:casting}
-Expression can be explicitly converted from one type to another with the use of the operator \key{@}. For example, in the following code we cast an integer and a float to its string representations before concateneting and printing them:
+Expression can be explicitly converted from one type to another with the use of the operator \key{@}. For example, in the following code we cast an integer and a float to its string representations before concatenating and printing them:
 \begin{lstlisting}[language=Gryph]
 i : int = 3;
 f : float = 0.3;
