@@ -856,7 +856,7 @@ makeCompatibleAssignTypes pm t@(GGraphVertexEdge vertices edges) v =
         GGraphEmpty                        -> (t,Value v)
         GGraphVertexEdge vertex GEdgeEmpty -> if checkCompatType vertices vertex--vertices == vertex 
                                               then (t,Value v)
-                                              else error ("Incompatible types " ++ show t ++ " and " ++ show v)
+                                              else error ("Incompatible types " ++ show t ++ " and " ++ show tv)
         GGraphVertexEdge vertex edge       -> if checkCompatType vertices vertex && checkCompatType edges edge--vertices == vertex && edges == edge
                                               then (t,Value v)
                                               else error ("Incompatible types " ++ show t ++ " and " ++ show tv)

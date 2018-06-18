@@ -1,0 +1,38 @@
+use "../../library/range.gph"
+use "../../library/split.gph"
+
+input : string;
+read input;
+
+# Number of cities
+n : int = input@int;
+
+cities : <int> = <range(1,n+1)>;
+
+for i over range(0,n-1){
+	read input;
+	vertices : [string] = split(input, ' ');
+
+	add (vertices[0]@int)--(vertices[1]@int) in cities;
+}
+
+v,level : int = -1;
+
+bfs a,b,c in cities{
+	if(c > level){
+		v     = a;
+		level = c;
+	}
+}
+
+distance : int = 0;
+level = 1;
+
+bfs a,b,c in cities from v{
+	if(level != c){
+		distance = distance + 1;
+		level = c;
+	}
+}
+
+println distance;
