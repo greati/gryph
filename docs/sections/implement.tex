@@ -7,7 +7,7 @@ main steps: \textbf{lexical analysis}, for tokens discovery;
 identification; and \textbf{program execution}, for
 performing machine state changes according to the
 meaning of the parsed entities, given by the semantic
-rules of the language (see \ref{sec:usage}). This section presents in detail how these three steps were implemented.
+rules of the language (see \autoref{sec:usage}). This section presents in detail how these three steps were implemented.
 
 \subsection{Lexical analysis}
 
@@ -65,7 +65,7 @@ deriving (Show, Eq)
 Therefore, a program is just a sequence of program units. Statements, in turn,
 are the basic execution units in a program, and can assume various forms,
 like control structures, input/output statements, variable declaration and
-assignments (see \ref{sec:statements}). The type defined for representing statements was:
+assignments (see \autoref{sec:statements}). The type defined for representing statements was:
 
 \begin{lstlisting}[language=Haskell,basicstyle=\footnotesize]
 data Stmt = ReadStmt Identifier | 

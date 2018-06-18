@@ -1,10 +1,10 @@
 \subsection{Expressions}
 \label{sec:expressions}
-Gryph expressions can take the form of literals of primitive type (\ref{sec:primitive}); composite type structures (\ref{sec:composite}), of which comprehension expressions are a part of (\ref{sec:comprehension}); subprogram calls (\ref{sec:subprogram}); variables (\ref{sec:variables}); and any combination of these with valid operations (\ref{sec:operations}).
+Gryph expressions can take the form of literals of primitive type (\autoref{sec:primitive}); composite type structures (\autoref{sec:composite}), of which comprehension expressions are a part of (\autoref{sec:comprehension}); subprogram calls (\autoref{sec:subprogram}); variables (\autoref{sec:variables}); and any combination of these with valid operations (\autoref{sec:operations}).
 
 \subsubsection{List and graph comprehension}
 \label{sec:comprehension}
-Lists and graphs can be expressed in Gryph through special comprehension constructs. For lists, this is an expression, followed by a \key{for} loop (see \ref{sec:iteration}), and then an optional predicate, all enclosed in square brackets. This iterates through the for loop as normal, and appends sequentially to the new list the values for the contained expression at each iteration. The predicate is composed of the \key{when} keyword, followed by an expression enclosed in parentheses which must evaluate to a boolean value: it means that, at each iteration, the value that would be appended to the list is only inserted if the expressed condition is satisfied.
+Lists and graphs can be expressed in Gryph through special comprehension constructs. For lists, this is an expression, followed by a \key{for} loop (see \autoref{sec:iteration}), and then an optional predicate, all enclosed in square brackets. This iterates through the for loop as normal, and appends sequentially to the new list the values for the contained expression at each iteration. The predicate is composed of the \key{when} keyword, followed by an expression enclosed in parentheses which must evaluate to a boolean value: it means that, at each iteration, the value that would be appended to the list is only inserted if the expressed condition is satisfied.
 In the following code we create two lists using list comprehension:
 \begin{lstlisting}[language=Gryph]
 l1 : [int] = [i+1 for i over [1, 2, 3]];
@@ -31,14 +31,14 @@ println g;
 
 \subsubsection{Operations}
 \label{sec:operations}
-In this section we describe all operations which can be used to modify and combine expressions, except for structure access operations, described in \ref{sec:composite}.
+In this section we describe all operations which can be used to modify and combine expressions, except for structure access operations, described in \autoref{sec:composite}.
 
 \paragraph{Logical and relational operations}
 Gryph has logical operators \key{not}, \key{and}, \key{or}, and \key{xor}, which behave in the usual way. Expression containing logical operators are always evaluated using short-circuit evaluation. The equality operation \key{==} is defined between two expressions if they are of the same type, or if one can be coerced into the other's type, and evaluates to true if and only if both expressions represent the same value. The relational operators \key{<}, \key{>}, \key{<=}, and \key{>=} follow the same type rule, but are defined only for built-in types, signifying numerical or lexicographical order depending on its operands.
 \paragraph{Arithmetic operations}
 Arithmetic operators include unary \key{-} and \key{+}, and binary \key{+}, \key{-}, \key{*}, and \key{/}, with ordinary meanings for numeric types. Additionally, there are the \key{\^} operator for exponentiation, and the modulo operator \key{\%}.
 \paragraph{Structure-oriented operations}
-As for structure-specific operations, in the case of strings, \key{+} can be used with another string for concatenation, and \key{*} can be used with an integer for duplication. Similarly for lists, there is \key{++} and \key{**} for list concatenation and duplication, respectively. Not to mention access operations described in \ref{sec:composite}.
+As for structure-specific operations, in the case of strings, \key{+} can be used with another string for concatenation, and \key{*} can be used with an integer for duplication. Similarly for lists, there is \key{++} and \key{**} for list concatenation and duplication, respectively. Not to mention access operations described in \autoref{sec:composite}.
 
 \paragraph{Casting}
 \label{sec:casting}

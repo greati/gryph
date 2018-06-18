@@ -1,10 +1,10 @@
 \subsection{Statements}
 \label{sec:statements}
-A statement is the basic building block of a Gryph program. It comes in two forms: simple statements (\ref{sec:simple-stmts}); or compound statements (\ref{sec:compound-stmts}), which may contain other statements, compound or simple.
+A statement is the basic building block of a Gryph program. It comes in two forms: simple statements (\autoref{sec:simple-stmts}); or compound statements (\autoref{sec:compound-stmts}), which may contain other statements, compound or simple.
 
 \subsubsection{Simple statements}
 \label{sec:simple-stmts}
-A simple statement can be: a variable declaration or assignment (\ref{sec:variables}), an I/O statement (\ref{sec:io}), an insertion or removal operation over a composite type (\ref{sec:add-del}), or a return (\ref{sec:return}) or escape (\ref{sec:escape}) statement. The end of a simple statement is always marked by a semicolon.
+A simple statement can be: a variable declaration or assignment (\autoref{sec:variables}), an I/O statement (\autoref{sec:io}), an insertion or removal operation over a composite type (\autoref{sec:add-del}), or a return (\autoref{sec:return}) or escape (\autoref{sec:escape}) statement. The end of a simple statement is always marked by a semicolon.
 
 \paragraph{Variable declaration and assignment}
 \label{sec:variables}
@@ -27,7 +27,7 @@ println c; # 1
 \paragraph{I/O statements}
 \label{sec:io}
 
-As for I/O output statements, there is \key{read} for input and \key{print} or \key{println} for output. For input, the \key{read} keyword is used, followed by a variable of the type \type{string}, where \key{read} will store the one line it reads from standard input. Numeric values can be ``read'' by attempting to cast the read string to the desired numeric type (see \ref{sec:casting}).
+As for I/O output statements, there is \key{read} for input and \key{print} or \key{println} for output. For input, the \key{read} keyword is used, followed by a variable of the type \type{string}, where \key{read} will store the one line it reads from standard input. Numeric values can be ``read'' by attempting to cast the read string to the desired numeric type (see \autoref{sec:casting}).
 
 And for output, the \key{print} statement, followed by any expression, will print a string representing the value of that expression to standard output. The \key{println} alternative works in the same way as \key{print}, put also prints a line break after the printed value.
 
@@ -44,7 +44,7 @@ Now, in regards to insertion and removal, the two relevant keywords to be used a
 
 The \type{tuple}, by contrast, supports neither insertion nor removal, being immutable; while the \type{dictionary} type supports removal, but insertion only through assignment to a key not yet in it. For removal of an entry with key \id{k} from a dictionary \id{d}, the expected syntax is \key{del} \id{k} \key{from} \id{d}. Note that just as a list will not allow an element to be removed from an invalid position, a dictionary will not allow removal of an entry with a certain key if it contains no such entry.
 
-The \type{graph} type supports insertion and removal of both vertices and edges. To insert a vertex \id{v} in a graph \id{g}: \key{add} \id{v} \key{in} \id{g}. To remove it: \key{del} \id{v} \key{from} \id{g}. Removing a vertex from a graph also removes all edges connected to it. Inserting and removing edges works in a similar way, but with the option of using the \key{where} keyword to specify a value to the edge being inserted, as in graph comprehension (see \ref{sec:comprehension}).
+The \type{graph} type supports insertion and removal of both vertices and edges. To insert a vertex \id{v} in a graph \id{g}: \key{add} \id{v} \key{in} \id{g}. To remove it: \key{del} \id{v} \key{from} \id{g}. Removing a vertex from a graph also removes all edges connected to it. Inserting and removing edges works in a similar way, but with the option of using the \key{where} keyword to specify a value to the edge being inserted, as in graph comprehension (see \autoref{sec:comprehension}).
 
 In the following code we exemplify some of the statements discussed in this section.
 \begin{lstlisting}[language=Gryph]
@@ -71,11 +71,11 @@ The return statement is one that may only be used inside subprograms, it ends th
 
 \paragraph{Escape statement}
 \label{sec:escape}
-An escape statement is used to exit an iteration structure (see \ref{sec:iteration}) independently to its regular exit conditions, continuing execution from the first statement following the end of the iteration structure wherein it was called. As such, it may only be used inside an iteration structure, be it a \key{for} or a \key{while}. Note that this escape statement is not ``multi-level'', that is, when called from within a nested loop, it exits only the innermost loop.
+An escape statement is used to exit an iteration structure (see \autoref{sec:iteration}) independently to its regular exit conditions, continuing execution from the first statement following the end of the iteration structure wherein it was called. As such, it may only be used inside an iteration structure, be it a \key{for} or a \key{while}. Note that this escape statement is not ``multi-level'', that is, when called from within a nested loop, it exits only the innermost loop.
 
 \subsubsection{Compound statements}
 \label{sec:compound-stmts}
-A compound statement can also be defined as a control structure, in that they alter the sequential flow of control based on certain conditions. They are divided in conditional structures (\ref{sec:conditional}) and iteration structures (\ref{sec:iteration}).
+A compound statement can also be defined as a control structure, in that they alter the sequential flow of control based on certain conditions. They are divided in conditional structures (\autoref{sec:conditional}) and iteration structures (\autoref{sec:iteration}).
 
 \paragraph{Conditional structures}
 \label{sec:conditional}
