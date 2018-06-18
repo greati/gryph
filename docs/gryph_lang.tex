@@ -8,7 +8,13 @@
 \usepackage{xcolor}
 \usepackage{calc} % AgeofEuler
 \usepackage{textcomp} % lst upquote
-\usepackage{titlesec} % paragraph section
+\usepackage{titlesec} % paragraph section, section newpage
+
+\usepackage{backnaur}
+\usepackage{textcomp} % \textquotesingle
+\usepackage{bm} % bold math
+
+%\newcommand{\sectionbreak}{\clearpage} % titlesec
 
 \newcommand{\gryphcommentstyle}{\color{gray}\ttfamily} % gryph comment style
 \newcommand{\id}[1]{\texttt{#1}} % gryph identifier
@@ -42,12 +48,22 @@
 \titlespacing*{\paragraph}
 {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 
+% .../backnaur/backnaur.sty
+% \newcommand{\bnfts}[1]{\textnormal{\bnf@tsfont{#1}}}
+% \textnormal -> \textbf
+
+\newenvironment{bnfsplit}[1][0.5\textwidth]
+{\minipage[t]{#1}$}
+{$\endminipage}
+
 \title{The Gryph Programming Language}
 \author{Vinícius Campos \and Artur Curinga \and Vitor Greati \and Carlos Vieira}
 
 \begin{document}
 
 \maketitle
+
+%\newpage
 
 \tableofcontents
 
@@ -64,6 +80,6 @@
 
 \input{sections/implement}
 
-% add bnf
+\input{bnf/ebnf}
 
 \end{document}

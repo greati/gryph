@@ -1,60 +1,57 @@
 \section{Implementation}
 \label{sec:implement}
 
-The interpreter for the Gryph Programming Language,
-implemented in Haskell language during this semester, comprises three
+The interpreter for the Gryph Programming Language was implemented in Haskell during the first semester of 2018, for an undergraduate course on programming languages. It is comprised of three
 main steps: \textbf{lexical analysis}, for tokens discovery;
 \textbf{syntactic analysis}, for language constructs
 identification; and \textbf{program execution}, for
 performing machine state changes according to the
 meaning of the parsed entities, given by the semantic
-rules of the language (see Section \ref{sec:usage}). The following subsections
-present them with rich detail.
+rules of the language (see \ref{sec:usage}). This section presents in detail how these three steps were implemented.
 
 \subsection{Lexical analysis}
 
-Lexical analysis is the part of the task of analysing syntax
-which deals with small-scale constructs. Dealing with it
+Lexical analysis is the part of the syntax analysis task
+which deals with small-scale constructs. Dealing with these
 separately is justified by gains in terms of simplicity, since
-it uses simple techniques (pattern matching, essentially); efficiency, since it is
+it can be done with simple techniques (pattern matching, essentially); efficiency, since it is
 more suitable for optimization than the general syntactic parser; 
-and portability, since lexical analysers can be platform dependent, in contrast
+and portability, since lexical analysers are platform dependent, in contrast
 with syntax analysers, which can be made independent.
 
-In order to simplify the development, \textbf{Alex}\footnote{https://www.haskell.org/alex/}, a lexical
-analyzer generator for Haskell, was used. It is basically built
-upon a sequence of regular expressions which describes the 
+In order to expedite the development process, \textbf{Alex}\footnote{https://www.haskell.org/alex/}, a lexical analyzer generator for Haskell, was used. It is basically built
+upon a sequence of regular expressions that describe the 
 language tokens. The implemented lexical analyzer takes a program as input and produces
 a list of the identified tokens, which is then transmitted to the
 syntactic parser, described in the next subsection. Alex also furnishes
-the position (line and column) of each token, for further richier error reporting, but
-this version of the interpreter does not take it into account.
+the position (line and column) of each token, for later error reporting, but
+this version of the interpreter does not yet take this information into account.
 
 \subsection{Syntactic analysis}
 
 The syntactic analyzer deals with the large-scale constructs, 
 such as expressions, statements and subprogram definitions.
 It takes the list of tokens produced in the lexical
-analysis and the language grammar (generally in Bakus-Naur Form) and performs
+analysis and the language grammar (generally in BNF, Backus-Naur Form) and performs
 the syntactic parsing according to its productions.
 Some adjustments may be necessary in order
-to adequate the grammar rules to the some restrictions imposed by
+to adequate the grammar rules to some restrictions imposed by
 the adopted parsing algorithm.
 
 Syntactic analysis, in the implemented interpreter, is performed
 with the aid of the \textbf{Parsec}\footnote{http://hackage.haskell.org/package/parsec} 
 parser library for Haskell.
 Parsec is based on \emph{monadic parser combinators}, and is
-fast, safe, well-documented and highly customizable. Basically,
+fast, safe, well-documented, and highly customizable. Basically,
 developing a parser with this tool is a matter of writing and combining small parsers
-for each grammar construct, taking care with left-recursive
+for each grammar construct, bewaring of left-recursive
 productions, since the underlying algorithm doesn't 
 accept them.
 
 The output of the syntactic parser in this implementation is a syntactic tree
 represented by Haskell user-defined types. The most general constructs are called
 \textbf{program units}, which are abstractions for import commands, subprogram definitions,
-struct definitions and statements. The Haskell type defined to represent such
+user type definitions and statements. The Haskell type defined to represent such
 concept was:
 
 \begin{lstlisting}[language=Haskell,basicstyle=\footnotesize]
@@ -67,8 +64,8 @@ deriving (Show, Eq)
 
 Therefore, a program is just a sequence of program units. Statements, in turn,
 are the basic execution units in a program, and can assume various forms,
-like control structures, arithmetic expressions, variable declaration and
-assignment commands. The type defined for representing statements was:
+like control structures, input/output statements, variable declaration and
+assignments (see \ref{sec:statements}). The type defined for representing statements was:
 
 \begin{lstlisting}[language=Haskell,basicstyle=\footnotesize]
 data Stmt = ReadStmt Identifier | 
@@ -95,7 +92,7 @@ The listing above shows the general approach of representing each
 language construct with values of custom Haskell types.
 It's worth noting that the type {\texttt ArithExpr}
 appears frequently, since it represents any valid expression, as 
-showed by its type definition:
+shown by its type definition:
 
 \begin{lstlisting}[language=Haskell,basicstyle=\footnotesize]
 data ArithExpr =    ArithUnExpr ArithUnOp ArithExpr | 
@@ -138,9 +135,9 @@ GInteger [ArithTerm (LitTerm (Lit 30))])), Stmt (PrintLnStmt
 \end{lstlisting}
 
 The complete list of types defined for representing syntactic
-entities can be found in the module {\texttt Syntactic.Syntax}
-of the interpreter. Finally, after the syntactic analysis, the list of program units
-is processed, in order to execute the semantic rules
+entities can be found in the interpreter module {\texttt Syntactic.Syntax}. 
+Finally, after the syntactic analysis, the list of program units
+is processed, in order to execute the implemented semantic rules
 of the language and change the machine state for performing
 computation. 
 
@@ -150,31 +147,31 @@ computation.
 
 Some data structures were used to simulate the data and
 program memory, as well as the current scope stack
-during a program execution. 
+during a program execution.
 
 \paragraph{Memory}
 
-The memory structure intends to store the variables
+The memory structure's purpose is to store the variables'
 attributes during program execution. It is represented
-by a Data.Map in Haskell, which is an effecient implementation
+by a Data.Map in Haskell, which is an efficient implementation
 of a dictionary, having the following definition:
 
 \begin{lstlisting}[language=Gryph, basicstyle=\footnotesize]
 type Memory = M.Map CellIdentifier Cell
 \end{lstlisting}
 
-A {\texttt CellIdentifier} is a pair containg
+A {\texttt CellIdentifier} is a pair containing
 the name and scope of a variable, and the Cell
 is another pair, storing a type and a memory value.
 There is a difference between memory values and
 common values of the language, since
-the memory can also contain reference (a CellIdentifier)
+the memory can also contain a reference (a CellIdentifier)
 to other variables in memory.
 
 \paragraph{Program Memory}
 
-The program memory stores subprogram and struct definitions.
-So, it is intented to keep a parsed Gryph code. The
+The program memory stores subprogram and user-type definitions.
+Thus, it is defined to store parsed Gryph code. The
 following type definitions clarify how this was
 implemented:
 
@@ -190,7 +187,7 @@ data UnitContent =  SubContent SubContent |
 \paragraph{Scope stack}
 
 The scope stack is intented to point to the current
-context of the program execution. It is important
+context in a program's execution. It is quite important,
 since it defines the referencing environments during
 execution. Values inside this stack are of type 
 {\texttt Scope}, whose definition is:
@@ -204,7 +201,7 @@ data Scope =    GlobalScope |
 
 Differentiating the types of scopes is important to allow the correct execution of 
 return and break statements. For example, a return statement searches for the
-last SubScope, to move the execution flow outside the last called subprogram.
+last SubScope, to move the execution flow outside of the last called subprogram.
 
 \subsubsection{Execution}
 
@@ -253,28 +250,22 @@ execUnit (Use path) m pm ss =
 \end{lstlisting}
 
 Similar definitions occur throughout the {\texttt Execution.Semantic} module, 
-which is responsible for the execution step. It is important to notice
-that the (data) memory, the program memory and the stack of scopes
-are always transmitted function to function, allowing the communication
-of the effects of the statements over the machine state and the
-program execution flow. The following sections details some other important aspects of 
-the implementation.
+which is responsible for the execution step. It is important to notice that the (data) memory, the program memory and the stack of scopes are always transmitted function to function, allowing the effects of each statement over the machine state and the program execution flow to be relayed to the next statement. The following sections details some other important aspects of the implementation.
 
-\paragraph{Condition for statement execution in blocks}
+\paragraph{Scope condition for block execution}
 
-Before each execution of a statement inside a block, it is checked if
+Before the execution of each statement inside a block, the interpreter checks if
 the scope introduced in the block entrance is the same as the
 current scope (the top of the scope stack). This is done to
 allow returns and breaks to work properly: such statements
-causes the scope stack to change, which, by the mentioned condition, makes
-the execution of the subsequent statements doesn't occur.
+cause the scope stack to change, which, by this condition, 
+makes it so the subsequent statements don't execute.
 
 \paragraph{Graph representation}
 
 A custom type was defined for the representation of graphs in Gryph. 
-This was done to allow graphs holding loads of any types in its vertices and
-edges, enhancing the power of this data structure in the contexts of
-the language domain. Below is the Haskell definition:
+This was done to allow graphs storing data of any type in its vertices and
+edges. Below is the Haskell definition:
 
 \begin{lstlisting}[language=Haskell, basicstyle=\footnotesize]
 data Vertex a = Vertex Int a
@@ -283,11 +274,10 @@ data Graph a b = Graph (S.Set (Vertex a)) (M.Map Int [Edge a b])
                     deriving (Eq, Ord)
 \end{lstlisting}
 
-A graph is then a set of vertex internally identified by integers holding some type $a$, together with
-a map of vertexes identifiers to edges connecting vertexes of type $a$ and holding data (weight)
+A graph is then a set of vertices internally identified by integers holding some type $a$, together with
+a map of vertex identifiers to edges connecting vertices of type $a$ and holding data (``weight'')
 of type $b$. This map is actually a representation of the graph adjacency list. 
-In this way, any type of the language can be put inside vertexes and
-edges, increasing the range of possible applications.
+In this way, vertices and edges can be of any Gryph type, increasing the range of possible applications of the language.
 
 
 
