@@ -25,7 +25,6 @@ executable igryph
   default-language:    Haskell2010
   other-modules:       Execution.Graph
                        ,Execution.Semantic
-                       ,Execution.GraphSemantic
                        ,Execution.Memory
                        ,Syntactic.GTok
                        ,Syntactic.GphTokens
