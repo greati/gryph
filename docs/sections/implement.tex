@@ -290,3 +290,35 @@ In this way, any type of the language can be put inside vertexes and
 edges, increasing the range of possible applications.
 
 
+
+\subsection{Verifications}
+
+The interpreter performs mainly the following verifications, exhibiting
+an error message when one of them is not satisfied by the
+program:
+
+\begin{description}
+    \item[Duplicity of variable declaration] There cannot exist two or more
+        variables with the same name in the same 
+        scope.
+    \item[Duplicity of subprogram definition] There cannot exist two
+        or more subprograms with the same name and the same parameter
+        profile.
+    \item[Duplicity of subprogram formal parameters] A subprogram
+        cannot have two or more formal parameters with the same name.
+    \item[Duplicity of structs] There cannot exist two or more
+        structs with the same name.
+    \item[Duplicity of struct fields] A struct cannot have two fields
+        with the same name.
+    \item[Positional actual parameters after named parameters] A subprogram
+        call cannot have positional actual parameters after named parameters.
+    \item[Type compatibility] Types are verified for every operation.
+        Widening coercion occurs only for Integer and Float types.
+    \item[Range of indexes for list access] Always varies
+        between 0 and $n-1$, where $n$ is the length of the list.
+    \item[Dictionary access] A dictionary can only be accessed in
+        previously defined keys.
+    \item[Fuction call inside expression] A function call cannot
+        be used in an expression if its execution ends with no
+        return value.
+\end{description}
