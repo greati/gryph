@@ -8,7 +8,8 @@
 \usepackage{xcolor}
 \usepackage{calc} % AgeofEuler
 \usepackage{textcomp} % lst upquote
-\usepackage{titlesec} % paragraph section, section newpage
+\usepackage{titlesec} % paragraph section
+\usepackage{indentfirst}
 
 \usepackage{backnaur}
 \usepackage{textcomp} % \textquotesingle
@@ -47,6 +48,10 @@
 {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
 \titlespacing*{\paragraph}
 {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+\def\subsectionautorefname{section}
+\def\subsubsectionautorefname{section}
+\def\paragraphautorefname{section}
 
 % .../backnaur/backnaur.sty
 % \newcommand{\bnfts}[1]{\textnormal{\bnf@tsfont{#1}}}
