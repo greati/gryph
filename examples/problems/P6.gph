@@ -24,8 +24,10 @@ sub insert(t : BST&; new_value : int) {
 		side : char;
 		if (new_value < curr{value})
 			side = left;
-		else
+		else if (new_value > curr{value})
 			side = right;
+		else
+			break;
 		side_child : [Node] = [n for n over t{tree}<curr> when (n{child}|side|)];
 		if (side_child == []) {
 			new : Node = Node{value=new_value};
@@ -38,8 +40,6 @@ sub insert(t : BST&; new_value : int) {
 		}
 	}
 }
-
-
 
 sub print_inorder(t : BST&) {
 	stack : [Node] = [];
@@ -113,20 +113,30 @@ sub maximum(t : BST&) : (int, int) {
 }
 
 t1 : BST;
+s : string;
 
-for n over [0, -10, 6, -20, 5]
-	insert(t1, n);
+println "Integer value to be inserted:";
+read s;
 
-println "inorder traversal: ";
-print_inorder(t1);
+while (s != "") {
+	insert(t1, s@int);
 
-println "breadth first traversal: ";
-print_levels(t1);
+	println "inorder traversal: ";
+	print_inorder(t1);
 
-min, max : (int, int) = minimum(t1), maximum(t1);
+	println "breadth first traversal: ";
+	print_levels(t1);
 
-print "min: " + min\0\@string;
-println " (level " + min\1\@string + ")";
+	min, max : (int, int) = minimum(t1), maximum(t1);
 
-print "max: " + max\0\@string;
-println " (level " + max\1\@string + ")";
+	print "min: " + min\0\@string;
+	println " (level " + min\1\@string + ")";
+
+	print "max: " + max\0\@string;
+	println " (level " + max\1\@string + ")";
+
+	println "";
+
+	println "Integer value to be inserted:";
+	read s;
+}
