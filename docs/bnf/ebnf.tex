@@ -1,4 +1,5 @@
 \section{Syntax in EBNF}
+\label{sec:ebnf}
 In this section we present Gryph's syntax in Extended Backus-Naur Form (EBNF). This particular version of EBNF uses three common extensions to BNF: (i) optional parts in the right-hand side (RHS) of a production are enclosed in square brackets; (ii) parts of the RHS of a production that can be repeated indefinitly, or left out altogether, are enclosed in braces; and (iii) a multiple-choice option may appear in the RHS of a production, enclosed in parentheses, where exactly one of the pipe-separated options must be chosen.
 
 Note that all terminal symbols appear \textbf{bolded}.
@@ -191,5 +192,5 @@ Note that all terminal symbols appear \textbf{bolded}.
     \bnfprod{unary-op}{\bnfts{$\bm{+}$} \bnfor \bnfts{$\bm{-}$}}\\
     \bnfprod{add-op}{\bnfts{$\bm{+}$} \bnfor \bnfts{$\bm{-}$}}\\
     \bnfprod{mult-op}{\bnfts{*} \bnfor \bnfts{$\bm{/}$} \bnfor \bnfts{\%} \bnfor \bnfts{$\bm{++}$} \bnfor \bnfts{**}}\\
-    \bnfprod{exp-op}{\bnfts{\^}}\\
+    \bnfprod{exp-op}{\bnfts{\^}}
 \end{bnf*}
