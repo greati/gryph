@@ -1,14 +1,37 @@
 \subsection{Expressions}
 \label{sec:expressions}
-pass
+Gryph expressions can take the form of literals of primitive type (\ref{sec:primitive}); composite type structures (\ref{sec:composite}), of which comprehension expressions are a part of (\ref{sec:comprehension}); subprogram calls (\ref{sec:subprogram}); variables (\ref{sec:variables}); and any combination of these with valid operations (\ref{sec:operations}).
 
 \subsubsection{List and graph comprehension}
 \label{sec:comprehension}
-pass
+Lists and graphs can be expressed in Gryph through special comprehension constructs. For lists, this is an expression, followed by a \key{for} loop (see \ref{sec:iteration}), and then an optional condition specifier, all enclosed in square brackets. This iterates through the for loop as normal, and appends sequentially to the new list the values for the contained expression at each iteration. The conditional specifier is composed of the \key{when} keyword, followed by an expression enclosed in parentheses which must evaluate to a boolean value: it means that, at each iteration, the value that would be appended to the list is only inserted if the condition evaluates to true.
+In the following code we create two lists using list comprehension:
+\begin{lstlisting}[language=Gryph]
+l1 : [int] = [i+1 for i over [1, 2, 3]];
+println l1; # [2, 3, 4]
+
+l2 : [int] = [i*2 for i over l1 when (i % 2 == 0)];
+println l2; # [4, 8]
+\end{lstlisting}
+
+Graph comprehension is used to generate a graph's edges and vertices simultaneously. This is is done with a syntax similiar to list comprehension, only the first expression is not a value to be inserted in a list, but and edge to be inserted in a graph, along with the vertices it connects. This edge expression can be preceded by a `weight' specifier: an expression representing the value to be stored in the edge being inserted at each iteration, followed by the keyword \key{where}.
+
+In the code below, we construct a fully connected directed graph over vertex set \id{v}, giving each edge a weight equal to the product of its vertices. Printing the graph shows the adjacency list of each vertex, as well as the weight of each edge, in parentheses. This output is shown here as comments below the \key{println} statement.
+\begin{lstlisting}[language=Gryph]
+v : [int] = [-1, 1, 3];
+g : <int, int> = <i*j where i->j for i, j over v, v>;
+
+println g;
+# <
+#     -1 -> 3 (-3), 1 (-1), -1 (1)
+#     1 -> 3 (3), 1 (1), -1 (-1)
+#     3 -> 3 (9), 1 (3), -1 (-3)
+# >
+\end{lstlisting}
 
 \subsubsection{Operations}
 \label{sec:operations}
-pass
+In this section we describe all operations which can be used to modify and combine expressions, except for structure access operations, described in \ref{sec:composite}.
 
 \paragraph{Logical and relational operations}
 pass
