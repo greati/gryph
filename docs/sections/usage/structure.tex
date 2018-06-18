@@ -33,7 +33,8 @@ sub add(lhs : int&; rhs: int) {
 }
 \end{lstlisting}
 
-The expression used to call a subprogram consists of the subprogram identifier, followed by parentheses containing the arguments being passed to the subprogram. Such an expression can be used as a statement in itself or as part of another statement. In the following code, we call the \id{my\_print} procedure, passing the return value of the \id{hello} function as an argument.
+The expression used to call a subprogram consists of the subprogram identifier, followed by parentheses containing the arguments being passed to the subprogram. The arguments can be passed sequentially, as comma-separated expressions, or as comma-separated ``attributions'', of the form parameter\key{=}argument.
+Such an expression can be used as a statement in itself or as part of another statement. In the following code, we call the \id{my\_print} procedure, passing the return value of the \id{hello} function as an argument.
 \begin{lstlisting}[language=Gryph]
 my_print(hello());
 \end{lstlisting}

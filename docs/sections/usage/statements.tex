@@ -44,9 +44,9 @@ Now, in regards to insertion and removal, the two relevant keywords to be used a
 
 The \type{tuple}, by contrast, supports neither insertion nor removal, being immutable; while the \type{dictionary} type supports removal, but insertion only through assignment to a key not yet in it. For removal of an entry with key \id{k} from a dictionary \id{d}, the expected syntax is \key{del} \id{k} \key{from} \id{d}. Note that just as a list will not allow an element to be removed from an invalid position, a dictionary will not allow removal of an entry with a certain key if it contains no such entry.
 
-% graphs
+The \type{graph} type supports insertion and removal of both vertices and edges. To insert a vertex \id{v} in a graph \id{g}: \key{add} \id{v} \key{in} \id{g}. To remove it: \key{del} \id{v} \key{from} \id{g}. Removing a vertex from a graph also removes all edges connected to it. Inserting and removing edges works in a similar way, but with the option of using the \key{where} keyword to specify a value to the edge being inserted, as in graph comprehension (see \ref{sec:comprehension}).
 
-In the following code we exemplify all the statements discussed in this section.
+In the following code we exemplify some of the statements discussed in this section.
 \begin{lstlisting}[language=Gryph]
 l : [int] = [-5, 0];
 add 5 in l;
@@ -57,6 +57,12 @@ d : |string, bool| = |"white" ? false|;
 d|"black"| = true;
 del "white" from d;
 println d; # |"black" ? true|
+
+g : <int, char> = <[1]>;
+add 2 in g;
+add 'x' where 1->2 in g;
+println g<1->2>; # 'x'
+del 1->2 from g;
 \end{lstlisting}
 
 \paragraph{Return statement}
@@ -133,8 +139,6 @@ for entry over d {
 }
 \end{lstlisting}
 
-As for graph iteration, the for syntax works in the same way as a list, iterating over the graph's vertices in no particular order. To specify an order, a graph-traversal keyword such as \key{bfs} or \key{dfs} may be used.
-
-% BFS/DFS
+As for graph iteration, the \key{for} syntax works in the same way as a list, iterating over the graph's vertices in no particular order. To specify an order, a graph-traversal keyword such as \key{bfs} or \key{dfs} may be used. When iterating through a graph using \key{bfs} or \key{dfs}, up to three identifiers may be specified, which will assume at each iteration the values of, respectively: the current vertex, its `parent' vertex, and the current distance or depth from the starting vertex.
 
 As with conditional structures, the blocks contained in iteration structures may actually be a single statement, alternatively to one or many statements enclosed by braces.
